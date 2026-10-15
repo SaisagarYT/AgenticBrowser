@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agentic Browser | Tri-Agent Autonomous Web Automation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="logo-orb"></div>
+        <div>
+          <h1>Agentic Browser</h1>
+          <span class="subtitle">Planner · Browser · Critique · Tri-Agent Automation</span>
+        </div>
+      </div>
+      <div class="header-status">
+        <span class="badge badge-pulse" id="server-status"><span class="dot"></span> System Ready</span>
+        <span class="badge badge-ghost">Node.js · Express · SQLite</span>
+      </div>
+    </header>
+
+    <!-- Main Grid -->
+    <main class="dashboard-grid">
+      <!-- Left: Controller & History -->
+      <section class="panel control-panel">
+        <div class="panel-header">
+          <h2>Task Controller</h2>
+          <span class="step-indicator" id="task-id-badge">No active task</span>
+        </div>
+
+        <form id="task-form" class="task-form">
+          <label for="task-input">What should the browser do?</label>
+          <div class="input-wrapper">
+            <textarea 
+              id="task-input" 
+              rows="3" 
+              placeholder="e.g. Find the price of RTX 4070 on Amazon India and check the delivery date..."
+              required
+            ></textarea>
+          </div>
+
+          <div class="suggestions">
+            <span class="suggestion-chip" data-query="Find the price of RTX 4070 on Amazon and check the delivery date">🛒 Amazon Price Check</span>
+            <span class="suggestion-chip" data-query="Search Google for top news about artificial intelligence today">📰 AI News Search</span>
+            <span class="suggestion-chip" data-query="Open wikipedia.org, search for Quantum Computing and extract summary">📖 Wikipedia Research</span>
+          </div>
+
+          <button type="submit" id="submit-btn" class="btn btn-primary">
+            <span class="btn-text">Execute Task</span>
+            <span class="btn-icon">⚡</span>
+          </button>
+        </form>
+
+        <!-- History -->
+        <div class="history-section">
+          <div class="section-title">
+            <h3>Recent Tasks (SQLite)</h3>
+            <button id="refresh-history-btn" class="btn-sm">↻ Refresh</button>
+          </div>
+          <div class="history-list" id="history-list">
+            <div class="empty-state">No past tasks recorded yet.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right: Live Execution Board -->
+      <section class="panel execution-panel">
+        <div class="panel-header">
+          <h2>Live Workflow Monitor</h2>
+          <div class="agent-badges">
+            <span class="agent-tag agent-planner" id="badge-planner">Planner</span>
+            <span class="agent-tag agent-browser" id="badge-browser">Browser</span>
+            <span class="agent-tag agent-critique" id="badge-critique">Critique</span>
+          </div>
+        </div>
+
+        <!-- Progress Stepper -->
+        <div class="workflow-stepper" id="workflow-stepper">
+          <div class="step-card" id="card-planner">
+            <div class="card-icon">📋</div>
+            <div class="card-content">
+              <h4>Current Plan & Next Step</h4>
+              <p id="planner-instruction">Waiting for a task to begin...</p>
+              <ul id="plan-items" class="plan-list"></ul>
+            </div>
+          </div>
+
+          <div class="step-card" id="card-browser">
+            <div class="card-icon">⚡</div>
+            <div class="card-content">
+              <h4>Browser Agent Action</h4>
+              <p id="browser-action-text">No action executed yet.</p>
+              <div id="action-details" class="code-pill">Idle</div>
+            </div>
+          </div>
+
+          <div class="step-card" id="card-critique">
+            <div class="card-icon">🔍</div>
+            <div class="card-content">
+              <h4>Critique Agent Verdict</h4>
+              <p id="critique-feedback">No evaluation yet.</p>
+              <span class="verdict-tag" id="critique-verdict-tag">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Split View: Screenshot & Logs -->
+        <div class="live-split-view">
+          <!-- Screenshot Viewport -->
+          <div class="viewport-box">
+            <div class="box-header">
+              <span>Current Viewport Screenshot</span>
+              <span id="screenshot-name" class="mono-label">None</span>
+            </div>
+            <div class="screenshot-container">
+              <img id="live-screenshot" src="" alt="Live viewport capture" style="display: none;">
+              <div class="viewport-placeholder" id="screenshot-placeholder">
+                <span class="placeholder-icon">🖥️</span>
+                <span>Screenshots will appear here during execution</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Final Response / Result -->
+          <div class="result-box">
+            <div class="box-header">
+              <span>Task Result</span>
+              <button class="btn-sm" id="copy-result-btn" style="display:none;">Copy</button>
+            </div>
+            <div class="result-content" id="result-text">
+              <span class="text-muted">Final answer will be rendered here upon task completion.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+{
+  "name": "agentic-browser-node",
+  "version": "1.0.0",
+  "description": "Autonomous browser automation system with a 3-agent feedback loop (Planner, Browser, Critique) in Node.js, Express, and SQLite.",
+  "type": "module",
+  "main": "src/index.js",
+  "bin": {
+    "agentic-browser": "bin/cli.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "cli": "node bin/cli.js",
+    "gui": "node bin/cli.js --gui",
+    "test:browser": "node -e \"import('playwright').then(async ({ chromium }) => { console.log('Popping up browser...'); const b = await chromium.launch({ headless: false }); const p = await b.newPage(); await p.goto('https://news.ycombinator.com'); await new Promise(r => setTimeout(r, 6000)); await b.close(); console.log('Closed.'); })\"",
+    "browser:install": "npx playwright install chromium"
+  },
+  "keywords": [
+    "browser-automation",
+    "ai-agent",
+    "playwright",
+    "express",
+    "sqlite",
+    "pydantic-ai",
+    "agentic-browser"
+  ],
+  "author": "",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "openai": "^4.86.1",
+    "pdf-parse": "^1.1.1",
+    "playwright": "^1.50.1"
+  }
+}
