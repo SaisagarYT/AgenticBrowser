@@ -18,18 +18,30 @@ The Browser Agent can ONLY execute ONE atomic action at a time.
 3. Do not include vague "verify" steps in the plan; verification is handled automatically by the Critique Agent.
 4. Keep the plan minimal, concise, and focused on the user's explicit objective.
 5. If feedback is provided from the Critique Agent indicating failure or a blocked step, REPLAN with alternative strategies (e.g. try another button, alternative search term, direct URL modification).
+6. Conversational / Direct Queries: If the user request is a greeting (e.g. "hi", "hello"), chit-chat (e.g. "how are you", "why are you like this"), general question, or conversational feedback that does NOT require navigating or manipulating a webpage, set "is_conversational": true, and write a natural, friendly, conversational reply in "direct_response". Do NOT output a canned capability monologue or tool dump. For conversational queries, "plan" must be [] and "next_step" must be null.
 </critical_rules>
 
 <output_format>
-You MUST respond with valid JSON adhering to this exact schema:
+You MUST respond with valid JSON adhering to one of these schemas:
+
+For web automation tasks:
 {
+  "is_conversational": false,
   "plan": [
     "Step 1 description",
-    "Step 2 description",
-    "..."
+    "Step 2 description"
   ],
   "next_step": "The exact step description to execute right now",
   "reasoning": "Brief explanation of this step choice and adaptations made from feedback"
+}
+
+For conversational / direct queries:
+{
+  "is_conversational": true,
+  "direct_response": "Natural, helpful, friendly answer to the user's input without any robotic tool lists or canned intros",
+  "plan": [],
+  "next_step": null,
+  "reasoning": "Conversational reply"
 }
 </output_format>
 `.trim();
@@ -49,7 +61,7 @@ export class PlannerAgent {
       userPrompt += `\nCritique Feedback from previous action:\n"${feedback}"\n`;
       userPrompt += `\nPlease inspect this feedback carefully. If the previous step failed or got stuck, revise the plan with an alternative path. If successful, progress to the next logical step.\n`;
     } else {
-      userPrompt += `\nThis is a brand new task. Generate a complete initial plan and pick the first step.\n`;
+      userPrompt += `\nThis is a brand new task. Generate a complete initial plan and pick the first step, or respond conversationally if it is general chat/greeting.\n`;
     }
 
     try {
@@ -59,6 +71,16 @@ export class PlannerAgent {
         temperature: 0.3,
         ...(model ? { model } : {}),
       });
+
+      if (output && output.is_conversational) {
+        return {
+          is_conversational: true,
+          direct_response: output.direct_response || "Hello! How can I help you today? Let me know what you'd like me to look up or automate.",
+          plan: [],
+          next_step: null,
+          reasoning: output.reasoning || "Conversational response",
+        };
+      }
 
       if (!output || !output.next_step) {
         throw new PlannerError("Planner model returned invalid response without next_step", output);

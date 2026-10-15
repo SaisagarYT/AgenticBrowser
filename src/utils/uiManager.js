@@ -42,9 +42,12 @@ export class UIManager {
     }
   }
 
-  async addUserMessage(page, message) {
+  async addUserMessage(page, message, fromOverlay = false) {
     this.conversationHistory.push({ from: "user", message });
     if (!page || page.isClosed()) return;
+
+    // If message originated from the in-page sidebar overlay, it's already rendered locally
+    if (fromOverlay) return;
 
     try {
       await page.evaluate((msg) => {

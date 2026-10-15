@@ -46,7 +46,7 @@ export class Orchestrator extends EventEmitter {
       // Ensure browser is up
       await browserManager.initialize();
       const activePage = await browserManager.getPage();
-      await uiManager.addUserMessage(activePage, command);
+      await uiManager.addUserMessage(activePage, command, Boolean(options.fromOverlay));
       await uiManager.updateState(activePage, "processing");
 
       while (stepIndex < this.maxSteps) {
@@ -63,6 +63,12 @@ export class Orchestrator extends EventEmitter {
           stepIndex: stepIndex - 1,
           model: taskModel,
         });
+
+        if (planResult.is_conversational) {
+          finalAnswer = planResult.direct_response;
+          this._log(taskId, "INFO", "Planner returned direct conversational response.");
+          break;
+        }
 
         currentPlan = planResult.plan;
         const currentInstruction = planResult.next_step;
@@ -107,8 +113,8 @@ export class Orchestrator extends EventEmitter {
           model: taskModel,
         });
 
-        if (currentPage && !currentPage.isClosed() && actionResult.toolName !== "final_response") {
-          const actionDesc = actionResult.rationale || `Executed ${actionResult.toolName}${actionResult.parameters ? ": " + JSON.stringify(actionResult.parameters) : ""}`;
+        if (currentPage && !currentPage.isClosed()) {
+          const actionDesc = actionResult.rationale || (actionResult.toolName === "final_response" ? "Final response prepared." : `Executed ${actionResult.toolName}${actionResult.parameters ? ": " + JSON.stringify(actionResult.parameters) : ""}`);
           await uiManager.addSystemMessage(currentPage, actionDesc, "browser");
         }
 
@@ -232,6 +238,17 @@ export class Orchestrator extends EventEmitter {
       logger.error(`[Orchestrator] Task failed: ${err.message}`, err);
       TaskRepository.fail(taskId, err.message, stepIndex, durationMs);
       this._emit(taskId, "task_failed", { taskId, error: err.message });
+
+      try {
+        const errorPage = await browserManager.getPage().catch(() => null);
+        if (errorPage && !errorPage.isClosed()) {
+          await uiManager.addSystemMessage(errorPage, `Error: ${err.message}`, "done");
+          await uiManager.commandCompleted(errorPage);
+        }
+      } catch {
+        // Ignore UI update errors on failure
+      }
+
       throw err;
     } finally {
       // Keep browser alive for inspection in non-headless mode, or clean up if desired

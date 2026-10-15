@@ -520,21 +520,21 @@
 
     .as-inline-plan-card {
       align-self: stretch;
-      background: #18181b;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      padding: 14px 16px;
-      margin: 6px 0;
-      box-shadow: 0 2px 8px -1px rgba(0, 0, 0, 0.25);
+      background: transparent !important;
+      border: none !important;
+      border-radius: 0 !important;
+      padding: 8px 2px !important;
+      margin: 4px 0 10px 0 !important;
+      box-shadow: none !important;
       font-family: var(--font-sans);
       animation: asFadeUp 0.24s cubic-bezier(0.16, 1, 0.3, 1);
       box-sizing: border-box;
     }
 
     #agentic-sidebar-root:not(.dark) .as-inline-plan-card {
-      background: #ffffff;
-      border: 1px solid rgba(0, 0, 0, 0.1);
-      box-shadow: 0 2px 8px -1px rgba(0, 0, 0, 0.06);
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
     }
 
     .as-inline-plan-summary {
@@ -2593,6 +2593,17 @@
 
   function appendUserBubble(text, attachments = []) {
     if (heroView) heroView.style.display = "none";
+
+    // Immediate duplicate prevention (e.g. local echo + backend addUserMessage call)
+    const lastEl = contentEl.lastElementChild;
+    if (lastEl && lastEl.classList.contains("as-bubble-user")) {
+      const lastText = lastEl.textContent.trim();
+      const currentText = (text || "").trim();
+      if (lastText === currentText || (currentText && lastText.includes(currentText))) {
+        return;
+      }
+    }
+
     const bubble = document.createElement("div");
     bubble.className = "as-bubble-user";
 
@@ -2755,6 +2766,10 @@
     }
 
     if (parsed && Array.isArray(parsed.plan)) {
+      if (parsed.stepIndex === 1) {
+        planItems = [];
+        currentInlinePlanCard = null;
+      }
       const incomingPlan = parsed.plan;
       const activeIdx = typeof parsed.stepIndex === "number" ? parsed.stepIndex - 1 : 0;
 

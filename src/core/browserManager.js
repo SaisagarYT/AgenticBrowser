@@ -68,7 +68,7 @@ class BrowserManager {
 
         logger.info(`Received command from in-page chat overlay: "${command}" [Model: ${selectedModel || "default"}]`);
         const { orchestrator } = await import("./orchestrator.js");
-        orchestrator.runTask(command, null, { model: selectedModel }).catch((err) => {
+        orchestrator.runTask(command, null, { model: selectedModel, fromOverlay: true }).catch((err) => {
           logger.error(`Task from overlay failed: ${err.message}`);
         });
       });
