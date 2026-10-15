@@ -109,22 +109,34 @@ class LLMClient {
     }
 
     try {
+      const isNvidiaNim = (config.llm.visionBaseUrl || "").includes("nvidia.com") || (model && (model.startsWith("meta/") || model.startsWith("nvidia/")));
+
       const content = [
         { type: "text", text: prompt },
       ];
 
-      if (base64Before) {
-        content.push({
-          type: "image_url",
-          image_url: { url: `data:image/jpeg;base64,${base64Before}`, detail: "high" },
-        });
-      }
-
-      if (base64After) {
-        content.push({
-          type: "image_url",
-          image_url: { url: `data:image/jpeg;base64,${base64After}`, detail: "high" },
-        });
+      if (isNvidiaNim) {
+        // NVIDIA NIM endpoints support at most 1 image per request. Use the resulting after-action state.
+        const targetImage = base64After || base64Before;
+        if (targetImage) {
+          content.push({
+            type: "image_url",
+            image_url: { url: `data:image/jpeg;base64,${targetImage}`, detail: "high" },
+          });
+        }
+      } else {
+        if (base64Before) {
+          content.push({
+            type: "image_url",
+            image_url: { url: `data:image/jpeg;base64,${base64Before}`, detail: "high" },
+          });
+        }
+        if (base64After) {
+          content.push({
+            type: "image_url",
+            image_url: { url: `data:image/jpeg;base64,${base64After}`, detail: "high" },
+          });
+        }
       }
 
       const response = await this.visionClient.chat.completions.create({
@@ -140,6 +152,27 @@ class LLMClient {
 
       return response.choices?.[0]?.message?.content?.trim() || "";
     } catch (err) {
+      // Fallback: If multiple images were rejected by provider, retry with single after-screenshot
+      if (err.message && err.message.includes("image") && base64After) {
+        try {
+          const fallbackRes = await this.visionClient.chat.completions.create({
+            model,
+            messages: [
+              {
+                role: "user",
+                content: [
+                  { type: "text", text: prompt },
+                  { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64After}`, detail: "high" } },
+                ],
+              },
+            ],
+            temperature: 0.2,
+          });
+          return fallbackRes.choices?.[0]?.message?.content?.trim() || "";
+        } catch {
+          // Fall through to error logging
+        }
+      }
       logger.error(`Vision analysis failed: ${err.message}`);
       return `Screenshot analysis error: ${err.message}`;
     }
