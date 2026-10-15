@@ -56,6 +56,15 @@ export class Orchestrator extends EventEmitter {
 
         // 1. Planner Phase
         this._emit(taskId, "planner_thinking", { stepIndex });
+        const currentPage = await browserManager.getPage().catch(() => activePage);
+        if (currentPage && !currentPage.isClosed()) {
+          await uiManager.addSystemMessage(currentPage, JSON.stringify({
+            type: "thinking",
+            stage: "planner",
+            text: `Formulating strategy for Step ${stepIndex}...`,
+          }), "thinking");
+        }
+
         const planResult = await PlannerAgent.plan({
           query: command,
           currentPlan,
@@ -70,6 +79,14 @@ export class Orchestrator extends EventEmitter {
           break;
         }
 
+        if (currentPage && !currentPage.isClosed() && planResult.reasoning) {
+          await uiManager.addSystemMessage(currentPage, JSON.stringify({
+            type: "thought",
+            stage: "planner",
+            text: `Strategy: ${planResult.reasoning}`,
+          }), "thinking");
+        }
+
         currentPlan = planResult.plan;
         const currentInstruction = planResult.next_step;
 
@@ -79,8 +96,6 @@ export class Orchestrator extends EventEmitter {
           version: stepIndex,
           steps: currentPlan,
         });
-
-        const currentPage = await browserManager.getPage().catch(() => activePage);
 
         await uiManager.addSystemMessage(currentPage, JSON.stringify({
           plan: currentPlan,
@@ -107,6 +122,14 @@ export class Orchestrator extends EventEmitter {
 
         // 3. Execution Phase (Browser Agent)
         this._emit(taskId, "browser_acting", { stepIndex, instruction: currentInstruction });
+        if (currentPage && !currentPage.isClosed()) {
+          await uiManager.addSystemMessage(currentPage, JSON.stringify({
+            type: "thinking",
+            stage: "browser",
+            text: `Inspecting page DOM and deciding action for: "${currentInstruction}"...`,
+          }), "thinking");
+        }
+
         const actionResult = await BrowserAgent.executeStep({
           stepInstruction: currentInstruction,
           previousActions,
@@ -126,15 +149,41 @@ export class Orchestrator extends EventEmitter {
           // Ignore capture error
         }
 
+        // Deliver screenshot to UI for camera flash animation and interactive preview
+        if (afterScreenshot && currentPage && !currentPage.isClosed()) {
+          await uiManager.addSystemMessage(currentPage, JSON.stringify({
+            type: "screenshot",
+            base64: afterScreenshot.base64,
+            filename: afterScreenshot.filename,
+            stepIndex,
+          }), "screenshot");
+        }
+
         // 5. Visual Analysis (Screenshot diff)
         let ssAnalysis = "N/A";
-        if (config.llm.visionEnabled && beforeScreenshot && afterScreenshot) {
+        if (config.llm.visionEnabled && afterScreenshot) {
+          if (currentPage && !currentPage.isClosed()) {
+            await uiManager.addSystemMessage(currentPage, JSON.stringify({
+              type: "thinking",
+              stage: "vision",
+              text: `Analyzing visual page state with Vision model (${config.llm.visionModel})...`,
+            }), "thinking");
+          }
+
           ssAnalysis = await analyzeScreenshots({
-            base64Before: beforeScreenshot.base64,
+            base64Before: beforeScreenshot ? beforeScreenshot.base64 : null,
             base64After: afterScreenshot.base64,
             actionDescription: `${actionResult.toolName} with ${JSON.stringify(actionResult.parameters)}`,
             expectedResult: currentInstruction,
           });
+
+          if (currentPage && !currentPage.isClosed() && ssAnalysis && ssAnalysis !== "N/A") {
+            await uiManager.addSystemMessage(currentPage, JSON.stringify({
+              type: "thought",
+              stage: "vision",
+              text: `Vision verification: ${ssAnalysis}`,
+            }), "thinking");
+          }
         }
 
         // Record action to SQLite
@@ -171,6 +220,14 @@ export class Orchestrator extends EventEmitter {
 
         // 6. Evaluation Phase (Critique Agent)
         this._emit(taskId, "critique_evaluating", { stepIndex });
+        if (currentPage && !currentPage.isClosed()) {
+          await uiManager.addSystemMessage(currentPage, JSON.stringify({
+            type: "thinking",
+            stage: "critique",
+            text: "Evaluating step outcome with Critique Agent...",
+          }), "thinking");
+        }
+
         const critiqueResult = await CritiqueAgent.critique({
           currentStep: currentInstruction,
           originalPlan: currentPlan,
@@ -178,6 +235,10 @@ export class Orchestrator extends EventEmitter {
           ssAnalysis,
           model: taskModel,
         });
+
+        if (currentPage && !currentPage.isClosed()) {
+          await uiManager.addSystemMessage(currentPage, `${critiqueResult.verdict}: ${critiqueResult.feedback}`, "critique");
+        }
 
         CritiqueRepository.record({
           taskId,

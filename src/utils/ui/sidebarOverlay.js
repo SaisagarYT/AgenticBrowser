@@ -767,6 +767,273 @@
       to { transform: rotate(360deg); }
     }
 
+    /* Realtime Model Thinking Indicator */
+    .as-plan-thinking-live {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 6px 0 8px 0;
+      padding: 6px 10px;
+      background: rgba(250, 204, 21, 0.08);
+      border: 1px solid rgba(250, 204, 21, 0.25);
+      border-radius: 6px;
+      font-size: 11.5px;
+      color: #facc15;
+      animation: asPulseThinking 1.4s ease-in-out infinite alternate;
+    }
+
+    #agentic-sidebar-root:not(.dark) .as-plan-thinking-live {
+      background: rgba(202, 138, 4, 0.08);
+      border-color: rgba(202, 138, 4, 0.25);
+      color: #a16207;
+    }
+
+    @keyframes asPulseThinking {
+      0% { opacity: 0.75; transform: translateY(0); }
+      100% { opacity: 1; transform: translateY(-1px); }
+    }
+
+    .as-spinner-pulse {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #facc15;
+      box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.6);
+      animation: asPulseDot 1.4s infinite cubic-bezier(0.66, 0, 0, 1);
+      flex-shrink: 0;
+    }
+
+    @keyframes asPulseDot {
+      to {
+        box-shadow: 0 0 0 8px rgba(250, 204, 21, 0);
+      }
+    }
+
+    /* Step Screenshot Preview */
+    .as-plan-screenshot-box {
+      margin: 8px 0 6px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .as-plan-screenshot-tag {
+      font-size: 10.5px;
+      font-weight: 600;
+      color: #a1a1aa;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .as-plan-screenshot-thumb-wrap {
+      position: relative;
+      max-width: 220px;
+      max-height: 130px;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+      transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+    }
+
+    #agentic-sidebar-root:not(.dark) .as-plan-screenshot-thumb-wrap {
+      border-color: rgba(0, 0, 0, 0.15);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .as-plan-screenshot-thumb-wrap:hover {
+      transform: scale(1.025);
+      border-color: #facc15;
+      box-shadow: 0 4px 14px rgba(250, 204, 21, 0.2);
+    }
+
+    .as-plan-screenshot-thumb {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .as-plan-screenshot-overlay {
+      position: absolute;
+      bottom: 0;
+      inset-inline: 0;
+      background: rgba(0, 0, 0, 0.72);
+      backdrop-filter: blur(2px);
+      color: #fafafa;
+      font-size: 10px;
+      font-weight: 500;
+      text-align: center;
+      padding: 3px 0;
+    }
+
+    /* Thought Drawer Screenshot Line */
+    .as-thought-screenshot-line {
+      margin: 10px 0 8px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .as-thought-screenshot-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .as-thought-screenshot-title {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #e4e4e7;
+    }
+
+    #agentic-sidebar-root:not(.dark) .as-thought-screenshot-title {
+      color: #27272a;
+    }
+
+    .as-thought-screenshot-thumb {
+      position: relative;
+      max-width: 250px;
+      max-height: 140px;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      cursor: pointer;
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.3);
+      transition: transform 0.16s ease, border-color 0.16s ease;
+    }
+
+    .as-thought-screenshot-thumb:hover {
+      transform: scale(1.02);
+      border-color: #facc15;
+    }
+
+    .as-thought-screenshot-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .as-thought-screenshot-hint {
+      position: absolute;
+      bottom: 0;
+      inset-inline: 0;
+      background: rgba(0, 0, 0, 0.75);
+      color: #facc15;
+      font-size: 10px;
+      font-weight: 500;
+      text-align: center;
+      padding: 3px 0;
+    }
+
+    /* Camera Shutter / Flash Animation */
+    #as-screenshot-flash {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      background: radial-gradient(circle at center, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.7) 100%);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 2147483646;
+      transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: inset 0 0 120px rgba(250, 204, 21, 0.35);
+    }
+
+    #as-screenshot-flash.flashing {
+      opacity: 1;
+      transition: opacity 0.04s ease-in;
+    }
+
+    /* Shutter Viewfinder Brackets */
+    #as-screenshot-flash::before,
+    #as-screenshot-flash::after {
+      content: "";
+      position: absolute;
+      width: 44px;
+      height: 44px;
+      border-color: #facc15;
+      border-style: solid;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+    }
+
+    #as-screenshot-flash.flashing::before {
+      top: 36px;
+      left: 36px;
+      border-width: 3px 0 0 3px;
+      opacity: 1;
+    }
+
+    #as-screenshot-flash.flashing::after {
+      bottom: 36px;
+      right: 36px;
+      border-width: 0 3px 3px 0;
+      opacity: 1;
+    }
+
+    /* Lightbox Modal for Enlarged Preview */
+    #as-screenshot-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.88);
+      backdrop-filter: blur(8px);
+      z-index: 2147483647;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      box-sizing: border-box;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    #as-screenshot-modal.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    #as-screenshot-modal img {
+      max-width: 90vw;
+      max-height: 85vh;
+      border-radius: 8px;
+      box-shadow: 0 12px 48px rgba(0, 0, 0, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      object-fit: contain;
+    }
+
+    #as-screenshot-modal-close {
+      position: absolute;
+      top: 20px;
+      right: 24px;
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      color: #ffffff;
+      border-radius: 50%;
+      width: 38px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      transition: background 0.15s ease, transform 0.15s ease;
+    }
+
+    #as-screenshot-modal-close:hover {
+      background: #facc15;
+      color: #000000;
+      transform: scale(1.08);
+    }
+
     /* ------------------------------------------------------------------------
        5. Messages & Hero Content Area
        ------------------------------------------------------------------------ */
@@ -2675,41 +2942,61 @@
           iconHtml = `<div class="as-plan-status-pending" title="Pending"></div>`;
         }
 
-        let logsHtml = "";
+        const logLines = [];
         if (item.logs && item.logs.length > 0) {
-          logsHtml = item.logs
-            .map(
-              (log) => `
+          item.logs.forEach((log) => {
+            logLines.push(`
               <div class="as-plan-step-interior-line">
                 <span class="as-plan-step-interior-bullet">•</span>
                 <span>${escapeHtml(log)}</span>
               </div>
-            `
-            )
-            .join("");
-        } else if (item.status === "in-progress") {
-          logsHtml = `
+            `);
+          });
+        }
+
+        if (item.currentThought && item.status === "in-progress") {
+          logLines.push(`
+            <div class="as-plan-thinking-live">
+              <div class="as-spinner-pulse"></div>
+              <span>${escapeHtml(item.currentThought)}</span>
+            </div>
+          `);
+        } else if (item.status === "in-progress" && (!item.logs || item.logs.length === 0)) {
+          logLines.push(`
             <div class="as-plan-step-interior-line" style="color: #facc15;">
               <span class="as-plan-step-interior-bullet">•</span>
               <span>Executing step action in browser...</span>
             </div>
-          `;
-        } else if (item.status === "completed") {
-          logsHtml = `
+          `);
+        } else if (item.status === "completed" && (!item.logs || item.logs.length === 0)) {
+          logLines.push(`
             <div class="as-plan-step-interior-line">
               <span class="as-plan-step-interior-bullet">•</span>
               <span>Step completed</span>
             </div>
-          `;
-        } else {
-          logsHtml = `
+          `);
+        } else if (item.status === "pending" && (!item.logs || item.logs.length === 0)) {
+          logLines.push(`
             <div class="as-plan-step-interior-line" style="color: #71717a;">
               <span class="as-plan-step-interior-bullet">•</span>
               <span>Waiting to execute...</span>
             </div>
-          `;
+          `);
         }
 
+        if (item.screenshot) {
+          logLines.push(`
+            <div class="as-plan-screenshot-box" data-base64="${item.screenshot}">
+              <div class="as-plan-screenshot-tag">📸 Screenshot Snapshot</div>
+              <div class="as-plan-screenshot-thumb-wrap">
+                <img src="data:image/jpeg;base64,${item.screenshot}" alt="Step Screenshot" class="as-plan-screenshot-thumb" />
+                <div class="as-plan-screenshot-overlay">🔍 Click to zoom</div>
+              </div>
+            </div>
+          `);
+        }
+
+        const logsHtml = logLines.join("");
         const isOpen = Boolean(item.isOpen);
 
         return `
@@ -2740,15 +3027,29 @@
       </div>
     `;
 
-    // Click handler to toggle interior dropdown section for each step
+    // Click handler to toggle interior dropdown section (only ONE open at any time)
     card.querySelectorAll(".as-inline-plan-item").forEach((itemEl) => {
       itemEl.addEventListener("click", (e) => {
         e.stopPropagation();
         const idx = parseInt(itemEl.getAttribute("data-idx"), 10);
         if (planItems[idx]) {
-          planItems[idx].isOpen = !planItems[idx].isOpen;
+          const willOpen = !planItems[idx].isOpen;
+          // Close all other steps so only one step stays open
+          planItems.forEach((it, i) => {
+            it.isOpen = (i === idx) ? willOpen : false;
+          });
           renderInlinePlanCard();
         }
+      });
+    });
+
+    // Screenshot thumbnail zoom click handler
+    card.querySelectorAll(".as-plan-screenshot-thumb-wrap").forEach((thumbEl) => {
+      thumbEl.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const box = thumbEl.closest(".as-plan-screenshot-box");
+        const b64 = box?.getAttribute("data-base64");
+        if (b64) openScreenshotModal(b64);
       });
     });
 
@@ -2786,25 +3087,35 @@
             text: cleanText,
             status,
             logs: [],
-            isOpen: idx === activeIdx,
+            screenshot: null,
+            currentThought: null,
+            isOpen: (idx === activeIdx && status === "in-progress"),
           });
         } else {
           existing.text = cleanText;
           if (idx < activeIdx) {
             existing.status = "completed";
+            existing.isOpen = false; // Completed steps stay closed!
+            existing.currentThought = null;
           } else if (idx === activeIdx) {
-            if (existing.status !== "completed") {
-              existing.status = "in-progress";
-              existing.isOpen = true;
-            }
+            existing.status = "in-progress";
+            existing.isOpen = true; // Only currently executing step stays open!
+          } else {
+            existing.status = "pending";
+            existing.isOpen = false; // Pending steps stay closed!
+            existing.currentThought = null;
           }
         }
       });
 
-      if (planItems[activeIdx] && planItems[activeIdx].status !== "completed") {
-        planItems[activeIdx].status = "in-progress";
-        planItems[activeIdx].isOpen = true;
-      }
+      // Strictly ensure only currently executing step is open
+      planItems.forEach((item, idx) => {
+        if (idx !== activeIdx || item.status !== "in-progress") {
+          item.isOpen = false;
+        } else {
+          item.isOpen = true;
+        }
+      });
 
       renderInlinePlanCard();
       return;
@@ -2824,6 +3135,7 @@
       planItems.forEach((item) => {
         if (item.id < stepIdx) {
           item.status = "completed";
+          item.isOpen = false;
         }
       });
 
@@ -2838,6 +3150,8 @@
           text: desc,
           status: "in-progress",
           logs: [],
+          screenshot: null,
+          currentThought: null,
           isOpen: true,
         });
       }
@@ -2845,12 +3159,15 @@
       const currentActive = planItems.find((item) => item.status === "in-progress");
       if (currentActive) {
         currentActive.status = "completed";
+        currentActive.isOpen = false;
       }
       planItems.push({
         id: planItems.length + 1,
         text: clean,
         status: "in-progress",
         logs: [],
+        screenshot: null,
+        currentThought: null,
         isOpen: true,
       });
     }
@@ -2865,7 +3182,6 @@
       activeItem = planItems.find((item) => item.status === "pending");
       if (activeItem) {
         activeItem.status = "in-progress";
-        activeItem.isOpen = true;
       }
     }
 
@@ -2873,12 +3189,14 @@
       if (!activeItem.logs) activeItem.logs = [];
       activeItem.logs.push(cleanAction);
       activeItem.status = "completed";
+      activeItem.isOpen = false; // Close completed step!
+      activeItem.currentThought = null;
 
-      // Advance to next pending step
+      // Advance to next pending step and open it!
       const nextPending = planItems.find((item) => item.status === "pending");
       if (nextPending) {
         nextPending.status = "in-progress";
-        nextPending.isOpen = true;
+        nextPending.isOpen = true; // Open only currently executing!
       }
     } else if (planItems.length > 0) {
       const last = planItems[planItems.length - 1];
@@ -2892,7 +3210,7 @@
   function completeAllPlanSteps() {
     planItems.forEach((item) => {
       item.status = "completed";
-      item.isOpen = false;
+      item.isOpen = false; // All close when done!
     });
     renderInlinePlanCard();
   }
@@ -3023,10 +3341,31 @@
     if (currentTaskThoughts.length > 0) {
       thoughtsListHtml = currentTaskThoughts
         .map((t) => {
+          if (t.type === "screenshot" && t.base64) {
+            return `
+              <div class="as-thought-screenshot-line">
+                <div class="as-thought-screenshot-header">
+                  <span class="as-thought-step-bullet">📸</span>
+                  <span class="as-thought-screenshot-title">Page Snapshot (Vision Verification)</span>
+                </div>
+                <div class="as-thought-screenshot-thumb" data-base64="${t.base64}">
+                  <img src="data:image/jpeg;base64,${t.base64}" alt="Screenshot" />
+                  <div class="as-thought-screenshot-hint">🔍 Click to zoom</div>
+                </div>
+              </div>
+            `;
+          }
+
           let label = stripStartSymbols(t.text);
+          let bullet = "•";
+          if (t.stage === "planner" || t.type === "plan") bullet = "🧠";
+          else if (t.stage === "browser" || t.type === "action") bullet = "⚡";
+          else if (t.stage === "vision") bullet = "👁️";
+          else if (t.stage === "critique" || t.type === "critique") bullet = "🎯";
+
           return `
             <div class="as-thought-step-line">
-              <span class="as-thought-step-bullet">•</span>
+              <span class="as-thought-step-bullet">${bullet}</span>
               <span>${escapeHtml(label)}</span>
             </div>
           `;
@@ -3108,6 +3447,15 @@
       });
     }
 
+    // Zoom listener for screenshots in thought drawer
+    container.querySelectorAll(".as-thought-screenshot-thumb").forEach((thumbEl) => {
+      thumbEl.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const b64 = thumbEl.getAttribute("data-base64");
+        if (b64) openScreenshotModal(b64);
+      });
+    });
+
     // 2. Copy Button
     const copyBtn = container.querySelector(".as-btn-copy");
     if (copyBtn) {
@@ -3169,24 +3517,128 @@
     contentEl.scrollTop = contentEl.scrollHeight;
   }
 
+  // --------------------------------------------------------------------------
+  // Screenshot Flash & Modal Lightbox Manager
+  // --------------------------------------------------------------------------
+  let flashEl = document.getElementById("as-screenshot-flash");
+  if (!flashEl) {
+    flashEl = document.createElement("div");
+    flashEl.id = "as-screenshot-flash";
+    document.body.appendChild(flashEl);
+  }
+
+  let screenshotModalEl = document.getElementById("as-screenshot-modal");
+  if (!screenshotModalEl) {
+    screenshotModalEl = document.createElement("div");
+    screenshotModalEl.id = "as-screenshot-modal";
+    screenshotModalEl.innerHTML = `
+      <button id="as-screenshot-modal-close" type="button" title="Close preview">✕</button>
+      <img id="as-screenshot-modal-img" src="" alt="Enlarged screenshot preview" />
+    `;
+    document.body.appendChild(screenshotModalEl);
+
+    screenshotModalEl.addEventListener("click", (e) => {
+      if (e.target === screenshotModalEl || e.target.id === "as-screenshot-modal-close") {
+        screenshotModalEl.classList.remove("open");
+      }
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && screenshotModalEl.classList.contains("open")) {
+        screenshotModalEl.classList.remove("open");
+      }
+    });
+  }
+
+  function openScreenshotModal(b64) {
+    if (!screenshotModalEl) return;
+    const img = screenshotModalEl.querySelector("#as-screenshot-modal-img");
+    if (img) img.src = b64.startsWith("data:") ? b64 : `data:image/jpeg;base64,${b64}`;
+    screenshotModalEl.classList.add("open");
+  }
+
+  function triggerScreenshotFlash() {
+    if (!flashEl) {
+      flashEl = document.getElementById("as-screenshot-flash");
+      if (!flashEl) {
+        flashEl = document.createElement("div");
+        flashEl.id = "as-screenshot-flash";
+        document.body.appendChild(flashEl);
+      }
+    }
+    flashEl.classList.remove("flashing");
+    void flashEl.offsetWidth; // trigger reflow
+    flashEl.classList.add("flashing");
+    setTimeout(() => {
+      if (flashEl) flashEl.classList.remove("flashing");
+    }, 280);
+  }
+
   function appendStepCard(text, type = "step") {
     if (heroView) heroView.style.display = "none";
 
     // 1. Route plan updates directly to the inline plan component
     if (type === "plan") {
       updatePlan(text);
-      currentTaskThoughts.push({ type: "plan", text: typeof text === "string" ? text : JSON.stringify(text), time: Date.now() });
+      currentTaskThoughts.push({ type: "plan", stage: "planner", text: typeof text === "string" ? text : JSON.stringify(text), time: Date.now() });
       return; // NO extra card in chat!
     }
 
-    // 2. When an executed browser task arrives, record it in the step's interior dropdown
+    // 2. Realtime model thinking / thoughts
+    if (type === "thinking") {
+      let tData = text;
+      if (typeof text === "string" && text.startsWith("{")) {
+        try { tData = JSON.parse(text); } catch {}
+      }
+      const tText = typeof tData === "object" ? (tData.text || "") : String(tData || "");
+      const stage = typeof tData === "object" ? (tData.stage || "planner") : "planner";
+      const cleanThought = stripStartSymbols(tText);
+
+      let activeItem = planItems.find((item) => item.status === "in-progress");
+      if (activeItem) {
+        if (tData.type === "thought") {
+          if (!activeItem.logs) activeItem.logs = [];
+          activeItem.logs.push(cleanThought);
+          activeItem.currentThought = null;
+        } else {
+          activeItem.currentThought = cleanThought;
+        }
+        renderInlinePlanCard();
+      }
+
+      currentTaskThoughts.push({ type: "thinking", stage, text: cleanThought, time: Date.now() });
+      return; // NO extra card in chat!
+    }
+
+    // 3. Screenshot capture event (triggers screen flash & shows preview)
+    if (type === "screenshot") {
+      triggerScreenshotFlash();
+      let sData = text;
+      if (typeof text === "string" && text.startsWith("{")) {
+        try { sData = JSON.parse(text); } catch {}
+      }
+      const b64 = typeof sData === "object" ? sData.base64 : sData;
+      if (b64) {
+        let activeItem = planItems.find((item) => item.status === "in-progress") || planItems.filter((item) => item.status === "completed").pop();
+        if (activeItem) {
+          activeItem.screenshot = b64;
+          if (!activeItem.logs) activeItem.logs = [];
+          activeItem.logs.push("📸 Vision screenshot captured for verification");
+          renderInlinePlanCard();
+        }
+        currentTaskThoughts.push({ type: "screenshot", base64: b64, time: Date.now() });
+      }
+      return; // NO extra card in chat!
+    }
+
+    // 4. When an executed browser task arrives, record it in the step's interior dropdown
     if (type === "browser") {
       recordStepAction(text);
-      currentTaskThoughts.push({ type: "action", text: stripStartSymbols(text), time: Date.now() });
+      currentTaskThoughts.push({ type: "action", stage: "browser", text: stripStartSymbols(text), time: Date.now() });
       return; // NO extra card in chat!
     }
 
-    // 3. When a critique arrives, record note in step's interior dropdown
+    // 5. When a critique arrives, record note in step's interior dropdown
     if (type === "critique") {
       const cleanCritique = stripStartSymbols(text);
       const activeItem = planItems.find((i) => i.status === "in-progress") || planItems.filter((i) => i.status === "completed").pop();
@@ -3195,11 +3647,11 @@
         activeItem.logs.push("Critique: " + cleanCritique);
         renderInlinePlanCard();
       }
-      currentTaskThoughts.push({ type: "critique", text: cleanCritique, time: Date.now() });
+      currentTaskThoughts.push({ type: "critique", stage: "critique", text: cleanCritique, time: Date.now() });
       return; // NO extra card in chat!
     }
 
-    // 4. When entire task finishes, complete all plan steps and output final AI response!
+    // 6. When entire task finishes, complete all plan steps and output final AI response!
     if (type === "done") {
       completeAllPlanSteps();
       appendAiResponseCard(text);
