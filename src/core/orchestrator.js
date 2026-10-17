@@ -15,6 +15,7 @@ import { ActionRepository } from "../db/repositories/actionRepository.js";
 import { CritiqueRepository } from "../db/repositories/critiqueRepository.js";
 import { LogRepository } from "../db/repositories/logRepository.js";
 import { uiManager } from "../utils/uiManager.js";
+import { extractDomRepresentation, computeDomDiff, isVisualCheckRequired } from "../utils/domHelper.js";
 
 export class Orchestrator extends EventEmitter {
   constructor(options = {}) {
@@ -56,15 +57,6 @@ export class Orchestrator extends EventEmitter {
 
         // 1. Planner Phase
         this._emit(taskId, "planner_thinking", { stepIndex });
-        const currentPage = await browserManager.getPage().catch(() => activePage);
-        if (currentPage && !currentPage.isClosed()) {
-          await uiManager.addSystemMessage(currentPage, JSON.stringify({
-            type: "thinking",
-            stage: "planner",
-            text: `Formulating strategy for Step ${stepIndex}...`,
-          }), "thinking");
-        }
-
         const planResult = await PlannerAgent.plan({
           query: command,
           currentPlan,
@@ -79,14 +71,6 @@ export class Orchestrator extends EventEmitter {
           break;
         }
 
-        if (currentPage && !currentPage.isClosed() && planResult.reasoning) {
-          await uiManager.addSystemMessage(currentPage, JSON.stringify({
-            type: "thought",
-            stage: "planner",
-            text: `Strategy: ${planResult.reasoning}`,
-          }), "thinking");
-        }
-
         currentPlan = planResult.plan;
         const currentInstruction = planResult.next_step;
 
@@ -97,11 +81,17 @@ export class Orchestrator extends EventEmitter {
           steps: currentPlan,
         });
 
+        const currentPage = await browserManager.getPage().catch(() => activePage);
+
         await uiManager.addSystemMessage(currentPage, JSON.stringify({
           plan: currentPlan,
           stepIndex,
           currentInstruction,
         }), "plan");
+
+        if (planResult.reasoning) {
+          await uiManager.addSystemMessage(currentPage, planResult.reasoning, "thought");
+        }
 
         this._emit(taskId, "plan_updated", {
           stepIndex,
@@ -110,9 +100,24 @@ export class Orchestrator extends EventEmitter {
           reasoning: planResult.reasoning,
         });
 
-        // 2. Capture Before-Screenshot (for vision critique)
+        // 2. Pre-Action State Capture (DOM snapshot & conditional before-screenshot)
+        let beforeDom = null;
+        try {
+          if (currentPage && !currentPage.isClosed()) {
+            beforeDom = await extractDomRepresentation(currentPage, "fields");
+          }
+        } catch {
+          // Ignore capture error
+        }
+
+        const preNeedsVision = isVisualCheckRequired({
+          instruction: currentInstruction,
+          verificationMode: config.llm.verificationMode,
+          visionEnabled: config.llm.visionEnabled,
+        });
+
         let beforeScreenshot = null;
-        if (config.llm.visionEnabled) {
+        if (preNeedsVision) {
           try {
             beforeScreenshot = await browserManager.captureScreenshot(`task_${taskId}_step_${stepIndex}_before`);
           } catch {
@@ -122,14 +127,6 @@ export class Orchestrator extends EventEmitter {
 
         // 3. Execution Phase (Browser Agent)
         this._emit(taskId, "browser_acting", { stepIndex, instruction: currentInstruction });
-        if (currentPage && !currentPage.isClosed()) {
-          await uiManager.addSystemMessage(currentPage, JSON.stringify({
-            type: "thinking",
-            stage: "browser",
-            text: `Inspecting page DOM and deciding action for: "${currentInstruction}"...`,
-          }), "thinking");
-        }
-
         const actionResult = await BrowserAgent.executeStep({
           stepInstruction: currentInstruction,
           previousActions,
@@ -141,48 +138,45 @@ export class Orchestrator extends EventEmitter {
           await uiManager.addSystemMessage(currentPage, actionDesc, "browser");
         }
 
-        // 4. Capture After-Screenshot
-        let afterScreenshot = null;
+        // 4. Post-Action State Capture & DOM Diff
+        const pageAfter = await browserManager.getPage().catch(() => currentPage);
+        let afterDom = null;
         try {
-          afterScreenshot = await browserManager.captureScreenshot(`task_${taskId}_step_${stepIndex}_after`);
+          if (pageAfter && !pageAfter.isClosed()) {
+            afterDom = await extractDomRepresentation(pageAfter, "fields");
+          }
         } catch {
           // Ignore capture error
         }
 
-        // Deliver screenshot to UI for camera flash animation and interactive preview
-        if (afterScreenshot && currentPage && !currentPage.isClosed()) {
-          await uiManager.addSystemMessage(currentPage, JSON.stringify({
-            type: "screenshot",
-            base64: afterScreenshot.base64,
-            filename: afterScreenshot.filename,
-            stepIndex,
-          }), "screenshot");
-        }
+        const domDiff = computeDomDiff(beforeDom, afterDom);
 
-        // 5. Visual Analysis (Screenshot diff)
-        let ssAnalysis = "N/A";
-        if (config.llm.visionEnabled && afterScreenshot) {
-          if (currentPage && !currentPage.isClosed()) {
-            await uiManager.addSystemMessage(currentPage, JSON.stringify({
-              type: "thinking",
-              stage: "vision",
-              text: `Analyzing visual page state with Vision model (${config.llm.visionModel})...`,
-            }), "thinking");
+        // 5. Visual Check (Hybrid: only if visual task/canvas or configured)
+        const needsVision = isVisualCheckRequired({
+          instruction: currentInstruction,
+          toolName: actionResult.toolName,
+          domDiff,
+          verificationMode: config.llm.verificationMode,
+          visionEnabled: config.llm.visionEnabled,
+        });
+
+        let afterScreenshot = null;
+        let ssAnalysis = "N/A (DOM diff verified; visual screenshot not required)";
+
+        if (needsVision) {
+          try {
+            afterScreenshot = await browserManager.captureScreenshot(`task_${taskId}_step_${stepIndex}_after`);
+          } catch {
+            // Ignore capture error
           }
 
-          ssAnalysis = await analyzeScreenshots({
-            base64Before: beforeScreenshot ? beforeScreenshot.base64 : null,
-            base64After: afterScreenshot.base64,
-            actionDescription: `${actionResult.toolName} with ${JSON.stringify(actionResult.parameters)}`,
-            expectedResult: currentInstruction,
-          });
-
-          if (currentPage && !currentPage.isClosed() && ssAnalysis && ssAnalysis !== "N/A") {
-            await uiManager.addSystemMessage(currentPage, JSON.stringify({
-              type: "thought",
-              stage: "vision",
-              text: `Vision verification: ${ssAnalysis}`,
-            }), "thinking");
+          if (afterScreenshot) {
+            ssAnalysis = await analyzeScreenshots({
+              base64Before: beforeScreenshot?.base64,
+              base64After: afterScreenshot.base64,
+              actionDescription: `${actionResult.toolName} with ${JSON.stringify(actionResult.parameters)}`,
+              expectedResult: currentInstruction,
+            });
           }
         }
 
@@ -209,6 +203,7 @@ export class Orchestrator extends EventEmitter {
           result: actionResult.result,
           screenshot: afterScreenshot ? afterScreenshot.filename : null,
           ssAnalysis,
+          domDiff: domDiff.diffSummary,
         });
 
         // Check if browser agent explicitly called final_response
@@ -220,25 +215,14 @@ export class Orchestrator extends EventEmitter {
 
         // 6. Evaluation Phase (Critique Agent)
         this._emit(taskId, "critique_evaluating", { stepIndex });
-        if (currentPage && !currentPage.isClosed()) {
-          await uiManager.addSystemMessage(currentPage, JSON.stringify({
-            type: "thinking",
-            stage: "critique",
-            text: "Evaluating step outcome with Critique Agent...",
-          }), "thinking");
-        }
-
         const critiqueResult = await CritiqueAgent.critique({
           currentStep: currentInstruction,
           originalPlan: currentPlan,
           toolResponse: actionResult.result,
+          domDiff: domDiff.diffSummary,
           ssAnalysis,
           model: taskModel,
         });
-
-        if (currentPage && !currentPage.isClosed()) {
-          await uiManager.addSystemMessage(currentPage, `${critiqueResult.verdict}: ${critiqueResult.feedback}`, "critique");
-        }
 
         CritiqueRepository.record({
           taskId,
@@ -255,6 +239,10 @@ export class Orchestrator extends EventEmitter {
           terminate: critiqueResult.terminate,
           finalResponse: critiqueResult.finalResponse,
         });
+
+        if (currentPage && !currentPage.isClosed() && critiqueResult.feedback) {
+          await uiManager.addSystemMessage(currentPage, critiqueResult.feedback, "critique");
+        }
 
         // Terminate condition reached
         if (critiqueResult.terminate) {

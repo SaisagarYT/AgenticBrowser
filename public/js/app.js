@@ -285,7 +285,31 @@ document.addEventListener("DOMContentLoaded", () => {
     critiqueFeedback.textContent = "Waiting for action...";
     critiqueVerdictTag.textContent = "-";
     critiqueVerdictTag.className = "verdict-tag";
-    resultText.innerHTML = `<span class="text-muted">Task is running... Results will appear here.</span>`;
+    resultText.innerHTML = `
+      <div class="dash-skeleton-wrapper">
+        <div class="dash-skeleton-thought-bar">
+          <div class="dash-skeleton-bar dash-skeleton-pill" style="width: 130px; height: 16px;"></div>
+          <div class="dash-skeleton-bar dash-skeleton-pill" style="width: 68px; height: 16px;"></div>
+        </div>
+        <div class="dash-skeleton-lines">
+          <div class="dash-skeleton-bar" style="width: 82%; height: 11px;"></div>
+          <div class="dash-skeleton-bar" style="width: 96%; height: 11px;"></div>
+          <div class="dash-skeleton-bar" style="width: 88%; height: 11px;"></div>
+          <div class="dash-skeleton-bar" style="width: 94%; height: 11px;"></div>
+          <div class="dash-skeleton-bar" style="width: 72%; height: 11px;"></div>
+          <div class="dash-skeleton-bar" style="width: 85%; height: 11px;"></div>
+          <div class="dash-skeleton-bar" style="width: 44%; height: 11px;"></div>
+        </div>
+        <div class="dash-skeleton-toolbar">
+          <div class="dash-skeleton-bar dash-skeleton-tool-btn"></div>
+          <div class="dash-skeleton-bar dash-skeleton-tool-btn"></div>
+          <div class="dash-skeleton-bar dash-skeleton-tool-btn"></div>
+          <div class="dash-skeleton-bar dash-skeleton-tool-btn"></div>
+          <div class="dash-skeleton-divider"></div>
+          <div class="dash-skeleton-bar dash-skeleton-tool-pill"></div>
+        </div>
+      </div>
+    `;
     copyResultBtn.style.display = "none";
   }
 

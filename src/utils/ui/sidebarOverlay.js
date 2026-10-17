@@ -33,10 +33,9 @@
     adaptPageLayout(isCurrentlyCollapsed);
   });
 
-  // Create container and append directly to documentElement for true viewport anchoring
+  // Create container for true viewport anchoring
   const container = document.createElement("div");
   container.id = "agentic-sidebar-wrapper";
-  (document.documentElement || document.body).appendChild(container);
 
   // --------------------------------------------------------------------------
   // 1. Strict shadcn/ui Design Tokens & Styles
@@ -370,12 +369,14 @@
       z-index: 50;
       opacity: 0;
       pointer-events: none;
+      display: none;
       transition: opacity 0.22s ease;
     }
 
     .as-sheet-overlay.open {
       opacity: 1;
       pointer-events: auto;
+      display: block;
     }
 
     .as-sheet {
@@ -394,10 +395,12 @@
       box-sizing: border-box;
       padding: 16px 14px;
       gap: 14px;
+      pointer-events: none;
     }
 
     .as-sheet.open {
       transform: translateX(0);
+      pointer-events: auto;
     }
 
     /* + New Chat Button in Sheet */
@@ -767,273 +770,6 @@
       to { transform: rotate(360deg); }
     }
 
-    /* Realtime Model Thinking Indicator */
-    .as-plan-thinking-live {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin: 6px 0 8px 0;
-      padding: 6px 10px;
-      background: rgba(250, 204, 21, 0.08);
-      border: 1px solid rgba(250, 204, 21, 0.25);
-      border-radius: 6px;
-      font-size: 11.5px;
-      color: #facc15;
-      animation: asPulseThinking 1.4s ease-in-out infinite alternate;
-    }
-
-    #agentic-sidebar-root:not(.dark) .as-plan-thinking-live {
-      background: rgba(202, 138, 4, 0.08);
-      border-color: rgba(202, 138, 4, 0.25);
-      color: #a16207;
-    }
-
-    @keyframes asPulseThinking {
-      0% { opacity: 0.75; transform: translateY(0); }
-      100% { opacity: 1; transform: translateY(-1px); }
-    }
-
-    .as-spinner-pulse {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #facc15;
-      box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.6);
-      animation: asPulseDot 1.4s infinite cubic-bezier(0.66, 0, 0, 1);
-      flex-shrink: 0;
-    }
-
-    @keyframes asPulseDot {
-      to {
-        box-shadow: 0 0 0 8px rgba(250, 204, 21, 0);
-      }
-    }
-
-    /* Step Screenshot Preview */
-    .as-plan-screenshot-box {
-      margin: 8px 0 6px 0;
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-    }
-
-    .as-plan-screenshot-tag {
-      font-size: 10.5px;
-      font-weight: 600;
-      color: #a1a1aa;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .as-plan-screenshot-thumb-wrap {
-      position: relative;
-      max-width: 220px;
-      max-height: 130px;
-      border-radius: 6px;
-      overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-      transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
-    }
-
-    #agentic-sidebar-root:not(.dark) .as-plan-screenshot-thumb-wrap {
-      border-color: rgba(0, 0, 0, 0.15);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    }
-
-    .as-plan-screenshot-thumb-wrap:hover {
-      transform: scale(1.025);
-      border-color: #facc15;
-      box-shadow: 0 4px 14px rgba(250, 204, 21, 0.2);
-    }
-
-    .as-plan-screenshot-thumb {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-
-    .as-plan-screenshot-overlay {
-      position: absolute;
-      bottom: 0;
-      inset-inline: 0;
-      background: rgba(0, 0, 0, 0.72);
-      backdrop-filter: blur(2px);
-      color: #fafafa;
-      font-size: 10px;
-      font-weight: 500;
-      text-align: center;
-      padding: 3px 0;
-    }
-
-    /* Thought Drawer Screenshot Line */
-    .as-thought-screenshot-line {
-      margin: 10px 0 8px 0;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .as-thought-screenshot-header {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .as-thought-screenshot-title {
-      font-size: 11.5px;
-      font-weight: 600;
-      color: #e4e4e7;
-    }
-
-    #agentic-sidebar-root:not(.dark) .as-thought-screenshot-title {
-      color: #27272a;
-    }
-
-    .as-thought-screenshot-thumb {
-      position: relative;
-      max-width: 250px;
-      max-height: 140px;
-      border-radius: 6px;
-      overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      cursor: pointer;
-      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.3);
-      transition: transform 0.16s ease, border-color 0.16s ease;
-    }
-
-    .as-thought-screenshot-thumb:hover {
-      transform: scale(1.02);
-      border-color: #facc15;
-    }
-
-    .as-thought-screenshot-thumb img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-
-    .as-thought-screenshot-hint {
-      position: absolute;
-      bottom: 0;
-      inset-inline: 0;
-      background: rgba(0, 0, 0, 0.75);
-      color: #facc15;
-      font-size: 10px;
-      font-weight: 500;
-      text-align: center;
-      padding: 3px 0;
-    }
-
-    /* Camera Shutter / Flash Animation */
-    #as-screenshot-flash {
-      position: fixed;
-      inset: 0;
-      width: 100vw;
-      height: 100vh;
-      background: radial-gradient(circle at center, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.7) 100%);
-      opacity: 0;
-      pointer-events: none;
-      z-index: 2147483646;
-      transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1);
-      box-shadow: inset 0 0 120px rgba(250, 204, 21, 0.35);
-    }
-
-    #as-screenshot-flash.flashing {
-      opacity: 1;
-      transition: opacity 0.04s ease-in;
-    }
-
-    /* Shutter Viewfinder Brackets */
-    #as-screenshot-flash::before,
-    #as-screenshot-flash::after {
-      content: "";
-      position: absolute;
-      width: 44px;
-      height: 44px;
-      border-color: #facc15;
-      border-style: solid;
-      opacity: 0;
-      transition: opacity 0.15s ease;
-    }
-
-    #as-screenshot-flash.flashing::before {
-      top: 36px;
-      left: 36px;
-      border-width: 3px 0 0 3px;
-      opacity: 1;
-    }
-
-    #as-screenshot-flash.flashing::after {
-      bottom: 36px;
-      right: 36px;
-      border-width: 0 3px 3px 0;
-      opacity: 1;
-    }
-
-    /* Lightbox Modal for Enlarged Preview */
-    #as-screenshot-modal {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.88);
-      backdrop-filter: blur(8px);
-      z-index: 2147483647;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      box-sizing: border-box;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    #as-screenshot-modal.open {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    #as-screenshot-modal img {
-      max-width: 90vw;
-      max-height: 85vh;
-      border-radius: 8px;
-      box-shadow: 0 12px 48px rgba(0, 0, 0, 0.7);
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      object-fit: contain;
-    }
-
-    #as-screenshot-modal-close {
-      position: absolute;
-      top: 20px;
-      right: 24px;
-      background: rgba(255, 255, 255, 0.15);
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      color: #ffffff;
-      border-radius: 50%;
-      width: 38px;
-      height: 38px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      font-size: 16px;
-      font-weight: 600;
-      transition: background 0.15s ease, transform 0.15s ease;
-    }
-
-    #as-screenshot-modal-close:hover {
-      background: #facc15;
-      color: #000000;
-      transform: scale(1.08);
-    }
-
     /* ------------------------------------------------------------------------
        5. Messages & Hero Content Area
        ------------------------------------------------------------------------ */
@@ -1140,25 +876,40 @@
        6. Message Bubbles & Agent Execution Cards (shadcn Card style)
        ------------------------------------------------------------------------ */
     .as-bubble-user {
-      align-self: flex-end;
-      max-width: 86%;
-      padding: 10px 14px;
-      border-radius: calc(var(--radius) + 2px);
-      border-bottom-right-radius: 4px;
-      background: #18181b;
-      color: #fafafa;
-      font-size: 12.5px;
-      line-height: 1.45;
-      font-weight: 450;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-      word-break: break-word;
-      animation: asFadeUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      align-self: flex-end !important;
+      max-width: 86% !important;
+      padding: 10px 14px !important;
+      border-radius: calc(var(--radius) + 2px) !important;
+      border-bottom-right-radius: 4px !important;
+      background: #18181b !important;
+      color: #fafafa !important;
+      font-size: 12.5px !important;
+      line-height: 1.45 !important;
+      font-weight: 450 !important;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+      word-break: break-word !important;
+      animation: asFadeUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+
+    .as-bubble-user,
+    .as-bubble-user *,
+    .as-bubble-user div,
+    .as-bubble-user span,
+    .as-bubble-user p {
+      color: #ffffff !important;
+      -webkit-text-fill-color: #ffffff !important;
     }
 
     #agentic-sidebar-root.dark .as-bubble-user {
-      background: #27272a;
-      color: #ffffff;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: #27272a !important;
+      color: #ffffff !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+
+    #agentic-sidebar-root.dark .as-bubble-user,
+    #agentic-sidebar-root.dark .as-bubble-user * {
+      color: #ffffff !important;
+      -webkit-text-fill-color: #ffffff !important;
     }
 
     .as-card-step {
@@ -1242,6 +993,127 @@
     .as-btn-copy:hover {
       background: hsl(var(--muted));
       color: hsl(var(--foreground));
+    }
+
+    /* ------------------------------------------------------------------------
+       6.4 Pure shadcn/ui Skeleton Animation (Exact Match to AI Response)
+       ------------------------------------------------------------------------ */
+    .as-skeleton-container {
+      align-self: stretch;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 4px;
+      margin-bottom: 6px;
+      padding: 2px 4px;
+      animation: asFadeUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      box-sizing: border-box;
+      font-family: var(--font-sans);
+    }
+
+    /* Top Thought Process Row Placeholder */
+    .as-skeleton-thought-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 4px 2px;
+    }
+
+    /* Middle Response Lines Placeholder */
+    .as-skeleton-lines {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 4px 2px;
+    }
+
+    /* Bottom Action Toolbar Placeholder */
+    .as-skeleton-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 0 0 2px;
+    }
+
+    .as-skeleton-tool-btn {
+      width: 22px !important;
+      height: 22px !important;
+      border-radius: 5px !important;
+      flex-shrink: 0;
+    }
+
+    .as-skeleton-divider {
+      width: 1px;
+      height: 12px;
+      background: rgba(255, 255, 255, 0.12);
+      margin: 0 4px;
+      flex-shrink: 0;
+    }
+
+    #agentic-sidebar-root:not(.dark) .as-skeleton-divider {
+      background: rgba(0, 0, 0, 0.12);
+    }
+
+    .as-skeleton-tool-pill {
+      width: 120px !important;
+      height: 22px !important;
+      border-radius: 5px !important;
+      flex-shrink: 0;
+    }
+
+    /* The Core Shadcn Shimmer Bar */
+    .as-skeleton-bar {
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+      position: relative;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    #agentic-sidebar-root:not(.dark) .as-skeleton-bar {
+      background: rgba(0, 0, 0, 0.07);
+    }
+
+    .as-skeleton-bar::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      transform: translateX(-100%);
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.07) 25%,
+        rgba(255, 255, 255, 0.18) 50%,
+        rgba(255, 255, 255, 0.07) 75%,
+        transparent 100%
+      );
+      animation: asShimmerWave 1.6s infinite cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    #agentic-sidebar-root:not(.dark) .as-skeleton-bar::after {
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(0, 0, 0, 0.04) 25%,
+        rgba(0, 0, 0, 0.12) 50%,
+        rgba(0, 0, 0, 0.04) 75%,
+        transparent 100%
+      );
+    }
+
+    @keyframes asShimmerWave {
+      0% {
+        transform: translateX(-100%);
+      }
+      100% {
+        transform: translateX(100%);
+      }
+    }
+
+    .as-skeleton-pill {
+      border-radius: 9999px !important;
     }
 
     /* ------------------------------------------------------------------------
@@ -2104,7 +1976,6 @@
       padding: 6px 6px 0 6px;
     }
   `;
-  document.head.appendChild(style);
 
   // --------------------------------------------------------------------------
   // 2. Crisp Lucide Vector Icons
@@ -2479,8 +2350,73 @@
   const sheetNewChat = sidebar.querySelector("#as-sheet-new-chat");
   const sheetHistoryList = sidebar.querySelector("#as-sheet-history-list");
 
-  // Initialize layout
-  adaptPageLayout(false);
+  // Mount elements to DOM safely
+  function mountSidebar() {
+    const root = document.documentElement || document.body;
+    if (!root) {
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", mountSidebar, { once: true });
+      } else {
+        setTimeout(mountSidebar, 25);
+      }
+      return;
+    }
+
+    const headTarget = document.head || document.documentElement || document.body;
+    if (headTarget && !document.getElementById("agentic-sidebar-styles")) {
+      headTarget.appendChild(style);
+    }
+
+    if (root && !document.getElementById("agentic-sidebar-wrapper")) {
+      root.appendChild(container);
+    }
+
+    adaptPageLayout(isCurrentlyCollapsed);
+  }
+
+  // Initialize mounting and layout
+  mountSidebar();
+
+  // Watchdog: Keep sidebar mounted across SPAs and dynamic DOM rewrites (YouTube, Twitter, GitHub, etc.)
+  if (!window.__agenticSidebarObserver && window.MutationObserver) {
+    try {
+      const observer = new MutationObserver(() => {
+        const root = document.documentElement || document.body;
+        if (root && !document.getElementById("agentic-sidebar-wrapper")) {
+          mountSidebar();
+        }
+      });
+      const obsTarget = document.documentElement || document.body;
+      if (obsTarget) {
+        observer.observe(obsTarget, { childList: true });
+      }
+      window.__agenticSidebarObserver = observer;
+    } catch {
+      // Ignore
+    }
+  }
+
+  // Watchdog: Re-attach on client-side SPA navigations (pushState / popstate)
+  if (!window.__agenticHistoryHooked && window.history) {
+    window.__agenticHistoryHooked = true;
+    try {
+      const origPushState = history.pushState;
+      history.pushState = function (...args) {
+        const ret = origPushState.apply(this, args);
+        setTimeout(mountSidebar, 80);
+        return ret;
+      };
+      const origReplaceState = history.replaceState;
+      history.replaceState = function (...args) {
+        const ret = origReplaceState.apply(this, args);
+        setTimeout(mountSidebar, 80);
+        return ret;
+      };
+      window.addEventListener("popstate", () => setTimeout(mountSidebar, 80));
+    } catch {
+      // Ignore
+    }
+  }
 
   // Toggle Sheet (Drawer)
   function setSheetOpen(isOpen) {
@@ -2556,7 +2492,8 @@
 
   // Clear Chat History
   function clearChat() {
-    const cards = contentEl.querySelectorAll(".as-bubble-user, .as-card-step, .as-ai-response-container, .as-inline-plan-card");
+    hideSkeleton();
+    const cards = contentEl.querySelectorAll(".as-bubble-user, .as-card-step, .as-ai-response-container, .as-inline-plan-card, .as-skeleton-container");
     cards.forEach((c) => c.remove());
     if (heroView) heroView.style.display = "flex";
     statusLabel.textContent = "Ready. Type a prompt below to automate.";
@@ -2813,6 +2750,7 @@
 
     if (heroView) heroView.style.display = "none";
     appendUserBubble(text, currentAttachments);
+    showSkeleton();
     setStatus("processing", "Planning step-by-step strategy...");
 
     // Record in history list
@@ -2873,6 +2811,7 @@
 
     const bubble = document.createElement("div");
     bubble.className = "as-bubble-user";
+    bubble.setAttribute("style", "color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; background-color: #18181b !important;");
 
     let attachHtml = "";
     if (attachments.length > 0) {
@@ -2883,15 +2822,80 @@
             if (att.isImage) {
               return `<img src="${att.dataUrl}" style="width: 48px; height: 48px; border-radius: 6px; object-fit: cover; border: 1px solid rgba(255, 255, 255, 0.2);" />`;
             }
-            return `<span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 4px; background: rgba(255, 255, 255, 0.15); font-size: 10px;">${ICONS.fileText} ${escapeHtml(att.name)}</span>`;
+            return `<span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 4px; background: rgba(255, 255, 255, 0.15); font-size: 10px; color: #ffffff !important; -webkit-text-fill-color: #ffffff !important;">${ICONS.fileText} ${escapeHtml(att.name)}</span>`;
           })
           .join("") +
         `</div>`;
     }
 
-    bubble.innerHTML = `${attachHtml}<div>${escapeHtml(text || "Uploaded attachment(s)")}</div>`;
+    bubble.innerHTML = `${attachHtml}<div style="color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; word-break: break-word !important; font-size: 12.5px !important; line-height: 1.45 !important;">${escapeHtml(text || "Uploaded attachment(s)")}</div>`;
     contentEl.appendChild(bubble);
     contentEl.scrollTop = contentEl.scrollHeight;
+  }
+
+  // --------------------------------------------------------------------------
+  // Pure shadcn/ui Skeleton AI Loading Animation Component
+  // --------------------------------------------------------------------------
+  let currentSkeletonEl = null;
+
+  function showSkeleton() {
+    hideSkeleton();
+    if (heroView) heroView.style.display = "none";
+
+    const container = document.createElement("div");
+    container.className = "as-skeleton-container";
+    container.id = "as-ai-skeleton";
+
+    container.innerHTML = `
+      <!-- Top Thought Bar Skeleton -->
+      <div class="as-skeleton-thought-bar">
+        <div class="as-skeleton-bar as-skeleton-pill" style="width: 130px; height: 16px;"></div>
+        <div class="as-skeleton-bar as-skeleton-pill" style="width: 68px; height: 16px;"></div>
+      </div>
+
+      <!-- Middle Response Lines Skeleton (7 realistic paragraph lines) -->
+      <div class="as-skeleton-lines">
+        <div class="as-skeleton-bar" style="width: 82%; height: 11px;"></div>
+        <div class="as-skeleton-bar" style="width: 96%; height: 11px;"></div>
+        <div class="as-skeleton-bar" style="width: 88%; height: 11px;"></div>
+        <div class="as-skeleton-bar" style="width: 94%; height: 11px;"></div>
+        <div class="as-skeleton-bar" style="width: 72%; height: 11px;"></div>
+        <div class="as-skeleton-bar" style="width: 85%; height: 11px;"></div>
+        <div class="as-skeleton-bar" style="width: 44%; height: 11px;"></div>
+      </div>
+
+      <!-- Bottom Action Toolbar Skeleton -->
+      <div class="as-skeleton-toolbar">
+        <div class="as-skeleton-bar as-skeleton-tool-btn"></div>
+        <div class="as-skeleton-bar as-skeleton-tool-btn"></div>
+        <div class="as-skeleton-bar as-skeleton-tool-btn"></div>
+        <div class="as-skeleton-bar as-skeleton-tool-btn"></div>
+        <div class="as-skeleton-divider"></div>
+        <div class="as-skeleton-bar as-skeleton-tool-pill"></div>
+      </div>
+    `;
+
+    contentEl.appendChild(container);
+    contentEl.scrollTop = contentEl.scrollHeight;
+    currentSkeletonEl = container;
+  }
+
+  function updateSkeletonStatus() {
+    // Pure symbol-free skeleton
+  }
+
+  function hideSkeleton() {
+    if (currentSkeletonEl) {
+      const el = currentSkeletonEl;
+      currentSkeletonEl = null;
+      el.style.transition = "opacity 0.15s ease, transform 0.15s ease";
+      el.style.opacity = "0";
+      el.style.transform = "translateY(-4px)";
+      setTimeout(() => {
+        if (el.parentNode) el.remove();
+      }, 150);
+    }
+    contentEl.querySelectorAll(".as-skeleton-container").forEach((s) => s.remove());
   }
 
   // --------------------------------------------------------------------------
@@ -2909,7 +2913,11 @@
     if (!currentInlinePlanCard || !contentEl.contains(currentInlinePlanCard)) {
       currentInlinePlanCard = document.createElement("div");
       currentInlinePlanCard.className = "as-inline-plan-card";
-      contentEl.appendChild(currentInlinePlanCard);
+      if (currentSkeletonEl && contentEl.contains(currentSkeletonEl)) {
+        contentEl.insertBefore(currentInlinePlanCard, currentSkeletonEl);
+      } else {
+        contentEl.appendChild(currentInlinePlanCard);
+      }
     }
     return currentInlinePlanCard;
   }
@@ -2942,61 +2950,41 @@
           iconHtml = `<div class="as-plan-status-pending" title="Pending"></div>`;
         }
 
-        const logLines = [];
+        let logsHtml = "";
         if (item.logs && item.logs.length > 0) {
-          item.logs.forEach((log) => {
-            logLines.push(`
+          logsHtml = item.logs
+            .map(
+              (log) => `
               <div class="as-plan-step-interior-line">
                 <span class="as-plan-step-interior-bullet">•</span>
                 <span>${escapeHtml(log)}</span>
               </div>
-            `);
-          });
-        }
-
-        if (item.currentThought && item.status === "in-progress") {
-          logLines.push(`
-            <div class="as-plan-thinking-live">
-              <div class="as-spinner-pulse"></div>
-              <span>${escapeHtml(item.currentThought)}</span>
-            </div>
-          `);
-        } else if (item.status === "in-progress" && (!item.logs || item.logs.length === 0)) {
-          logLines.push(`
+            `
+            )
+            .join("");
+        } else if (item.status === "in-progress") {
+          logsHtml = `
             <div class="as-plan-step-interior-line" style="color: #facc15;">
               <span class="as-plan-step-interior-bullet">•</span>
               <span>Executing step action in browser...</span>
             </div>
-          `);
-        } else if (item.status === "completed" && (!item.logs || item.logs.length === 0)) {
-          logLines.push(`
+          `;
+        } else if (item.status === "completed") {
+          logsHtml = `
             <div class="as-plan-step-interior-line">
               <span class="as-plan-step-interior-bullet">•</span>
               <span>Step completed</span>
             </div>
-          `);
-        } else if (item.status === "pending" && (!item.logs || item.logs.length === 0)) {
-          logLines.push(`
+          `;
+        } else {
+          logsHtml = `
             <div class="as-plan-step-interior-line" style="color: #71717a;">
               <span class="as-plan-step-interior-bullet">•</span>
               <span>Waiting to execute...</span>
             </div>
-          `);
+          `;
         }
 
-        if (item.screenshot) {
-          logLines.push(`
-            <div class="as-plan-screenshot-box" data-base64="${item.screenshot}">
-              <div class="as-plan-screenshot-tag">📸 Screenshot Snapshot</div>
-              <div class="as-plan-screenshot-thumb-wrap">
-                <img src="data:image/jpeg;base64,${item.screenshot}" alt="Step Screenshot" class="as-plan-screenshot-thumb" />
-                <div class="as-plan-screenshot-overlay">🔍 Click to zoom</div>
-              </div>
-            </div>
-          `);
-        }
-
-        const logsHtml = logLines.join("");
         const isOpen = Boolean(item.isOpen);
 
         return `
@@ -3027,33 +3015,25 @@
       </div>
     `;
 
-    // Click handler to toggle interior dropdown section (only ONE open at any time)
+    // Click handler to toggle interior dropdown section for each step
     card.querySelectorAll(".as-inline-plan-item").forEach((itemEl) => {
       itemEl.addEventListener("click", (e) => {
         e.stopPropagation();
         const idx = parseInt(itemEl.getAttribute("data-idx"), 10);
         if (planItems[idx]) {
           const willOpen = !planItems[idx].isOpen;
-          // Close all other steps so only one step stays open
-          planItems.forEach((it, i) => {
-            it.isOpen = (i === idx) ? willOpen : false;
+          planItems.forEach((p, i) => {
+            p.isOpen = i === idx ? willOpen : false;
           });
           renderInlinePlanCard();
         }
       });
     });
 
-    // Screenshot thumbnail zoom click handler
-    card.querySelectorAll(".as-plan-screenshot-thumb-wrap").forEach((thumbEl) => {
-      thumbEl.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const box = thumbEl.closest(".as-plan-screenshot-box");
-        const b64 = box?.getAttribute("data-base64");
-        if (b64) openScreenshotModal(b64);
-      });
-    });
-
     contentEl.scrollTop = contentEl.scrollHeight;
+    requestAnimationFrame(() => {
+      contentEl.scrollTop = contentEl.scrollHeight;
+    });
   }
 
   function updatePlan(data) {
@@ -3061,7 +3041,7 @@
     if (typeof data === "string" && data.trim().startsWith("{")) {
       try {
         parsed = JSON.parse(data);
-      } catch {}
+      } catch { }
     } else if (typeof data === "object" && data !== null) {
       parsed = data;
     }
@@ -3087,33 +3067,31 @@
             text: cleanText,
             status,
             logs: [],
-            screenshot: null,
-            currentThought: null,
-            isOpen: (idx === activeIdx && status === "in-progress"),
+            isOpen: idx === activeIdx,
           });
         } else {
           existing.text = cleanText;
           if (idx < activeIdx) {
             existing.status = "completed";
-            existing.isOpen = false; // Completed steps stay closed!
-            existing.currentThought = null;
+            existing.isOpen = false;
           } else if (idx === activeIdx) {
-            existing.status = "in-progress";
-            existing.isOpen = true; // Only currently executing step stays open!
+            if (existing.status !== "completed") {
+              existing.status = "in-progress";
+            }
+            existing.isOpen = true;
           } else {
             existing.status = "pending";
-            existing.isOpen = false; // Pending steps stay closed!
-            existing.currentThought = null;
+            existing.isOpen = false;
           }
         }
       });
 
-      // Strictly ensure only currently executing step is open
       planItems.forEach((item, idx) => {
-        if (idx !== activeIdx || item.status !== "in-progress") {
-          item.isOpen = false;
-        } else {
+        if (idx === activeIdx && item.status !== "completed") {
+          item.status = "in-progress";
           item.isOpen = true;
+        } else if (idx !== activeIdx) {
+          item.isOpen = false;
         }
       });
 
@@ -3150,8 +3128,6 @@
           text: desc,
           status: "in-progress",
           logs: [],
-          screenshot: null,
-          currentThought: null,
           isOpen: true,
         });
       }
@@ -3166,11 +3142,15 @@
         text: clean,
         status: "in-progress",
         logs: [],
-        screenshot: null,
-        currentThought: null,
         isOpen: true,
       });
     }
+
+    planItems.forEach((item) => {
+      if (item.status !== "in-progress") {
+        item.isOpen = false;
+      }
+    });
 
     renderInlinePlanCard();
   }
@@ -3189,14 +3169,13 @@
       if (!activeItem.logs) activeItem.logs = [];
       activeItem.logs.push(cleanAction);
       activeItem.status = "completed";
-      activeItem.isOpen = false; // Close completed step!
-      activeItem.currentThought = null;
+      activeItem.isOpen = false;
 
-      // Advance to next pending step and open it!
+      // Advance to next pending step and open it exclusively
       const nextPending = planItems.find((item) => item.status === "pending");
       if (nextPending) {
         nextPending.status = "in-progress";
-        nextPending.isOpen = true; // Open only currently executing!
+        nextPending.isOpen = true;
       }
     } else if (planItems.length > 0) {
       const last = planItems[planItems.length - 1];
@@ -3204,13 +3183,20 @@
       last.logs.push(cleanAction);
     }
 
+    // Ensure strictly only the in-progress step is open
+    planItems.forEach((item) => {
+      if (item.status !== "in-progress") {
+        item.isOpen = false;
+      }
+    });
+
     renderInlinePlanCard();
   }
 
   function completeAllPlanSteps() {
     planItems.forEach((item) => {
       item.status = "completed";
-      item.isOpen = false; // All close when done!
+      item.isOpen = false;
     });
     renderInlinePlanCard();
   }
@@ -3341,31 +3327,10 @@
     if (currentTaskThoughts.length > 0) {
       thoughtsListHtml = currentTaskThoughts
         .map((t) => {
-          if (t.type === "screenshot" && t.base64) {
-            return `
-              <div class="as-thought-screenshot-line">
-                <div class="as-thought-screenshot-header">
-                  <span class="as-thought-step-bullet">📸</span>
-                  <span class="as-thought-screenshot-title">Page Snapshot (Vision Verification)</span>
-                </div>
-                <div class="as-thought-screenshot-thumb" data-base64="${t.base64}">
-                  <img src="data:image/jpeg;base64,${t.base64}" alt="Screenshot" />
-                  <div class="as-thought-screenshot-hint">🔍 Click to zoom</div>
-                </div>
-              </div>
-            `;
-          }
-
           let label = stripStartSymbols(t.text);
-          let bullet = "•";
-          if (t.stage === "planner" || t.type === "plan") bullet = "🧠";
-          else if (t.stage === "browser" || t.type === "action") bullet = "⚡";
-          else if (t.stage === "vision") bullet = "👁️";
-          else if (t.stage === "critique" || t.type === "critique") bullet = "🎯";
-
           return `
             <div class="as-thought-step-line">
-              <span class="as-thought-step-bullet">${bullet}</span>
+              <span class="as-thought-step-bullet">•</span>
               <span>${escapeHtml(label)}</span>
             </div>
           `;
@@ -3447,15 +3412,6 @@
       });
     }
 
-    // Zoom listener for screenshots in thought drawer
-    container.querySelectorAll(".as-thought-screenshot-thumb").forEach((thumbEl) => {
-      thumbEl.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const b64 = thumbEl.getAttribute("data-base64");
-        if (b64) openScreenshotModal(b64);
-      });
-    });
-
     // 2. Copy Button
     const copyBtn = container.querySelector(".as-btn-copy");
     if (copyBtn) {
@@ -3468,7 +3424,7 @@
             copyBtn.innerHTML = ICONS.copy;
             copyBtn.classList.remove("copied");
           }, 2000);
-        } catch {}
+        } catch { }
       });
     }
 
@@ -3512,6 +3468,15 @@
         textareaEl.focus();
       });
     }
+
+    // Zoom listener for screenshots in thought drawer
+    container.querySelectorAll(".as-thought-screenshot-thumb").forEach((thumbEl) => {
+      thumbEl.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const b64 = thumbEl.getAttribute("data-base64");
+        if (b64) openScreenshotModal(b64);
+      });
+    });
 
     contentEl.appendChild(container);
     contentEl.scrollTop = contentEl.scrollHeight;
@@ -3585,7 +3550,7 @@
     }
 
     // 2. Realtime model thinking / thoughts
-    if (type === "thinking") {
+    if (type === "thinking" || type === "thought") {
       let tData = text;
       if (typeof text === "string" && text.startsWith("{")) {
         try { tData = JSON.parse(text); } catch {}
@@ -3596,9 +3561,9 @@
 
       let activeItem = planItems.find((item) => item.status === "in-progress");
       if (activeItem) {
-        if (tData.type === "thought") {
+        if (tData.type === "thought" || type === "thought") {
           if (!activeItem.logs) activeItem.logs = [];
-          activeItem.logs.push(cleanThought);
+          activeItem.logs.push("Reasoning: " + cleanThought);
           activeItem.currentThought = null;
         } else {
           activeItem.currentThought = cleanThought;
@@ -3641,7 +3606,7 @@
     // 5. When a critique arrives, record note in step's interior dropdown
     if (type === "critique") {
       const cleanCritique = stripStartSymbols(text);
-      const activeItem = planItems.find((i) => i.status === "in-progress") || planItems.filter((i) => i.status === "completed").pop();
+      const activeItem = planItems.find((item) => item.status === "in-progress") || planItems.filter((item) => item.status === "completed").pop();
       if (activeItem) {
         if (!activeItem.logs) activeItem.logs = [];
         activeItem.logs.push("Critique: " + cleanCritique);
@@ -3654,11 +3619,13 @@
     // 6. When entire task finishes, complete all plan steps and output final AI response!
     if (type === "done") {
       completeAllPlanSteps();
+      hideSkeleton();
       appendAiResponseCard(text);
       return;
     }
 
     // Fallback for any other system message
+    hideSkeleton();
     const card = document.createElement("div");
     card.className = "as-card-step";
     const cleanText = stripStartSymbols(text);
@@ -3698,10 +3665,15 @@
   window.agenticSidebar = {
     setCollapsed,
     toggleCollapsed,
-    addUserMessage: (msg) => appendUserBubble(msg),
+    addUserMessage: (msg) => {
+      appendUserBubble(msg);
+      showSkeleton();
+    },
     addSystemMessage: (msg, type = "step") => appendStepCard(msg, type),
     setStatus: (status) => setStatus("idle", status),
     setProcessing: (status) => setStatus("processing", status),
+    showSkeleton: (status) => showSkeleton(status),
+    hideSkeleton: () => hideSkeleton(),
     clearMessages: clearChat,
   };
 })();

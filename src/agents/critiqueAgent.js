@@ -13,7 +13,7 @@ You are also responsible for the termination of the entire workflow.
 </agent_role>
 
 <rules>
-1. Evaluate whether the current step was successfully executed based on the tool response and screenshot analysis.
+1. Evaluate whether the current step was successfully executed based on the tool response, DOM state changes / diff, and visual analysis (if applicable).
 2. If the user's intent or goal is satisfied, set "terminate": true AND provide the complete, detailed final answer in "final_response".
 3. STRICT PROHIBITION: Never provide generic filler in "final_response" like "Information has been compiled", "The task was executed", or canned introductions ("Hello! I'm your Web Navigation Browser Agent..."). You MUST output the actual requested data, prices, dates, summaries, or a natural summary of what was accomplished on the webpage!
 4. If the task is NOT yet complete, set "terminate": false, leave "final_response": null, and provide clear, specific guidance in "feedback" telling the Planner what succeeded, what failed, and what to do next.
@@ -32,7 +32,7 @@ You MUST respond with valid JSON adhering to this exact schema:
 `.trim();
 
 export class CritiqueAgent {
-  static async critique({ currentStep, originalPlan, toolResponse, ssAnalysis = "N/A", model = null }) {
+  static async critique({ currentStep, originalPlan, toolResponse, domDiff = "N/A", ssAnalysis = "N/A", model = null }) {
     logger.info(`[CritiqueAgent] Evaluating outcome of step: "${currentStep}" [Model: ${model || "default"}]`);
 
     const userPrompt = `
@@ -44,6 +44,9 @@ Current Step Attempted:
 
 Browser Tool Execution Response:
 ${typeof toolResponse === "object" ? JSON.stringify(toolResponse, null, 2) : toolResponse}
+
+DOM State Changes / Diff:
+${domDiff}
 
 Screenshot Visual Analysis:
 ${ssAnalysis}

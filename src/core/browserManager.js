@@ -30,6 +30,8 @@ class BrowserManager {
         "--disable-blink-features=AutomationControlled",
         "--disable-dev-shm-usage",
         "--start-maximized",
+        "--disable-web-security",
+        "--disable-features=IsolateOrigins,site-per-process",
       ],
     };
 
@@ -41,6 +43,8 @@ class BrowserManager {
       this.context = await chromium.launchPersistentContext(config.browser.storageDir, {
         ...launchOptions,
         viewport: null,
+        bypassCSP: true,
+        ignoreHTTPSErrors: true,
         userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
       });
 
@@ -50,9 +54,22 @@ class BrowserManager {
       this.browser = await chromium.launch(launchOptions);
       this.context = await this.browser.newContext({
         viewport: null,
+        bypassCSP: true,
+        ignoreHTTPSErrors: true,
         userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
       });
       this.page = await this.context.newPage();
+    }
+
+    // Auto-inject sidebar on every document context before any page scripts run
+    const { uiManager } = await import("../utils/uiManager.js");
+    const sidebarScript = uiManager.getSidebarScript();
+    if (sidebarScript) {
+      try {
+        await this.context.addInitScript({ content: sidebarScript });
+      } catch (err) {
+        logger.debug(`Context addInitScript notice: ${err.message}`);
+      }
     }
 
     // Expose process_task for the in-page chat overlay
@@ -76,34 +93,39 @@ class BrowserManager {
       // Ignore if already exposed
     }
 
-    // Set standard navigation timeout (30s)
-    this.page.setDefaultTimeout(30000);
-    this.page.setDefaultNavigationTimeout(45000);
+    // Comprehensive lifecycle listeners: inject overlay on domcontentloaded, load, and frame navigation
+    const attachPageOverlayListeners = (targetPage) => {
+      targetPage.setDefaultTimeout(30000);
+      targetPage.setDefaultNavigationTimeout(45000);
 
-    // Auto-inject overlay on page navigation
-    const { uiManager } = await import("../utils/uiManager.js");
-    this.page.on("load", async () => {
-      try {
-        await uiManager.injectOverlay(this.page);
-      } catch {
-        // Ignore
-      }
-    });
+      targetPage.on("domcontentloaded", async () => {
+        try {
+          await uiManager.injectOverlay(targetPage);
+        } catch { }
+      });
+
+      targetPage.on("load", async () => {
+        try {
+          await uiManager.injectOverlay(targetPage);
+        } catch { }
+      });
+
+      targetPage.on("framenavigated", async (frame) => {
+        if (frame === targetPage.mainFrame()) {
+          try {
+            await uiManager.injectOverlay(targetPage);
+          } catch { }
+        }
+      });
+    };
+
+    attachPageOverlayListeners(this.page);
 
     // Auto-track new tabs and popups (e.g. e-commerce product links with target="_blank")
     this.context.on("page", async (newPage) => {
       logger.info(`[BrowserManager] Switching active focus to new tab: ${newPage.url()}`);
       this.page = newPage;
-      newPage.setDefaultTimeout(30000);
-      newPage.setDefaultNavigationTimeout(45000);
-
-      newPage.on("load", async () => {
-        try {
-          await uiManager.injectOverlay(newPage);
-        } catch {
-          // Ignore
-        }
-      });
+      attachPageOverlayListeners(newPage);
 
       try {
         await uiManager.injectOverlay(newPage);

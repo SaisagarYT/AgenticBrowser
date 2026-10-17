@@ -28,6 +28,7 @@ export const config = {
     textApiKey: process.env.AGENTIC_BROWSER_TEXT_API_KEY || process.env.NVIDIA_API_KEY || process.env.OPENAI_API_KEY || "",
     textBaseUrl: process.env.AGENTIC_BROWSER_TEXT_BASE_URL || "https://api.openai.com/v1",
 
+    verificationMode: process.env.AGENTIC_BROWSER_VERIFICATION_MODE || "hybrid",
     visionEnabled: process.env.AGENTIC_BROWSER_SS_ENABLED !== "false",
     visionModel: process.env.AGENTIC_BROWSER_SS_MODEL || "gpt-4o",
     visionApiKey: process.env.AGENTIC_BROWSER_SS_API_KEY || process.env.NVIDIA_API_KEY || process.env.OPENAI_API_KEY || "",

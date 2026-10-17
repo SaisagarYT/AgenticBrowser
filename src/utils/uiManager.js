@@ -22,7 +22,7 @@ export class UIManager {
     return null;
   }
 
-  async injectOverlay(page) {
+  async injectOverlay(page, retries = 2) {
     if (!page || page.isClosed()) return;
 
     try {
@@ -35,14 +35,25 @@ export class UIManager {
       // Replay existing chat history if any
       await this.replayHistory(page);
     } catch (err) {
-      // Ignore if page is navigating or detached
-      if (!err.message.includes("Execution context was destroyed") && !err.message.includes("Frame was detached")) {
+      const isNavigating = err.message.includes("Execution context was destroyed") ||
+        err.message.includes("Frame was detached") ||
+        err.message.includes("navigating") ||
+        err.message.includes("Cannot find context");
+
+      if (isNavigating && retries > 0) {
+        setTimeout(() => {
+          if (!page.isClosed()) {
+            this.injectOverlay(page, retries - 1).catch(() => {});
+          }
+        }, 250);
+      } else if (!isNavigating) {
         logger.debug(`Sidebar injection notice: ${err.message}`);
       }
     }
   }
 
   async addUserMessage(page, message, fromOverlay = false) {
+    this.statusText = "Planning step-by-step strategy...";
     this.conversationHistory.push({ from: "user", message });
     if (!page || page.isClosed()) return;
 
@@ -90,6 +101,7 @@ export class UIManager {
 
     try {
       await page.evaluate(() => {
+        window.agenticSidebar?.hideSkeleton?.();
         window.agenticSidebar?.setStatus("Task completed! Type your next instruction below.");
       });
     } catch {

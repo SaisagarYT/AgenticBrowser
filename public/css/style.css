@@ -533,3 +533,91 @@ body {
   padding: 24px 0;
   font-size: 0.85rem;
 }
+
+/* shadcn Shimmer Skeleton Animation */
+.dash-skeleton-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 0;
+  width: 100%;
+}
+
+.dash-skeleton-thought-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.dash-skeleton-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.dash-skeleton-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-top: 4px;
+}
+
+.dash-skeleton-tool-btn {
+  width: 22px !important;
+  height: 22px !important;
+  border-radius: 5px !important;
+  flex-shrink: 0;
+}
+
+.dash-skeleton-divider {
+  width: 1px;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.12);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+.dash-skeleton-tool-pill {
+  width: 115px !important;
+  height: 22px !important;
+  border-radius: 5px !important;
+  flex-shrink: 0;
+}
+
+.dash-skeleton-bar {
+  height: 12px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.07);
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.dash-skeleton-pill {
+  border-radius: 9999px !important;
+}
+
+.dash-skeleton-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.07) 25%,
+    rgba(99, 102, 241, 0.22) 50%,
+    rgba(255, 255, 255, 0.07) 75%,
+    transparent 100%
+  );
+  animation: dashShimmer 1.6s infinite cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes dashShimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+
