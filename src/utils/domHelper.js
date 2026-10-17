@@ -16,7 +16,58 @@ export const DOM_INJECTION_SCRIPT = `
     }
   });
 
-  // 2. Render visual Set-of-Marks (SoM) bounding boxes & numbered tags
+  // 2. Helper to find closest meaningful semantic container
+  function getSemanticContainer(el) {
+    let cur = el.parentElement;
+    let best = null;
+    while (cur && cur !== document.body && cur !== document.documentElement) {
+      if (cur.id === 'agentic-sidebar-wrapper' || cur.id === 'agentic-rail-root' || cur.id === 'agentic-som-overlay') {
+        return null;
+      }
+      const tag = cur.tagName.toLowerCase();
+      const role = (cur.getAttribute('role') || '').toLowerCase();
+      const cls = typeof cur.className === 'string' ? cur.className.toLowerCase() : '';
+      const id = (cur.id || '').toLowerCase();
+
+      const isSemanticTag = ['article', 'section', 'nav', 'header', 'footer', 'aside', 'form', 'table'].includes(tag);
+      const isSemanticRole = ['dialog', 'region', 'navigation', 'search', 'feed', 'listitem', 'form'].includes(role);
+      const isCardClass = /(^|\s|-|_)(card|item|product|result|panel|box|container|widget|entry|listing)($|\s|-|_)/i.test(cls) ||
+                          /(^|\s|-|_)(card|item|product|result|panel|box|widget)($|\s|-|_)/i.test(id);
+
+      if (isSemanticTag || isSemanticRole || isCardClass) {
+        const rect = cur.getBoundingClientRect();
+        if (rect.width >= 35 && rect.height >= 24) {
+          best = cur;
+          if (tag === 'article' || tag === 'form' || isCardClass) break;
+        }
+      }
+      cur = cur.parentElement;
+    }
+    return best;
+  }
+
+  function getContainerLabel(container) {
+    if (!container) return 'Component';
+    const tag = container.tagName.toLowerCase();
+    const aria = container.getAttribute('aria-label') || container.getAttribute('title');
+    if (aria && aria.trim()) return aria.trim().slice(0, 32);
+
+    const h = container.querySelector('h1, h2, h3, h4, h5, h6, [class*="title"], [class*="name"]');
+    if (h && h.innerText && h.innerText.trim()) {
+      return h.innerText.trim().slice(0, 32);
+    }
+
+    if (tag === 'form') return 'Form Container';
+    if (tag === 'nav') return 'Navigation Bar';
+    if (tag === 'header') return 'Header';
+    if (tag === 'footer') return 'Footer';
+    if (tag === 'table') return 'Data Table';
+    if (tag === 'article') return 'Content Card';
+    if (tag === 'section') return 'Section Block';
+    return 'Card Container';
+  }
+
+  // 3. Render visual Set-of-Marks (SoM) bounding boxes & numbered tags
   function renderVisualMarks() {
     let overlay = document.getElementById('agentic-som-overlay');
     if (!overlay) {
@@ -51,13 +102,70 @@ export const DOM_INJECTION_SCRIPT = `
     const interactive = document.querySelectorAll('[mmid]');
     const fragment = document.createDocumentFragment();
 
+    // Pass 1: Render outer semantic container bounding boxes (Phase 3)
+    const containersDrawn = new Set();
+    interactive.forEach((el) => {
+      if (el.closest('#agentic-sidebar-wrapper') || el.closest('#agentic-rail-root') || el.closest('#agentic-som-overlay')) return;
+      const container = getSemanticContainer(el);
+      if (!container || containersDrawn.has(container)) return;
+      containersDrawn.add(container);
+
+      const cRect = container.getBoundingClientRect();
+      if (cRect.width < 40 || cRect.height < 25) return;
+      if (cRect.bottom < 0 || cRect.top > vh || cRect.right < 0 || cRect.left > vw) return;
+      // Skip if it takes up the entire viewport
+      if (cRect.width >= vw * 0.98 && cRect.height >= vh * 0.98) return;
+
+      const cBox = document.createElement('div');
+      cBox.className = 'as-som-container-box';
+      cBox.style.cssText = \`
+        position: absolute !important;
+        left: \${Math.round(cRect.left)}px !important;
+        top: \${Math.round(cRect.top)}px !important;
+        width: \${Math.round(cRect.width)}px !important;
+        height: \${Math.round(cRect.height)}px !important;
+        border: 1.5px dashed rgba(59, 130, 246, 0.45) !important;
+        background-color: rgba(59, 130, 246, 0.015) !important;
+        box-sizing: border-box !important;
+        pointer-events: none !important;
+        border-radius: 4px !important;
+      \`;
+
+      const cBadge = document.createElement('span');
+      cBadge.className = 'as-som-container-badge';
+      cBadge.textContent = getContainerLabel(container);
+      const cBadgeAbove = cRect.top >= 16;
+      cBadge.style.cssText = \`
+        position: absolute !important;
+        top: \${cBadgeAbove ? -14 : 2}px !important;
+        left: 4px !important;
+        background: #0f172a !important;
+        color: #93c5fd !important;
+        border: 1px solid rgba(147, 197, 253, 0.35) !important;
+        font-size: 8.5px !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.4px !important;
+        padding: 1px 5px !important;
+        border-radius: 3px !important;
+        white-space: nowrap !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+        pointer-events: none !important;
+        user-select: none !important;
+        z-index: 1 !important;
+      \`;
+
+      cBox.appendChild(cBadge);
+      fragment.appendChild(cBox);
+    });
+
+    // Pass 2: Render individual interactive element boxes (Phase 1)
     interactive.forEach((el) => {
       if (el.closest('#agentic-sidebar-wrapper') || el.closest('#agentic-rail-root') || el.closest('#agentic-som-overlay')) {
         return;
       }
 
       const rect = el.getBoundingClientRect();
-      // Only render if visible in viewport and has meaningful dimensions
       if (rect.width < 4 || rect.height < 4) return;
       if (rect.bottom < 0 || rect.top > vh || rect.right < 0 || rect.left > vw) return;
 
@@ -87,7 +195,6 @@ export const DOM_INJECTION_SCRIPT = `
       badge.className = 'as-som-badge';
       badge.textContent = mmid;
 
-      // Position badge: top-left corner, slightly above or inside if near top edge
       const badgeAbove = rect.top >= 15;
       badge.style.cssText = \`
         position: absolute !important;
@@ -353,11 +460,86 @@ export async function extractDomRepresentation(page, contentType = "fields") {
       return desc;
     });
 
+    // 2. Build semantic container blocks grouping (Phase 3)
+    function findContainer(el) {
+      let cur = el.parentElement;
+      let best = null;
+      while (cur && cur !== document.body && cur !== document.documentElement) {
+        if (cur.id === 'agentic-sidebar-wrapper' || cur.id === 'agentic-rail-root' || cur.id === 'agentic-som-overlay') return null;
+        const tag = cur.tagName.toLowerCase();
+        const role = (cur.getAttribute('role') || '').toLowerCase();
+        const cls = typeof cur.className === 'string' ? cur.className.toLowerCase() : '';
+        const id = (cur.id || '').toLowerCase();
+
+        const isSemanticTag = ['article', 'section', 'nav', 'header', 'footer', 'aside', 'form', 'table'].includes(tag);
+        const isSemanticRole = ['dialog', 'region', 'navigation', 'search', 'feed', 'listitem', 'form'].includes(role);
+        const isCardClass = /(^|\s|-|_)(card|item|product|result|panel|box|container|widget|entry|listing)($|\s|-|_)/i.test(cls) ||
+                            /(^|\s|-|_)(card|item|product|result|panel|box|widget)($|\s|-|_)/i.test(id);
+
+        if (isSemanticTag || isSemanticRole || isCardClass) {
+          const rect = cur.getBoundingClientRect();
+          if (rect.width >= 35 && rect.height >= 24) {
+            best = cur;
+            if (tag === 'article' || tag === 'form' || isCardClass) break;
+          }
+        }
+        cur = cur.parentElement;
+      }
+      return best;
+    }
+
+    function getLabel(c) {
+      if (!c) return 'General Section';
+      const aria = c.getAttribute('aria-label') || c.getAttribute('title');
+      if (aria && aria.trim()) return aria.trim().slice(0, 40);
+      const h = c.querySelector('h1, h2, h3, h4, h5, h6, [class*="title"], [class*="name"]');
+      if (h && h.innerText && h.innerText.trim()) return h.innerText.trim().slice(0, 40);
+      const tag = c.tagName.toLowerCase();
+      if (tag === 'form') return 'Form Container';
+      if (tag === 'nav') return 'Navigation Bar';
+      if (tag === 'header') return 'Header';
+      if (tag === 'footer') return 'Footer';
+      if (tag === 'table') return 'Data Table';
+      if (tag === 'article') return 'Content Card';
+      if (tag === 'section') return 'Section Block';
+      return 'Component Block';
+    }
+
+    const blockMap = new Map();
+    interactive.forEach((el, idx) => {
+      const container = findContainer(el);
+      const key = container || document.body;
+      if (!blockMap.has(key)) {
+        blockMap.set(key, {
+          container,
+          label: getLabel(container),
+          tag: container ? container.tagName.toLowerCase() : 'body',
+          elements: [],
+        });
+      }
+      blockMap.get(key).elements.push(items[idx]);
+    });
+
+    let bCounter = 1;
+    const semanticBlocks = [];
+    for (const [, bData] of blockMap.entries()) {
+      if (bData.elements.length > 0) {
+        semanticBlocks.push({
+          blockId: bCounter++,
+          label: bData.label,
+          type: bData.tag,
+          elementsCount: bData.elements.length,
+          elements: bData.elements,
+        });
+      }
+    }
+
     return {
       title: document.title,
       url: window.location.href,
       hasCanvas,
       interactiveElements: items.slice(0, 150),
+      semanticBlocks: semanticBlocks.slice(0, 40),
     };
   });
 }
