@@ -2,14 +2,127 @@
 
 export const DOM_INJECTION_SCRIPT = `
 (() => {
+  // 1. Tag all interactive elements with mmid if not already tagged
   let counter = 1;
   const elements = document.querySelectorAll('a, button, input, textarea, select, [role="button"], [role="link"], [role="checkbox"], [tabindex], [contenteditable="true"]');
   
   elements.forEach((el) => {
+    // Skip anything inside the agentic sidebar, rail dock, or existing overlay
+    if (el.closest('#agentic-sidebar-wrapper') || el.closest('#agentic-rail-root') || el.closest('#agentic-som-overlay')) {
+      return;
+    }
     if (!el.getAttribute('mmid')) {
       el.setAttribute('mmid', String(counter++));
     }
   });
+
+  // 2. Render visual Set-of-Marks (SoM) bounding boxes & numbered tags
+  function renderVisualMarks() {
+    let overlay = document.getElementById('agentic-som-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'agentic-som-overlay';
+      overlay.style.cssText = 'position: fixed !important; top: 0px !important; left: 0px !important; width: 100vw !important; height: 100vh !important; pointer-events: none !important; z-index: 2147483640 !important; overflow: hidden !important;';
+      
+      const targetMount = document.body || document.documentElement;
+      if (targetMount) {
+        targetMount.appendChild(overlay);
+      }
+
+      let scrollRaf = null;
+      const handleViewportUpdate = () => {
+        if (scrollRaf) return;
+        scrollRaf = requestAnimationFrame(() => {
+          scrollRaf = null;
+          if (typeof window.__renderVisualMarks === 'function') {
+            window.__renderVisualMarks();
+          }
+        });
+      };
+
+      window.addEventListener('scroll', handleViewportUpdate, { passive: true });
+      window.addEventListener('resize', handleViewportUpdate, { passive: true });
+    } else {
+      overlay.innerHTML = '';
+    }
+
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const interactive = document.querySelectorAll('[mmid]');
+    const fragment = document.createDocumentFragment();
+
+    interactive.forEach((el) => {
+      if (el.closest('#agentic-sidebar-wrapper') || el.closest('#agentic-rail-root') || el.closest('#agentic-som-overlay')) {
+        return;
+      }
+
+      const rect = el.getBoundingClientRect();
+      // Only render if visible in viewport and has meaningful dimensions
+      if (rect.width < 4 || rect.height < 4) return;
+      if (rect.bottom < 0 || rect.top > vh || rect.right < 0 || rect.left > vw) return;
+
+      const style = window.getComputedStyle(el);
+      if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return;
+
+      const mmid = el.getAttribute('mmid');
+      const box = document.createElement('div');
+      box.className = 'as-som-box';
+      box.setAttribute('data-mmid', mmid);
+
+      box.style.cssText = \`
+        position: absolute !important;
+        left: \${Math.round(rect.left)}px !important;
+        top: \${Math.round(rect.top)}px !important;
+        width: \${Math.round(rect.width)}px !important;
+        height: \${Math.round(rect.height)}px !important;
+        border: 1.5px solid rgba(37, 99, 235, 0.78) !important;
+        background-color: rgba(37, 99, 235, 0.04) !important;
+        box-sizing: border-box !important;
+        pointer-events: none !important;
+        border-radius: 2px !important;
+        transition: border-color 0.15s ease, background-color 0.15s ease !important;
+      \`;
+
+      const badge = document.createElement('span');
+      badge.className = 'as-som-badge';
+      badge.textContent = mmid;
+
+      // Position badge: top-left corner, slightly above or inside if near top edge
+      const badgeAbove = rect.top >= 15;
+      badge.style.cssText = \`
+        position: absolute !important;
+        top: \${badgeAbove ? -14 : 0}px !important;
+        left: 0px !important;
+        background: #1d4ed8 !important;
+        color: #ffffff !important;
+        font-size: 10px !important;
+        font-weight: 700 !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace !important;
+        line-height: 12px !important;
+        padding: 1px 3.5px !important;
+        border-radius: 2px !important;
+        white-space: nowrap !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+        pointer-events: none !important;
+        user-select: none !important;
+        z-index: 1 !important;
+      \`;
+
+      box.appendChild(badge);
+      fragment.appendChild(box);
+    });
+
+    overlay.appendChild(fragment);
+  }
+
+  // Attach global helpers for dynamic updates and external controls
+  window.__renderVisualMarks = renderVisualMarks;
+  window.__clearVisualMarks = () => {
+    const overlay = document.getElementById('agentic-som-overlay');
+    if (overlay) overlay.remove();
+  };
+
+  renderVisualMarks();
 
   return {
     taggedCount: counter - 1,
@@ -27,13 +140,41 @@ export async function tagInteractiveElements(page) {
   }
 }
 
+export async function renderVisualMarks(page) {
+  try {
+    return await page.evaluate(() => {
+      if (typeof window.__renderVisualMarks === "function") {
+        window.__renderVisualMarks();
+        return true;
+      }
+      return false;
+    });
+  } catch {
+    return false;
+  }
+}
+
+export async function clearVisualMarks(page) {
+  try {
+    return await page.evaluate(() => {
+      if (typeof window.__clearVisualMarks === "function") {
+        window.__clearVisualMarks();
+        return true;
+      }
+      return false;
+    });
+  } catch {
+    return false;
+  }
+}
+
 export async function extractDomRepresentation(page, contentType = "fields") {
   await tagInteractiveElements(page);
 
   if (contentType === "text_only") {
     return await page.evaluate(() => {
       const clone = document.body.cloneNode(true);
-      const scripts = clone.querySelectorAll("script, style, noscript, svg");
+      const scripts = clone.querySelectorAll("script, style, noscript, svg, #agentic-som-overlay, #agentic-sidebar-wrapper");
       scripts.forEach((s) => s.remove());
       return clone.innerText.replace(/\\n{3,}/g, "\\n\\n").trim();
     });
@@ -44,7 +185,7 @@ export async function extractDomRepresentation(page, contentType = "fields") {
     const hasCanvas = !!document.querySelector("canvas");
     const interactive = Array.from(
       document.querySelectorAll('[mmid]')
-    );
+    ).filter((el) => !el.closest('#agentic-sidebar-wrapper') && !el.closest('#agentic-rail-root') && !el.closest('#agentic-som-overlay'));
 
     const items = interactive.map((el) => {
       const tag = el.tagName.toLowerCase();
