@@ -4,6 +4,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { logger } from "./logger.js";
 
+import { modelRegistry } from "../core/modelRegistry.js";
+
 const SIDEBAR_JS_PATH = path.resolve(process.cwd(), "src", "utils", "ui", "sidebarOverlay.js");
 
 export class UIManager {
@@ -16,7 +18,19 @@ export class UIManager {
 
   getSidebarScript() {
     if (fs.existsSync(SIDEBAR_JS_PATH)) {
-      return fs.readFileSync(SIDEBAR_JS_PATH, "utf8");
+      const baseScript = fs.readFileSync(SIDEBAR_JS_PATH, "utf8");
+      try {
+        const initialModels = JSON.stringify(modelRegistry.getModels());
+        const initialProviders = JSON.stringify(modelRegistry.getProviders());
+        const initScript = `
+window.__INITIAL_MODELS__ = ${initialModels};
+window.__INITIAL_PROVIDERS__ = ${initialProviders};
+window.__ANTIGRAVITY_AVAILABLE__ = true;
+`;
+        return initScript + "\n" + baseScript;
+      } catch {
+        return baseScript;
+      }
     }
     logger.warn(`Sidebar script not found at: ${SIDEBAR_JS_PATH}`);
     return null;

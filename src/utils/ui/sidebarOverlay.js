@@ -1975,6 +1975,488 @@
       color: hsl(var(--muted-foreground));
       padding: 6px 6px 0 6px;
     }
+
+    /* ------------------------------------------------------------------------
+       View Architecture: Same Space Switching (#as-view-chat vs #as-view-settings)
+       ------------------------------------------------------------------------ */
+    .as-view-chat,
+    .as-view-settings {
+      display: flex;
+      flex-direction: column;
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: hidden;
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+    }
+
+    /* ------------------------------------------------------------------------
+       High-Contrast Theme System: Pure White & Deep Dark
+       ------------------------------------------------------------------------ */
+    /* Light Theme (Strictly Pure White, Zinc-200 Borders, Zinc-950 Text) */
+    #agentic-sidebar-root:not(.dark) {
+      background: #ffffff !important;
+      border-left: 1px solid #e4e4e7 !important;
+      color: #09090b !important;
+      box-shadow: -8px 0 30px rgba(0, 0, 0, 0.08) !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-header {
+      background: #ffffff !important;
+      border-bottom: 1px solid #e4e4e7 !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-header-title {
+      color: #09090b !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-icon-btn {
+      color: #71717a !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-icon-btn:hover {
+      color: #09090b !important;
+      background: #f4f4f5 !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-status-bar {
+      background: #fafafa !important;
+      border-bottom: 1px solid #e4e4e7 !important;
+      color: #71717a !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-content-area {
+      background: #ffffff !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-voxle-card {
+      background: #ffffff !important;
+      border: 1px solid #e4e4e7 !important;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06) !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-voxle-textarea {
+      color: #09090b !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-voxle-textarea::placeholder {
+      color: #a1a1aa !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-shadcn-select-trigger {
+      background: #f4f4f5 !important;
+      border: 1px solid #e4e4e7 !important;
+      color: #09090b !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-shadcn-select-trigger:hover {
+      background: #e4e4e7 !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-shadcn-select-popover {
+      background: #ffffff !important;
+      border: 1px solid #e4e4e7 !important;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12) !important;
+      color: #09090b !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-select-item {
+      color: #09090b !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-select-item:hover {
+      background: #f4f4f5 !important;
+      color: #09090b !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-select-item.selected {
+      background: #e4e4e7 !important;
+      color: #09090b !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-nim-status-pill {
+      background: #f4f4f5 !important;
+      border: 1px solid #e4e4e7 !important;
+      color: #09090b !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-nim-status-pill.inactive {
+      background: transparent !important;
+      border-color: #e4e4e7 !important;
+      color: #a1a1aa !important;
+    }
+
+    /* Dark Theme (Pure Deep Dark Zinc-950) */
+    #agentic-sidebar-root.dark {
+      background: #09090b !important;
+      border-left: 1px solid #27272a !important;
+      color: #fafafa !important;
+      box-shadow: -8px 0 30px rgba(0, 0, 0, 0.6) !important;
+    }
+    #agentic-sidebar-root.dark .as-header {
+      background: #09090b !important;
+      border-bottom: 1px solid #27272a !important;
+    }
+    #agentic-sidebar-root.dark .as-status-bar {
+      background: #121215 !important;
+      border-bottom: 1px solid #27272a !important;
+      color: #a1a1aa !important;
+    }
+    #agentic-sidebar-root.dark .as-content-area {
+      background: #09090b !important;
+    }
+    #agentic-sidebar-root.dark .as-voxle-card {
+      background: #121215 !important;
+      border: 1px solid #27272a !important;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+    }
+
+    /* ------------------------------------------------------------------------
+       Settings View Styling (Occupies 100% of the Chat Space)
+       ------------------------------------------------------------------------ */
+    .as-settings-topbar {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      padding: 12px 16px !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+      flex-shrink: 0 !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-settings-topbar {
+      border-bottom: 1px solid #e4e4e7 !important;
+      background: #ffffff !important;
+    }
+    #agentic-sidebar-root.dark .as-settings-topbar {
+      border-bottom: 1px solid #27272a !important;
+      background: #09090b !important;
+    }
+
+    .as-btn-back {
+      all: initial !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 6px !important;
+      padding: 6px 10px !important;
+      border-radius: 6px !important;
+      cursor: pointer !important;
+      font-size: 12px !important;
+      font-weight: 500 !important;
+      font-family: var(--font-sans) !important;
+      transition: all 0.15s ease !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-btn-back {
+      background: #f4f4f5 !important;
+      color: #09090b !important;
+      border: 1px solid #e4e4e7 !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-btn-back:hover {
+      background: #e4e4e7 !important;
+    }
+    #agentic-sidebar-root.dark .as-btn-back {
+      background: #18181b !important;
+      color: #fafafa !important;
+      border: 1px solid #27272a !important;
+    }
+    #agentic-sidebar-root.dark .as-btn-back:hover {
+      background: #27272a !important;
+      color: #facc15 !important;
+    }
+
+    .as-settings-header-title {
+      font-size: 13px !important;
+      font-weight: 600 !important;
+      font-family: var(--font-sans) !important;
+      letter-spacing: -0.2px !important;
+    }
+
+    .as-settings-scroll-area {
+      flex: 1 1 auto !important;
+      overflow-y: auto !important;
+      padding: 16px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 16px !important;
+      box-sizing: border-box !important;
+    }
+
+    .as-settings-card {
+      border-radius: 10px !important;
+      padding: 16px !important;
+      box-sizing: border-box !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 14px !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-settings-card {
+      background: #ffffff !important;
+      border: 1px solid #e4e4e7 !important;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+    }
+    #agentic-sidebar-root.dark .as-settings-card {
+      background: #121215 !important;
+      border: 1px solid #27272a !important;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3) !important;
+    }
+
+    .as-settings-card-header {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 3px !important;
+    }
+
+    .as-settings-card-title {
+      font-size: 13.5px !important;
+      font-weight: 600 !important;
+      letter-spacing: -0.2px !important;
+    }
+
+    .as-settings-card-sub {
+      font-size: 11px !important;
+      color: #71717a !important;
+      line-height: 1.4 !important;
+    }
+
+    .as-settings-form {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 12px !important;
+    }
+
+    .as-settings-field {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 5px !important;
+    }
+
+    .as-settings-label {
+      font-size: 11px !important;
+      font-weight: 600 !important;
+      color: inherit !important;
+      letter-spacing: 0.2px !important;
+    }
+
+    .as-settings-input,
+    .as-settings-select {
+      all: initial !important;
+      display: block !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+      padding: 8px 10px !important;
+      border-radius: 6px !important;
+      font-size: 12px !important;
+      font-family: var(--font-sans) !important;
+      transition: border-color 0.15s ease !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-settings-input,
+    #agentic-sidebar-root:not(.dark) .as-settings-select {
+      background: #ffffff !important;
+      border: 1px solid #e4e4e7 !important;
+      color: #09090b !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-settings-input:focus,
+    #agentic-sidebar-root:not(.dark) .as-settings-select:focus {
+      border-color: #09090b !important;
+    }
+    #agentic-sidebar-root.dark .as-settings-input,
+    #agentic-sidebar-root.dark .as-settings-select {
+      background: #18181b !important;
+      border: 1px solid #27272a !important;
+      color: #fafafa !important;
+    }
+    #agentic-sidebar-root.dark .as-settings-input:focus,
+    #agentic-sidebar-root.dark .as-settings-select:focus {
+      border-color: #facc15 !important;
+    }
+
+    .as-input-password-wrapper {
+      position: relative !important;
+      display: flex !important;
+      align-items: center !important;
+      width: 100% !important;
+    }
+
+    .as-btn-toggle-eye {
+      all: initial !important;
+      position: absolute !important;
+      right: 8px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      cursor: pointer !important;
+      color: #71717a !important;
+      padding: 4px !important;
+    }
+    .as-btn-toggle-eye:hover {
+      color: inherit !important;
+    }
+
+    .as-settings-hint {
+      font-size: 10px !important;
+      color: #71717a !important;
+    }
+
+    .as-settings-btn-save {
+      all: initial !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 6px !important;
+      padding: 9px 14px !important;
+      border-radius: 6px !important;
+      cursor: pointer !important;
+      font-size: 12px !important;
+      font-weight: 600 !important;
+      font-family: var(--font-sans) !important;
+      transition: all 0.15s ease !important;
+      margin-top: 4px !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-settings-btn-save {
+      background: #09090b !important;
+      color: #ffffff !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-settings-btn-save:hover {
+      background: #27272a !important;
+    }
+    #agentic-sidebar-root.dark .as-settings-btn-save {
+      background: #facc15 !important;
+      color: #09090b !important;
+    }
+    #agentic-sidebar-root.dark .as-settings-btn-save:hover {
+      background: #eab308 !important;
+    }
+
+    .as-configured-models-list {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 8px !important;
+    }
+
+    .as-configured-model-item {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      padding: 10px 12px !important;
+      border-radius: 8px !important;
+      gap: 8px !important;
+      transition: all 0.15s ease !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-configured-model-item {
+      background: #fafafa !important;
+      border: 1px solid #e4e4e7 !important;
+    }
+    #agentic-sidebar-root.dark .as-configured-model-item {
+      background: #18181b !important;
+      border: 1px solid #27272a !important;
+    }
+
+    .as-model-meta-info {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 2px !important;
+      overflow: hidden !important;
+    }
+
+    .as-model-item-title {
+      font-size: 12.5px !important;
+      font-weight: 600 !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+    }
+
+    .as-model-item-sub {
+      font-size: 10.5px !important;
+      color: #71717a !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+    }
+
+    .as-model-item-actions {
+      display: flex !important;
+      align-items: center !important;
+      gap: 6px !important;
+      flex-shrink: 0 !important;
+    }
+
+    .as-model-active-badge {
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 4px !important;
+      padding: 3px 7px !important;
+      border-radius: 4px !important;
+      font-size: 10.5px !important;
+      font-weight: 600 !important;
+      background: #facc15 !important;
+      color: #09090b !important;
+    }
+
+    .as-btn-model-activate {
+      all: initial !important;
+      padding: 4px 8px !important;
+      border-radius: 4px !important;
+      font-size: 11px !important;
+      font-weight: 500 !important;
+      font-family: var(--font-sans) !important;
+      cursor: pointer !important;
+      transition: all 0.15s ease !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-btn-model-activate {
+      background: #f4f4f5 !important;
+      border: 1px solid #e4e4e7 !important;
+      color: #09090b !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-btn-model-activate:hover {
+      background: #e4e4e7 !important;
+    }
+    #agentic-sidebar-root.dark .as-btn-model-activate {
+      background: #27272a !important;
+      border: 1px solid #3f3f46 !important;
+      color: #fafafa !important;
+    }
+    #agentic-sidebar-root.dark .as-btn-model-activate:hover {
+      background: #3f3f46 !important;
+      color: #facc15 !important;
+    }
+
+    .as-btn-model-delete {
+      all: initial !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      cursor: pointer !important;
+      color: #ef4444 !important;
+      padding: 5px !important;
+      border-radius: 4px !important;
+      transition: background 0.15s ease !important;
+    }
+    .as-btn-model-delete:hover {
+      background: rgba(239, 68, 68, 0.15) !important;
+    }
+
+    .as-empty-models-notice {
+      font-size: 11.5px !important;
+      color: #71717a !important;
+      text-align: center !important;
+      padding: 16px 8px !important;
+    }
+
+    .as-empty-models-popover {
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      gap: 8px !important;
+      padding: 14px 10px !important;
+      text-align: center !important;
+    }
+
+    .as-empty-models-popover span {
+      font-size: 11.5px !important;
+      color: #71717a !important;
+    }
+
+    .as-btn-popover-settings {
+      all: initial !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 5px !important;
+      padding: 6px 10px !important;
+      border-radius: 5px !important;
+      font-size: 11px !important;
+      font-weight: 600 !important;
+      font-family: var(--font-sans) !important;
+      cursor: pointer !important;
+      background: #facc15 !important;
+      color: #09090b !important;
+      transition: background 0.15s ease !important;
+    }
+    .as-btn-popover-settings:hover {
+      background: #eab308 !important;
+    }
   `;
 
   // --------------------------------------------------------------------------
@@ -2013,6 +2495,8 @@
     sliders: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><line x1="1" x2="7" y1="14" y2="14"/><line x1="9" x2="15" y1="8" y2="8"/><line x1="17" x2="23" y1="16" y2="16"/></svg>`,
     eye: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`,
     eyeOff: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>`,
+    settings: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>`,
+    arrowLeft: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>`,
   };
 
   // 3D Isometric Cube SVG Logo (Exact Voxle Aesthetic)
@@ -2089,6 +2573,14 @@
       </button>
       <div class="as-rail-tooltip">Visual Marks (Alt+M)</div>
     </div>
+
+    <!-- Model & Provider Settings -->
+    <div class="as-rail-item">
+      <button class="as-rail-btn" id="as-rail-settings" aria-label="Model Settings" title="Model &amp; Provider Settings">
+        ${ICONS.settings}
+      </button>
+      <div class="as-rail-tooltip">Settings</div>
+    </div>
   `;
   container.appendChild(rail);
 
@@ -2142,182 +2634,225 @@
 
       <div class="as-header-right">
         <button class="as-icon-btn" id="as-btn-som-toggle" title="Toggle Visual Marks (Alt+M)" style="color: #facc15;">${ICONS.eye}</button>
+        <button class="as-icon-btn" id="as-btn-settings" title="Model &amp; Provider Settings">${ICONS.settings}</button>
         <button class="as-icon-btn" id="as-btn-theme" title="Toggle Theme">${ICONS.moon}</button>
         <button class="as-icon-btn" id="as-btn-clear" title="Clear Chat">${ICONS.trash}</button>
         <button class="as-icon-btn" id="as-btn-collapse" title="Collapse Sidebar (Ctrl+B)">${ICONS.panelClose}</button>
       </div>
     </div>
 
-    <!-- Subtle Status Bar -->
-    <div class="as-status-bar">
-      <div class="as-status-text">
-        <span class="as-spinner" id="as-status-spinner" style="display: none;"></span>
-        <span id="as-status-label">Ready. Type a prompt below to automate.</span>
+    <!-- VIEW 1: Main Chat View (#as-view-chat) -->
+    <div class="as-view-chat" id="as-view-chat">
+      <!-- Subtle Status Bar -->
+      <div class="as-status-bar">
+        <div class="as-status-text">
+          <span class="as-spinner" id="as-status-spinner" style="display: none;"></span>
+          <span id="as-status-label">Ready. Type a prompt below to automate.</span>
+        </div>
+        <span>Tri-Agent</span>
       </div>
-      <span>Tri-Agent</span>
-    </div>
 
-    <!-- Plan Wrapper (Hidden - Plan rendered inline in feed) -->
-    <div class="as-plan-wrapper" id="as-plan-wrapper" style="display: none !important;"></div>
+      <!-- Plan Wrapper (Hidden - Plan rendered inline in feed) -->
+      <div class="as-plan-wrapper" id="as-plan-wrapper" style="display: none !important;"></div>
 
-    <!-- Feed / Content Area -->
-    <div class="as-content-area" id="as-content-area">
-      <!-- Hero Welcome View (Voxle Aesthetic) -->
-      <div class="as-hero-container" id="as-hero-view">
-        ${VOXLE_CUBE_SVG}
-        <h2 class="as-hero-title">How can I help you today?</h2>
-        <p class="as-hero-subtitle">Autonomously browse web pages, research topics, fill forms, and run workflows.</p>
+      <!-- Feed / Content Area -->
+      <div class="as-content-area" id="as-content-area">
+        <!-- Hero Welcome View (Voxle Aesthetic) -->
+        <div class="as-hero-container" id="as-hero-view">
+          ${VOXLE_CUBE_SVG}
+          <h2 class="as-hero-title">How can I help you today?</h2>
+          <p class="as-hero-subtitle">Autonomously browse web pages, research topics, fill forms, and run workflows.</p>
 
-        <div class="as-chips-grid">
-          <button class="as-chip-btn" data-prompt="Search Google for latest RTX 4050 laptops and compare prices">
-            ${ICONS.search}
-            <span>Search Google for RTX 4050 laptops</span>
-          </button>
-          <button class="as-chip-btn" data-prompt="Open https://news.ycombinator.com and extract top 3 stories">
-            ${ICONS.fileText}
-            <span>Extract top 3 Hacker News stories</span>
-          </button>
-          <button class="as-chip-btn" data-prompt="Go to wikipedia.org and research Node.js history">
-            ${ICONS.sparkles}
-            <span>Research Node.js history on Wikipedia</span>
-          </button>
+          <div class="as-chips-grid">
+            <button class="as-chip-btn" data-prompt="Search Google for latest RTX 4050 laptops and compare prices">
+              ${ICONS.search}
+              <span>Search Google for RTX 4050 laptops</span>
+            </button>
+            <button class="as-chip-btn" data-prompt="Open https://news.ycombinator.com and extract top 3 stories">
+              ${ICONS.fileText}
+              <span>Extract top 3 Hacker News stories</span>
+            </button>
+            <button class="as-chip-btn" data-prompt="Go to wikipedia.org and research Node.js history">
+              ${ICONS.sparkles}
+              <span>Research Node.js history on Wikipedia</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Floating Responsive Input Card (Exact Voxle 4.0 Style with File & Image Uploads) -->
+      <div class="as-input-footer">
+        <input type="file" id="as-file-input" multiple accept="image/*,.pdf,.txt,.doc,.docx,.csv,.json" style="display: none;" />
+
+        <div class="as-voxle-card" id="as-voxle-card">
+          <!-- Attachment Chips Container -->
+          <div class="as-attachment-list" id="as-attachment-list" style="display: none;"></div>
+
+          <!-- Spacious Textarea Area (initial height ~40px) -->
+          <textarea
+            class="as-voxle-textarea"
+            id="as-textarea"
+            placeholder="Chat with Agent..."
+            rows="2"
+          ></textarea>
+
+          <!-- Bottom Action Toolbar inside the card -->
+          <div class="as-voxle-toolbar">
+            <div class="as-voxle-tools-left">
+              <!-- shadcn/ui DropdownMenu for Attachments & Uploads (+) -->
+              <div class="as-shadcn-dropdown" id="as-upload-dropdown">
+                <button class="as-upload-trigger-btn" id="as-btn-upload-trigger" type="button" aria-haspopup="menu" aria-expanded="false" title="Attach files, images &amp; context">
+                  ${ICONS.plus}
+                </button>
+
+                <div class="as-shadcn-dropdown-content" id="as-upload-dropdown-content" role="menu">
+                  <div class="as-dropdown-header">Add attachments</div>
+                  <div class="as-dropdown-item" id="as-item-upload-doc" role="menuitem">
+                    <span class="as-dropdown-item-icon">${ICONS.fileText}</span>
+                    <div class="as-dropdown-item-info">
+                      <span class="as-dropdown-item-title">Upload Documents</span>
+                      <span class="as-dropdown-item-sub">PDF, TXT, DOCX, CSV, JSON, Code</span>
+                    </div>
+                  </div>
+                  <div class="as-dropdown-item" id="as-item-upload-img" role="menuitem">
+                    <span class="as-dropdown-item-icon">${ICONS.image}</span>
+                    <div class="as-dropdown-item-info">
+                      <span class="as-dropdown-item-title">Upload Photos &amp; Images</span>
+                      <span class="as-dropdown-item-sub">PNG, JPG, WebP screenshots</span>
+                    </div>
+                  </div>
+                  <div class="as-dropdown-separator"></div>
+                  <div class="as-dropdown-item" id="as-item-paste-clip" role="menuitem">
+                    <span class="as-dropdown-item-icon">${ICONS.clipboard}</span>
+                    <div class="as-dropdown-item-info">
+                      <span class="as-dropdown-item-title">Paste from Clipboard</span>
+                      <span class="as-dropdown-item-sub">Attach copied text, links, or image</span>
+                    </div>
+                  </div>
+                  <div class="as-dropdown-item" id="as-item-page-snap" role="menuitem">
+                    <span class="as-dropdown-item-icon">${ICONS.camera}</span>
+                    <div class="as-dropdown-item-info">
+                      <span class="as-dropdown-item-title">Current Tab Context</span>
+                      <span class="as-dropdown-item-sub">Attach page title &amp; URL info</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- shadcn/ui Select Component for Model Selection -->
+              <div class="as-shadcn-select" id="as-model-select">
+                <button class="as-shadcn-select-trigger" id="as-model-select-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" title="Switch AI Model">
+                  <span id="as-selected-model-name">No Model Configured</span>
+                  <span class="as-select-chevron">${ICONS.chevronUp}</span>
+                </button>
+
+                <div class="as-shadcn-select-popover" id="as-model-select-popover" role="listbox">
+                  <div id="as-model-items-list">
+                    <!-- Populated dynamically via renderModelList() -->
+                  </div>
+                </div>
+              </div>
+
+              <!-- Accurate NIM / Model Status Pill -->
+              <div class="as-nim-status-pill inactive" id="as-nim-status" title="Model Status">
+                <span id="as-nim-status-text">No Model</span>
+              </div>
+            </div>
+
+            <div class="as-voxle-tools-right">
+              <button class="as-voxle-tool-btn" id="as-btn-mic" title="Voice / Audio action">
+                ${ICONS.mic}
+              </button>
+              <button class="as-voxle-send-btn" id="as-btn-send" title="Send message (Enter)">
+                ${ICONS.arrowRight}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="as-input-hint">
+          <span>Enter to run • Shift+Enter for newline</span>
+          <span>Ctrl+B to collapse</span>
         </div>
       </div>
     </div>
 
-    <!-- Floating Responsive Input Card (Exact Voxle 4.0 Style with File & Image Uploads) -->
-    <div class="as-input-footer">
-      <input type="file" id="as-file-input" multiple accept="image/*,.pdf,.txt,.doc,.docx,.csv,.json" style="display: none;" />
+    <!-- VIEW 2: In-Place Model Settings Screen (#as-view-settings) -->
+    <div class="as-view-settings" id="as-view-settings" style="display: none;">
+      <div class="as-settings-topbar">
+        <button class="as-btn-back" id="as-btn-back-to-chat" type="button">
+          ${ICONS.arrowLeft}
+          <span>Back to Chat</span>
+        </button>
+        <div class="as-settings-header-title">Model Settings</div>
+      </div>
 
-      <div class="as-voxle-card" id="as-voxle-card">
-        <!-- Attachment Chips Container -->
-        <div class="as-attachment-list" id="as-attachment-list" style="display: none;"></div>
+      <div class="as-settings-scroll-area">
+        <!-- Card 1: Add New Model Form -->
+        <div class="as-settings-card">
+          <div class="as-settings-card-header">
+            <div class="as-settings-card-title">Add New Model</div>
+            <div class="as-settings-card-sub">Configure an AI model with your provider and API key to enable the agent.</div>
+          </div>
 
-        <!-- Spacious Textarea Area (initial height ~40px) -->
-        <textarea
-          class="as-voxle-textarea"
-          id="as-textarea"
-          placeholder="Chat with Agent..."
-          rows="2"
-        ></textarea>
+          <form id="as-settings-model-form" class="as-settings-form">
+            <div class="as-settings-field">
+              <label class="as-settings-label" for="as-input-provider">Provider</label>
+              <select class="as-settings-select" id="as-input-provider">
+                <option value="nvidia">NVIDIA NIM</option>
+                <option value="openai">OpenAI</option>
+                <option value="groq">Groq</option>
+                <option value="ollama">Local Ollama</option>
+                <option value="openrouter">OpenRouter</option>
+                <option value="antigravity">Google Antigravity CLI (Local Agent)</option>
+                <option value="custom">Custom / Self-Hosted</option>
+              </select>
+            </div>
 
-        <!-- Bottom Action Toolbar inside the card -->
-        <div class="as-voxle-toolbar">
-          <div class="as-voxle-tools-left">
-            <!-- shadcn/ui DropdownMenu for Attachments & Uploads (+) -->
-            <div class="as-shadcn-dropdown" id="as-upload-dropdown">
-              <button class="as-upload-trigger-btn" id="as-btn-upload-trigger" type="button" aria-haspopup="menu" aria-expanded="false" title="Attach files, images &amp; context">
+            <div class="as-settings-field">
+              <label class="as-settings-label" for="as-input-model-id">Model ID</label>
+              <input class="as-settings-input" id="as-input-model-id" type="text" placeholder="e.g. nvidia/nemotron-3-ultra-550b-a55b or gpt-4o" required />
+            </div>
+
+            <div class="as-settings-field">
+              <label class="as-settings-label" for="as-input-model-name">Display Name (Optional)</label>
+              <input class="as-settings-input" id="as-input-model-name" type="text" placeholder="e.g. Nemotron Ultra or GPT-4o" />
+            </div>
+
+            <div class="as-settings-field" id="as-field-api-key">
+              <label class="as-settings-label" for="as-input-api-key">API Key</label>
+              <div class="as-input-password-wrapper">
+                <input class="as-settings-input" id="as-input-api-key" type="password" placeholder="Enter provider API key (nvapi-..., sk-..., etc.)" />
+                <button type="button" class="as-btn-toggle-eye" id="as-btn-toggle-key">${ICONS.eye}</button>
+              </div>
+              <span class="as-settings-hint" id="as-key-hint">Stored locally in data/models_config.json</span>
+            </div>
+
+            <div class="as-settings-field" id="as-field-base-url">
+              <label class="as-settings-label" for="as-input-base-url">Base URL (Optional)</label>
+              <input class="as-settings-input" id="as-input-base-url" type="text" placeholder="Default provider endpoint" />
+            </div>
+
+            <div class="as-settings-form-actions">
+              <button class="as-settings-btn-save" id="as-btn-save-model" type="submit">
                 ${ICONS.plus}
+                <span>Save &amp; Activate Model</span>
               </button>
-
-              <div class="as-shadcn-dropdown-content" id="as-upload-dropdown-content" role="menu">
-                <div class="as-dropdown-header">Add attachments</div>
-                <div class="as-dropdown-item" id="as-item-upload-doc" role="menuitem">
-                  <span class="as-dropdown-item-icon">${ICONS.fileText}</span>
-                  <div class="as-dropdown-item-info">
-                    <span class="as-dropdown-item-title">Upload Documents</span>
-                    <span class="as-dropdown-item-sub">PDF, TXT, DOCX, CSV, JSON, Code</span>
-                  </div>
-                </div>
-                <div class="as-dropdown-item" id="as-item-upload-img" role="menuitem">
-                  <span class="as-dropdown-item-icon">${ICONS.image}</span>
-                  <div class="as-dropdown-item-info">
-                    <span class="as-dropdown-item-title">Upload Photos &amp; Images</span>
-                    <span class="as-dropdown-item-sub">PNG, JPG, WebP screenshots</span>
-                  </div>
-                </div>
-                <div class="as-dropdown-separator"></div>
-                <div class="as-dropdown-item" id="as-item-paste-clip" role="menuitem">
-                  <span class="as-dropdown-item-icon">${ICONS.clipboard}</span>
-                  <div class="as-dropdown-item-info">
-                    <span class="as-dropdown-item-title">Paste from Clipboard</span>
-                    <span class="as-dropdown-item-sub">Attach copied text, links, or image</span>
-                  </div>
-                </div>
-                <div class="as-dropdown-item" id="as-item-page-snap" role="menuitem">
-                  <span class="as-dropdown-item-icon">${ICONS.camera}</span>
-                  <div class="as-dropdown-item-info">
-                    <span class="as-dropdown-item-title">Current Tab Context</span>
-                    <span class="as-dropdown-item-sub">Attach page title &amp; URL info</span>
-                  </div>
-                </div>
-              </div>
             </div>
+          </form>
+        </div>
 
-            <!-- shadcn/ui Select Component for Model Selection -->
-            <div class="as-shadcn-select" id="as-model-select">
-              <button class="as-shadcn-select-trigger" id="as-model-select-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" title="Switch AI Model">
-                <span id="as-selected-model-name">Nemotron 550B</span>
-                <span class="as-select-chevron">${ICONS.chevronUp}</span>
-              </button>
-
-              <div class="as-shadcn-select-popover" id="as-model-select-popover" role="listbox">
-                <div class="as-select-label">Reasoning &amp; Planning Models</div>
-                <div class="as-select-item selected" data-model="nvidia/nemotron-3-ultra-550b-a55b" data-name="Nemotron 550B" role="option" aria-selected="true">
-                  <div class="as-select-item-info">
-                    <span class="as-select-item-title">Nemotron 550B</span>
-                    <span class="as-select-item-sub">NVIDIA Ultra Reasoning</span>
-                  </div>
-                  <span class="as-select-check">${ICONS.check}</span>
-                </div>
-                <div class="as-select-item" data-model="nvidia/nemotron-4-340b-instruct" data-name="Nemotron 340B" role="option" aria-selected="false">
-                  <div class="as-select-item-info">
-                    <span class="as-select-item-title">Nemotron 340B</span>
-                    <span class="as-select-item-sub">Fast Agentic NIM</span>
-                  </div>
-                  <span class="as-select-check">${ICONS.check}</span>
-                </div>
-                <div class="as-select-item" data-model="meta/llama-3.3-70b-instruct" data-name="Llama 3.3 70B" role="option" aria-selected="false">
-                  <div class="as-select-item-info">
-                    <span class="as-select-item-title">Llama 3.3 70B</span>
-                    <span class="as-select-item-sub">Meta Frontier Intelligence</span>
-                  </div>
-                  <span class="as-select-check">${ICONS.check}</span>
-                </div>
-                <div class="as-select-item" data-model="mistralai/mistral-large-2-instruct" data-name="Mistral Large 2" role="option" aria-selected="false">
-                  <div class="as-select-item-info">
-                    <span class="as-select-item-title">Mistral Large 2</span>
-                    <span class="as-select-item-sub">123B Parameter Frontier</span>
-                  </div>
-                  <span class="as-select-check">${ICONS.check}</span>
-                </div>
-                <div class="as-select-item" data-model="deepseek-ai/deepseek-r1" data-name="DeepSeek R1" role="option" aria-selected="false">
-                  <div class="as-select-item-info">
-                    <span class="as-select-item-title">DeepSeek R1</span>
-                    <span class="as-select-item-sub">Open-R1 High Accuracy</span>
-                  </div>
-                  <span class="as-select-check">${ICONS.check}</span>
-                </div>
-                <div class="as-select-item" data-model="deepseek-ai/deepseek-v4.1-flash" data-name="DeepSeek V4.1 Flash" role="option" aria-selected="false">
-                  <div class="as-select-item-info">
-                    <span class="as-select-item-title">DeepSeek V4.1 Flash</span>
-                    <span class="as-select-item-sub">Ultra Fast High-Throughput Reasoning</span>
-                  </div>
-                  <span class="as-select-check">${ICONS.check}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Accurate NIM Active Status Pill with Gray Border & Text (No Colors, Slightly Rounded) -->
-            <div class="as-nim-status-pill" id="as-nim-status" title="NVIDIA NIM Active">
-              <span id="as-nim-status-text">NIM Active</span>
-            </div>
+        <!-- Card 2: Configured Models List -->
+        <div class="as-settings-card">
+          <div class="as-settings-card-header">
+            <div class="as-settings-card-title">Configured Models</div>
+            <div class="as-settings-card-sub">Models ready for autonomous browser task automation.</div>
           </div>
 
-          <div class="as-voxle-tools-right">
-            <button class="as-voxle-tool-btn" id="as-btn-mic" title="Voice / Audio action">
-              ${ICONS.mic}
-            </button>
-            <button class="as-voxle-send-btn" id="as-btn-send" title="Send message (Enter)">
-              ${ICONS.arrowRight}
-            </button>
+          <div class="as-configured-models-list" id="as-configured-models-list">
+            <div class="as-empty-models-notice">No models configured yet. Add a model above to begin.</div>
           </div>
         </div>
-      </div>
-
-      <div class="as-input-hint">
-        <span>Enter to run • Shift+Enter for newline</span>
-        <span>Ctrl+B to collapse</span>
       </div>
     </div>
   `;
@@ -2712,36 +3247,315 @@
     });
   }
 
+  // --------------------------------------------------------------------------
+  // In-Place View Management (Chat View vs Model Settings View)
+  // --------------------------------------------------------------------------
+  const viewChat = sidebar.querySelector("#as-view-chat");
+  const viewSettings = sidebar.querySelector("#as-view-settings");
+  const btnSettings = sidebar.querySelector("#as-btn-settings");
+  const railSettings = rail.querySelector("#as-rail-settings");
+  const btnBackToChat = sidebar.querySelector("#as-btn-back-to-chat");
+
+  const modelItemsListEl = sidebar.querySelector("#as-model-items-list");
+  const nimStatusPill = sidebar.querySelector("#as-nim-status");
+  const nimStatusText = sidebar.querySelector("#as-nim-status-text");
+
+  const settingsForm = sidebar.querySelector("#as-settings-model-form");
+  const settingsProviderSelect = sidebar.querySelector("#as-input-provider");
+  const settingsModelIdInput = sidebar.querySelector("#as-input-model-id");
+  const settingsModelNameInput = sidebar.querySelector("#as-input-model-name");
+  const settingsApiKeyInput = sidebar.querySelector("#as-input-api-key");
+  const settingsBaseUrlInput = sidebar.querySelector("#as-input-base-url");
+  const btnToggleKey = sidebar.querySelector("#as-btn-toggle-key");
+  const configuredModelsListEl = sidebar.querySelector("#as-configured-models-list");
+
+  let registeredModels = Array.isArray(window.__INITIAL_MODELS__) ? [...window.__INITIAL_MODELS__] : [];
+  let activeModelId = window.agenticSelectedModel || (registeredModels[0]?.id || null);
+
+  function setView(viewName) {
+    if (!viewChat || !viewSettings) return;
+    if (viewName === "settings") {
+      viewChat.style.display = "none";
+      viewSettings.style.display = "flex";
+      renderSettingsModelsList();
+    } else {
+      viewSettings.style.display = "none";
+      viewChat.style.display = "flex";
+      renderModelList();
+    }
+  }
+
+  btnSettings?.addEventListener("click", () => setView("settings"));
+  railSettings?.addEventListener("click", () => {
+    setCollapsed(false);
+    setView("settings");
+  });
+  btnBackToChat?.addEventListener("click", () => setView("chat"));
+
+  // Toggle API Key visibility
+  if (btnToggleKey && settingsApiKeyInput) {
+    btnToggleKey.addEventListener("click", () => {
+      const isPass = settingsApiKeyInput.type === "password";
+      settingsApiKeyInput.type = isPass ? "text" : "password";
+      btnToggleKey.innerHTML = isPass ? ICONS.eyeOff : ICONS.eye;
+    });
+  }
+
+  // Auto-fill defaults based on selected provider
+  if (settingsProviderSelect) {
+    settingsProviderSelect.addEventListener("change", () => {
+      const p = settingsProviderSelect.value;
+      if (p === "antigravity") {
+        if (!settingsModelIdInput.value) settingsModelIdInput.value = "antigravity/local";
+        if (!settingsModelNameInput.value) settingsModelNameInput.value = "Antigravity CLI Agent";
+        const keyField = sidebar.querySelector("#as-field-api-key");
+        if (keyField) keyField.style.display = "none";
+      } else {
+        const keyField = sidebar.querySelector("#as-field-api-key");
+        if (keyField) keyField.style.display = "flex";
+        if (p === "nvidia" && !settingsModelIdInput.value) {
+          settingsModelIdInput.value = "nvidia/nemotron-3-ultra-550b-a55b";
+          settingsModelNameInput.value = "Nemotron 550B";
+        } else if (p === "openai" && !settingsModelIdInput.value) {
+          settingsModelIdInput.value = "gpt-4o";
+          settingsModelNameInput.value = "GPT-4o";
+        }
+      }
+    });
+  }
+
+  async function persistModel(modelData) {
+    if (typeof window.save_model === "function") {
+      await window.save_model(modelData);
+    } else {
+      await fetch("/api/models", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(modelData),
+      }).catch(() => {});
+    }
+  }
+
+  async function persistDeleteModel(modelId) {
+    if (typeof window.delete_model === "function") {
+      await window.delete_model(modelId);
+    } else {
+      await fetch(`/api/models/${encodeURIComponent(modelId)}`, { method: "DELETE" }).catch(() => {});
+    }
+  }
+
+  function renderModelList() {
+    if (!modelItemsListEl) return;
+    modelItemsListEl.innerHTML = "";
+
+    if (registeredModels.length === 0) {
+      if (modelNameEl) modelNameEl.textContent = "No Model Configured";
+      if (nimStatusText) nimStatusText.textContent = "No Model";
+      if (nimStatusPill) nimStatusPill.classList.add("inactive");
+      window.agenticSelectedModel = null;
+
+      const emptyDiv = document.createElement("div");
+      emptyDiv.className = "as-empty-models-popover";
+      emptyDiv.innerHTML = `
+        <span>No models configured yet</span>
+        <button class="as-btn-popover-settings" id="as-btn-empty-settings" type="button">
+          ${ICONS.settings}
+          <span>Configure in Settings</span>
+        </button>
+      `;
+      emptyDiv.querySelector("#as-btn-empty-settings").addEventListener("click", (e) => {
+        e.stopPropagation();
+        modelSelectEl?.classList.remove("open");
+        modelTriggerEl?.setAttribute("aria-expanded", "false");
+        setView("settings");
+      });
+      modelItemsListEl.appendChild(emptyDiv);
+      return;
+    }
+
+    // Verify active model exists
+    let activeModel = registeredModels.find((m) => m.id === activeModelId);
+    if (!activeModel) {
+      activeModel = registeredModels[0];
+      activeModelId = activeModel.id;
+    }
+    window.agenticSelectedModel = activeModel.id;
+
+    if (modelNameEl) modelNameEl.textContent = activeModel.name || activeModel.id;
+    if (nimStatusText) nimStatusText.textContent = activeModel.name || activeModel.id;
+    if (nimStatusPill) nimStatusPill.classList.remove("inactive");
+
+    const label = document.createElement("div");
+    label.className = "as-select-label";
+    label.textContent = "Available Models";
+    modelItemsListEl.appendChild(label);
+
+    registeredModels.forEach((m) => {
+      const isSelected = m.id === activeModelId;
+      const itemEl = document.createElement("div");
+      itemEl.className = `as-select-item ${isSelected ? "selected" : ""}`;
+      itemEl.setAttribute("data-model", m.id);
+      itemEl.setAttribute("data-name", m.name || m.id);
+      itemEl.setAttribute("role", "option");
+      itemEl.setAttribute("aria-selected", String(isSelected));
+
+      itemEl.innerHTML = `
+        <div class="as-select-item-info">
+          <span class="as-select-item-title">${escapeHtml(m.name || m.id)}</span>
+          <span class="as-select-item-sub">${escapeHtml((m.provider || "custom").toUpperCase())} • ${escapeHtml(m.id)}</span>
+        </div>
+        <span class="as-select-check">${ICONS.check}</span>
+      `;
+
+      itemEl.addEventListener("click", (e) => {
+        e.stopPropagation();
+        activeModelId = m.id;
+        window.agenticSelectedModel = m.id;
+        renderModelList();
+        modelSelectEl?.classList.remove("open");
+        modelTriggerEl?.setAttribute("aria-expanded", "false");
+        setStatus("idle", `Switched model to ${m.name || m.id}`);
+      });
+
+      modelItemsListEl.appendChild(itemEl);
+    });
+
+    const divider = document.createElement("div");
+    divider.style.cssText = "height: 1px; background: rgba(255,255,255,0.08); margin: 6px 0;";
+    modelItemsListEl.appendChild(divider);
+
+    const manageBtn = document.createElement("button");
+    manageBtn.type = "button";
+    manageBtn.style.cssText = "all: initial; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 7px; border-radius: 6px; font-size: 11px; font-weight: 500; font-family: var(--font-sans); cursor: pointer; color: inherit; background: rgba(255,255,255,0.06); box-sizing: border-box;";
+    manageBtn.innerHTML = `${ICONS.settings}<span>Manage Models in Settings</span>`;
+    manageBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      modelSelectEl?.classList.remove("open");
+      modelTriggerEl?.setAttribute("aria-expanded", "false");
+      setView("settings");
+    });
+    modelItemsListEl.appendChild(manageBtn);
+  }
+
+  function renderSettingsModelsList() {
+    if (!configuredModelsListEl) return;
+    configuredModelsListEl.innerHTML = "";
+
+    if (registeredModels.length === 0) {
+      configuredModelsListEl.innerHTML = `
+        <div class="as-empty-models-notice">
+          No models configured yet. Fill out the form above to add your first model.
+        </div>
+      `;
+      return;
+    }
+
+    registeredModels.forEach((m) => {
+      const isSelected = m.id === activeModelId;
+      const card = document.createElement("div");
+      card.className = "as-configured-model-item";
+
+      card.innerHTML = `
+        <div class="as-model-meta-info">
+          <div class="as-model-item-title">${escapeHtml(m.name || m.id)}</div>
+          <div class="as-model-item-sub">${escapeHtml((m.provider || "custom").toUpperCase())} • ${escapeHtml(m.id)}</div>
+        </div>
+        <div class="as-model-item-actions">
+          ${
+            isSelected
+              ? `<span class="as-model-active-badge">${ICONS.check} Active</span>`
+              : `<button class="as-btn-model-activate" data-model="${escapeHtml(m.id)}">Activate</button>`
+          }
+          <button class="as-btn-model-delete" data-model="${escapeHtml(m.id)}" title="Delete model">
+            ${ICONS.trash}
+          </button>
+        </div>
+      `;
+
+      const activateBtn = card.querySelector(".as-btn-model-activate");
+      if (activateBtn) {
+        activateBtn.addEventListener("click", () => {
+          activeModelId = m.id;
+          window.agenticSelectedModel = m.id;
+          renderSettingsModelsList();
+          renderModelList();
+          setStatus("idle", `Activated model: ${m.name || m.id}`);
+        });
+      }
+
+      const deleteBtn = card.querySelector(".as-btn-model-delete");
+      if (deleteBtn) {
+        deleteBtn.addEventListener("click", async () => {
+          const mId = m.id;
+          registeredModels = registeredModels.filter((item) => item.id !== mId);
+          if (activeModelId === mId) {
+            activeModelId = registeredModels[0]?.id || null;
+            window.agenticSelectedModel = activeModelId;
+          }
+          await persistDeleteModel(mId);
+          renderSettingsModelsList();
+          renderModelList();
+          setStatus("idle", `Removed model: ${m.name || mId}`);
+        });
+      }
+
+      configuredModelsListEl.appendChild(card);
+    });
+  }
+
+  // Model Form Submission
+  if (settingsForm) {
+    settingsForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const provider = settingsProviderSelect.value;
+      const id = settingsModelIdInput.value.trim();
+      const name = settingsModelNameInput.value.trim() || id;
+      const apiKey = settingsApiKeyInput.value.trim();
+      const baseURL = settingsBaseUrlInput.value.trim();
+
+      if (!id) return;
+
+      const modelData = {
+        id,
+        name,
+        provider,
+        ...(apiKey ? { apiKey } : {}),
+        ...(baseURL ? { baseURL } : {}),
+      };
+
+      const existingIndex = registeredModels.findIndex((m) => m.id === id);
+      if (existingIndex >= 0) {
+        registeredModels[existingIndex] = { ...registeredModels[existingIndex], ...modelData };
+      } else {
+        registeredModels.push(modelData);
+      }
+
+      activeModelId = id;
+      window.agenticSelectedModel = id;
+
+      await persistModel(modelData);
+      renderSettingsModelsList();
+      renderModelList();
+
+      settingsModelIdInput.value = "";
+      settingsModelNameInput.value = "";
+      settingsApiKeyInput.value = "";
+      settingsBaseUrlInput.value = "";
+
+      setView("chat");
+      setStatus("idle", `Added and activated model: ${name}`);
+    });
+  }
+
+  // Initial render of models list
+  renderModelList();
+
   if (modelTriggerEl && modelSelectEl) {
     modelTriggerEl.addEventListener("click", (e) => {
       e.stopPropagation();
       if (uploadDropdownEl) uploadDropdownEl.classList.remove("open");
       const isOpen = modelSelectEl.classList.toggle("open");
       modelTriggerEl.setAttribute("aria-expanded", String(isOpen));
-    });
-
-    modelItems.forEach((item) => {
-      item.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const modelId = item.getAttribute("data-model");
-        const modelName = item.getAttribute("data-name");
-
-        modelItems.forEach((i) => {
-          i.classList.remove("selected");
-          i.setAttribute("aria-selected", "false");
-        });
-        item.classList.add("selected");
-        item.setAttribute("aria-selected", "true");
-
-        if (modelNameEl) modelNameEl.textContent = modelName;
-        modelSelectEl.classList.remove("open");
-        modelTriggerEl.setAttribute("aria-expanded", "false");
-
-        window.agenticSelectedModel = modelId;
-        const nimStatusText = sidebar.querySelector("#as-nim-status-text");
-        if (nimStatusText) nimStatusText.textContent = `${modelName}`;
-        setStatus("idle", `Switched model to ${modelName}`);
-      });
     });
   }
 
@@ -2781,6 +3595,13 @@
     const text = textareaEl.value.trim();
     if (!text && attachedFiles.length === 0) return;
 
+    const activeModel = window.agenticSelectedModel || (registeredModels[0]?.id || null);
+    if (!activeModel) {
+      setStatus("idle", "No model configured. Opening Settings to configure a model...");
+      setView("settings");
+      return;
+    }
+
     resetPlan();
     currentTaskStartTime = Date.now();
     currentTaskThoughts = [];
@@ -2807,7 +3628,6 @@
       fullCommand = fullCommand ? `${fullCommand} (Attached: ${fileNames})` : `Process attached: ${fileNames}`;
     }
 
-    const activeModel = window.agenticSelectedModel || "nvidia/nemotron-3-ultra-550b-a55b";
     if (typeof window.process_task === "function") {
       window.process_task(fullCommand, activeModel);
     } else {

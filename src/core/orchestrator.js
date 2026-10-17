@@ -16,6 +16,7 @@ import { CritiqueRepository } from "../db/repositories/critiqueRepository.js";
 import { LogRepository } from "../db/repositories/logRepository.js";
 import { uiManager } from "../utils/uiManager.js";
 import { extractDomRepresentation, computeDomDiff, isVisualCheckRequired } from "../utils/domHelper.js";
+import { AntigravityCliClient } from "./antigravityCliClient.js";
 
 export class Orchestrator extends EventEmitter {
   constructor(options = {}) {
@@ -36,6 +37,14 @@ export class Orchestrator extends EventEmitter {
       TaskRepository.updateStatus(taskId, "RUNNING");
     }
     this._emit(taskId, "task_started", { taskId, command, model: taskModel });
+
+    // Route to Antigravity CLI Agent if requested
+    const isAntigravity = options.agent === "antigravity" ||
+      (typeof taskModel === "string" && taskModel.toLowerCase().includes("antigravity"));
+
+    if (isAntigravity) {
+      return this._runAntigravityTask(command, taskId, options, startTime);
+    }
 
     let currentPlan = null;
     let feedback = null;
@@ -305,6 +314,109 @@ export class Orchestrator extends EventEmitter {
         await browserManager.close();
       }
     }
+  }
+
+  async _runAntigravityTask(command, taskId, options, startTime) {
+    logger.info(`[Orchestrator] Running Antigravity CLI Agent for task "${taskId}": "${command}"`);
+    let activePage = null;
+
+    try {
+      await browserManager.initialize();
+      activePage = await browserManager.getPage();
+      await uiManager.addUserMessage(activePage, command, Boolean(options.fromOverlay));
+      await uiManager.updateState(activePage, "processing");
+      await uiManager.addSystemMessage(
+        activePage,
+        JSON.stringify({
+          plan: ["Initialize Antigravity CLI Agent", "Execute Reasoning & Tool Steps", "Stream Final Response"],
+          stepIndex: 1,
+          currentInstruction: "Antigravity CLI Agent is reasoning...",
+        }),
+        "plan"
+      );
+    } catch (err) {
+      logger.warn(`[Orchestrator] Initial UI setup notice: ${err.message}`);
+    }
+
+    this._emit(taskId, "planner_thinking", { stepIndex: 1 });
+    this._emit(taskId, "plan_updated", {
+      stepIndex: 1,
+      plan: ["Initialize Antigravity CLI Agent", "Execute Reasoning & Tool Steps", "Stream Final Response"],
+      currentInstruction: "Antigravity CLI Agent running...",
+    });
+
+    return new Promise((resolve, reject) => {
+      let fullTokens = "";
+      let stepCount = 1;
+
+      AntigravityCliClient.streamTask({
+        prompt: command,
+        cwd: process.cwd(),
+        onToken: async (delta, accumulated) => {
+          fullTokens = accumulated;
+          this._emit(taskId, "agent_token", { delta, accumulated });
+        },
+        onThought: async (thoughtText) => {
+          this._emit(taskId, "agent_thought", { text: thoughtText });
+          if (activePage && !activePage.isClosed()) {
+            await uiManager.addSystemMessage(activePage, String(thoughtText), "thought").catch(() => {});
+          }
+        },
+        onToolCall: async (toolUpdate) => {
+          stepCount++;
+          const toolDesc = `Tool: ${toolUpdate.step_type || "action"}`;
+          this._emit(taskId, "action_completed", {
+            stepIndex: stepCount,
+            toolName: "antigravity_tool",
+            result: toolUpdate,
+          });
+          if (activePage && !activePage.isClosed()) {
+            await uiManager.addSystemMessage(activePage, toolDesc, "browser").catch(() => {});
+          }
+        },
+        onDone: async (result) => {
+          const durationMs = Date.now() - startTime;
+          const finalAnswer = result.response || fullTokens || "Task completed successfully.";
+
+          TaskRepository.complete(taskId, finalAnswer, stepCount, durationMs);
+          this._emit(taskId, "task_completed", {
+            taskId,
+            finalResponse: finalAnswer,
+            totalSteps: stepCount,
+            durationMs,
+          });
+
+          const finalPage = await browserManager.getPage().catch(() => activePage);
+          if (finalPage && !finalPage.isClosed()) {
+            await uiManager.addSystemMessage(finalPage, finalAnswer, "done").catch(() => {});
+            await uiManager.commandCompleted(finalPage).catch(() => {});
+          }
+
+          resolve({
+            taskId,
+            status: "COMPLETED",
+            finalResponse: finalAnswer,
+            totalSteps: stepCount,
+            durationMs,
+            agent: "antigravity",
+          });
+        },
+        onError: async (err) => {
+          const durationMs = Date.now() - startTime;
+          logger.error(`[Orchestrator] Antigravity task error: ${err.message}`);
+          TaskRepository.fail(taskId, err.message, stepCount, durationMs);
+          this._emit(taskId, "task_failed", { taskId, error: err.message });
+
+          const finalPage = await browserManager.getPage().catch(() => activePage);
+          if (finalPage && !finalPage.isClosed()) {
+            await uiManager.addSystemMessage(finalPage, `Antigravity CLI Error: ${err.message}`, "done").catch(() => {});
+            await uiManager.commandCompleted(finalPage).catch(() => {});
+          }
+
+          reject(err);
+        },
+      });
+    });
   }
 
   _emit(taskId, event, data) {

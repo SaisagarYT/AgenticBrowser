@@ -133,11 +133,14 @@ document.addEventListener("DOMContentLoaded", () => {
     resetUI();
 
     try {
+      const engineSelect = document.getElementById("agent-engine-select");
+      const selectedModel = engineSelect ? engineSelect.value : "antigravity/local";
+
       // Trigger execution via API
       const res = await fetch("/api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ command, async: true }),
+        body: JSON.stringify({ command, model: selectedModel, async: true }),
       });
 
       if (!res.ok) {

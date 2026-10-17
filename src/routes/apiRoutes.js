@@ -5,6 +5,8 @@ import crypto from "node:crypto";
 import { orchestrator } from "../core/orchestrator.js";
 import { TaskRepository } from "../db/repositories/taskRepository.js";
 import { LogRepository } from "../db/repositories/logRepository.js";
+import { modelRegistry } from "../core/modelRegistry.js";
+import { AntigravityCliClient } from "../core/antigravityCliClient.js";
 import { logger } from "../utils/logger.js";
 
 export const apiRouter = express.Router();
@@ -12,10 +14,10 @@ export const apiRouter = express.Router();
 /**
  * Compatible with TheAgenticBrowser Python FastAPI endpoint:
  * POST /execute_task
- * Body: { "command": "...", "client_id": "..." }
+ * Body: { "command": "...", "client_id": "...", "model": "...", "agent": "..." }
  */
 apiRouter.post("/execute_task", async (req, res) => {
-  const { command, client_id } = req.body || {};
+  const { command, client_id, model, agent } = req.body || {};
 
   if (!command || typeof command !== "string") {
     return res.status(400).json({ error: "Missing or invalid 'command' field in request body." });
@@ -26,7 +28,7 @@ apiRouter.post("/execute_task", async (req, res) => {
 
   if (asyncMode) {
     const taskId = client_id || crypto.randomUUID();
-    orchestrator.runTask(command.trim(), taskId).catch((err) => {
+    orchestrator.runTask(command.trim(), taskId, { model, agent }).catch((err) => {
       logger.error(`Async execution failed for task ${taskId}: ${err.message}`);
     });
 
@@ -38,7 +40,7 @@ apiRouter.post("/execute_task", async (req, res) => {
   }
 
   try {
-    const result = await orchestrator.runTask(command.trim(), client_id);
+    const result = await orchestrator.runTask(command.trim(), client_id, { model, agent });
     return res.json(result);
   } catch (err) {
     return res.status(500).json({
@@ -50,7 +52,7 @@ apiRouter.post("/execute_task", async (req, res) => {
 
 // Standard REST task endpoint
 apiRouter.post("/tasks", async (req, res) => {
-  const { command, async: runAsync } = req.body || {};
+  const { command, model, agent, async: runAsync } = req.body || {};
 
   if (!command) {
     return res.status(400).json({ error: "Field 'command' is required." });
@@ -59,14 +61,14 @@ apiRouter.post("/tasks", async (req, res) => {
   if (runAsync) {
     const taskId = crypto.randomUUID();
     const task = TaskRepository.create({ id: taskId, command });
-    orchestrator.runTask(command, taskId).catch((err) => {
+    orchestrator.runTask(command, taskId, { model, agent }).catch((err) => {
       logger.error(`Async task ${taskId} error: ${err.message}`);
     });
     return res.status(202).json(task);
   }
 
   try {
-    const result = await orchestrator.runTask(command);
+    const result = await orchestrator.runTask(command, null, { model, agent });
     return res.json(result);
   } catch (err) {
     return res.status(500).json({ error: err.message });
@@ -98,10 +100,42 @@ apiRouter.delete("/tasks/:id", (req, res) => {
   return res.json({ success: true, message: `Task ${req.params.id} deleted` });
 });
 
+// Model & Agent Management Endpoints
+apiRouter.get("/models", (req, res) => {
+  return res.json({
+    models: modelRegistry.getModels(),
+    providers: modelRegistry.getProviders(),
+    antigravityAvailable: AntigravityCliClient.isAvailable(),
+  });
+});
+
+apiRouter.post("/models", (req, res) => {
+  const { id, name, provider, description, baseURL, apiKey } = req.body || {};
+  if (!id) {
+    return res.status(400).json({ error: "Model ID is required." });
+  }
+
+  try {
+    const created = modelRegistry.addModel({ id, name, provider, description, baseURL, apiKey });
+    return res.status(201).json({ success: true, model: created });
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
+  }
+});
+
+apiRouter.delete("/models/:id", (req, res) => {
+  const removed = modelRegistry.removeModel(req.params.id);
+  if (!removed) {
+    return res.status(404).json({ error: "Model not found." });
+  }
+  return res.json({ success: true, message: `Model ${req.params.id} removed.` });
+});
+
 apiRouter.get("/health", (req, res) => {
   res.json({
     status: "ok",
     service: "agentic-browser-node",
+    antigravity: AntigravityCliClient.isAvailable() ? "connected" : "unavailable",
     time: new Date().toISOString(),
   });
 });

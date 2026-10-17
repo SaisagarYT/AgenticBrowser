@@ -52,51 +52,7 @@ export const PROVIDERS = {
   },
 };
 
-export const DEFAULT_MODELS = [
-  {
-    id: "nvidia/nemotron-3-ultra-550b-a55b",
-    name: "Nemotron 550B",
-    provider: "nvidia",
-    description: "NVIDIA Ultra Reasoning (Default)",
-    isDefault: true,
-  },
-  {
-    id: "nvidia/nemotron-4-340b-instruct",
-    name: "Nemotron 340B",
-    provider: "nvidia",
-    description: "Fast Agentic NIM",
-  },
-  {
-    id: "nvidia/nemotron-3.5-super-vl-120b-a12b",
-    name: "Nemotron 3.5 Super VL",
-    provider: "nvidia",
-    description: "120B Vision-Language Reasoning",
-  },
-  {
-    id: "meta/llama-3.3-70b-instruct",
-    name: "Llama 3.3 70B",
-    provider: "nvidia",
-    description: "Meta Frontier Intelligence",
-  },
-  {
-    id: "mistralai/mistral-large-2-instruct",
-    name: "Mistral Large 2",
-    provider: "nvidia",
-    description: "123B Parameter Frontier",
-  },
-  {
-    id: "deepseek-ai/deepseek-r1",
-    name: "DeepSeek R1",
-    provider: "nvidia",
-    description: "Open-R1 High Accuracy",
-  },
-  {
-    id: "deepseek-ai/deepseek-v4.1-flash",
-    name: "DeepSeek V4.1 Flash",
-    provider: "nvidia",
-    description: "Ultra Fast High-Throughput Reasoning",
-  },
-];
+export const DEFAULT_MODELS = [];
 
 class ModelRegistry {
   constructor() {
@@ -110,18 +66,15 @@ class ModelRegistry {
         const raw = fs.readFileSync(CONFIG_FILE, "utf-8");
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed.models)) {
-          // Merge defaults with custom models (avoid duplicates by id)
-          const customIds = new Set(parsed.models.map((m) => m.id));
-          const missingDefaults = DEFAULT_MODELS.filter((d) => !customIds.has(d.id));
-          this.models = [...missingDefaults, ...parsed.models];
+          this.models = [...parsed.models];
           return;
         }
       }
     } catch (err) {
-      logger.warn(`[ModelRegistry] Failed to load ${CONFIG_FILE}: ${err.message}. Using default models.`);
+      logger.warn(`[ModelRegistry] Failed to load ${CONFIG_FILE}: ${err.message}. Starting empty.`);
     }
 
-    this.models = [...DEFAULT_MODELS];
+    this.models = [];
     this.save();
   }
 

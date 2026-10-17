@@ -89,6 +89,29 @@ class BrowserManager {
           logger.error(`Task from overlay failed: ${err.message}`);
         });
       });
+
+      // Expose model management functions to bypass CORS/CSP on third-party sites
+      await this.context.exposeFunction("get_models", async () => {
+        const { modelRegistry } = await import("./modelRegistry.js");
+        const { AntigravityCliClient } = await import("./antigravityCliClient.js");
+        return {
+          models: modelRegistry.getModels(),
+          providers: modelRegistry.getProviders(),
+          antigravityAvailable: AntigravityCliClient.isAvailable(),
+        };
+      });
+
+      await this.context.exposeFunction("save_model", async (modelData) => {
+        const { modelRegistry } = await import("./modelRegistry.js");
+        const created = modelRegistry.addModel(modelData);
+        return { success: true, model: created };
+      });
+
+      await this.context.exposeFunction("delete_model", async (modelId) => {
+        const { modelRegistry } = await import("./modelRegistry.js");
+        const removed = modelRegistry.removeModel(modelId);
+        return { success: removed };
+      });
     } catch {
       // Ignore if already exposed
     }

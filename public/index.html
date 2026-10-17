@@ -57,6 +57,14 @@
               Research</span>
           </div>
 
+          <div class="engine-selector-group" style="margin-top: 14px; margin-bottom: 12px;">
+            <label for="agent-engine-select" style="display:block; font-size:12px; font-weight:600; color:#a1a1aa; margin-bottom: 6px;">Reasoning Engine</label>
+            <select id="agent-engine-select" style="width:100%; padding: 9px 12px; background: #18181b; border: 1px solid #27272a; border-radius: 8px; color: #f4f4f5; font-size: 13px; font-family: inherit; outline: none; cursor: pointer;">
+              <option value="antigravity/local" selected>⚡ Google Antigravity CLI Agent (Connected)</option>
+              <option value="default">Autonomous Multi-Agent Loop (Planner + Browser + Critique)</option>
+            </select>
+          </div>
+
           <button type="submit" id="submit-btn" class="btn btn-primary">
             <span class="btn-text">Execute Task</span>
             <span class="btn-icon">⚡</span>
