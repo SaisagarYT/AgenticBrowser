@@ -3,6 +3,7 @@
 import { browserManager } from "../core/browserManager.js";
 import { logger } from "../utils/logger.js";
 import { SkillError } from "../utils/errors.js";
+import { highlightActionElement } from "../utils/domHelper.js";
 
 function resolveSelector(selector) {
   if (!selector) return "";
@@ -27,6 +28,10 @@ export async function enterText({ selector, text, pressEnter = false, clearBefor
     const element = page.locator(resolved).first();
     await element.waitFor({ state: "visible", timeout: 10000 });
     await element.scrollIntoViewIfNeeded();
+
+    // Trigger visual action highlight & typing badge (Phase 2)
+    await highlightActionElement(page, { selector: resolved, actionType: "type", detail: String(text) }).catch(() => {});
+    await new Promise((r) => setTimeout(r, 220));
 
     if (clearBefore) {
       await element.fill("");

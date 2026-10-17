@@ -3,6 +3,7 @@
 import { browserManager } from "../core/browserManager.js";
 import { logger } from "../utils/logger.js";
 import { SkillError } from "../utils/errors.js";
+import { highlightActionElement } from "../utils/domHelper.js";
 
 function resolveSelector(selector) {
   if (!selector) return "";
@@ -30,6 +31,10 @@ export async function clickSelector({ selector, timeout = 10000 }) {
     const element = page.locator(resolved).first();
     await element.waitFor({ state: "visible", timeout });
     await element.scrollIntoViewIfNeeded();
+
+    // Trigger visual action highlight & click ripple badge (Phase 2)
+    await highlightActionElement(page, { selector: resolved, actionType: "click" }).catch(() => {});
+    await new Promise((r) => setTimeout(r, 220));
 
     try {
       await element.click({ timeout: Math.min(timeout, 3500) });

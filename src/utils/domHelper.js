@@ -168,6 +168,148 @@ export async function clearVisualMarks(page) {
   }
 }
 
+export async function highlightActionElement(page, { selector, actionType = "click", detail = "" }) {
+  if (!page || page.isClosed()) return false;
+
+  try {
+    return await page.evaluate(({ selector, actionType, detail }) => {
+      try {
+        let mmid = null;
+        const clean = (selector || "").trim();
+        const mmidMatch = clean.match(/mmid=["']?(\d+)["']?/i) || clean.match(/^(\d+)$/);
+        if (mmidMatch) {
+          mmid = mmidMatch[1];
+        } else {
+          const el = document.querySelector(clean);
+          if (el) mmid = el.getAttribute("mmid");
+        }
+
+        const overlay = document.getElementById("agentic-som-overlay");
+        if (!overlay) return false;
+
+        let box = mmid ? overlay.querySelector(`.as-som-box[data-mmid="${mmid}"]`) : null;
+        if (!box && mmid && typeof window.__renderVisualMarks === "function") {
+          window.__renderVisualMarks();
+          box = overlay.querySelector(`.as-som-box[data-mmid="${mmid}"]`);
+        }
+
+        if (!box) return false;
+
+        // Ensure keyframe animations and styles are present
+        if (!document.getElementById("agentic-som-action-styles")) {
+          const st = document.createElement("style");
+          st.id = "agentic-som-action-styles";
+          st.textContent = `
+            @keyframes asSomRipple {
+              0% { transform: scale(0.3); opacity: 1; }
+              100% { transform: scale(2.4); opacity: 0; }
+            }
+            @keyframes asSomPop {
+              0% { transform: scale(0.7); opacity: 0; }
+              100% { transform: scale(1); opacity: 1; }
+            }
+            .as-som-active-box {
+              border: 2px solid #f97316 !important;
+              background-color: rgba(249, 115, 22, 0.16) !important;
+              box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.45) !important;
+              z-index: 2147483645 !important;
+            }
+            .as-som-action-pill {
+              display: inline-flex !important;
+              align-items: center !important;
+              gap: 4px !important;
+              padding: 1px 5px !important;
+              margin-left: 3px !important;
+              background: #18181b !important;
+              color: #facc15 !important;
+              border: 1px solid rgba(250, 204, 21, 0.5) !important;
+              border-radius: 3px !important;
+              font-size: 9.5px !important;
+              font-weight: 700 !important;
+              line-height: 12px !important;
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace !important;
+              box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6) !important;
+              animation: asSomPop 0.15s cubic-bezier(0.16, 1, 0.3, 1) !important;
+              white-space: nowrap !important;
+              pointer-events: none !important;
+              user-select: none !important;
+            }
+            .as-som-click-pointer {
+              position: absolute !important;
+              top: 50% !important;
+              left: 50% !important;
+              transform: translate(-50%, -50%) !important;
+              pointer-events: none !important;
+              display: flex !important;
+              align-items: center !important;
+              justify-content: center !important;
+              width: 28px !important;
+              height: 28px !important;
+              z-index: 2147483646 !important;
+            }
+            .as-som-ripple-ring {
+              position: absolute !important;
+              width: 24px !important;
+              height: 24px !important;
+              border-radius: 50% !important;
+              border: 2px solid #f97316 !important;
+              animation: asSomRipple 0.6s cubic-bezier(0.1, 0.8, 0.3, 1) forwards !important;
+            }
+            .as-som-arrow-icon {
+              width: 14px !important;
+              height: 14px !important;
+              filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5)) !important;
+            }
+          `;
+          document.head.appendChild(st);
+        }
+
+        // 1. Highlight box with active spotlight
+        box.classList.add("as-som-active-box");
+
+        // 2. Add action pill next to badge
+        const badge = box.querySelector(".as-som-badge");
+        let actionPill = box.querySelector(".as-som-action-pill");
+        if (!actionPill && badge) {
+          actionPill = document.createElement("span");
+          actionPill.className = "as-som-action-pill";
+          const label = actionType === "type" ? `Type: "${(detail || "").slice(0, 15)}"` : "Click";
+          actionPill.textContent = label;
+          badge.insertAdjacentElement("afterend", actionPill);
+        }
+
+        // 3. Add animated click ripple pointer
+        const pointer = document.createElement("div");
+        pointer.className = "as-som-click-pointer";
+        pointer.innerHTML = `
+          <div class="as-som-ripple-ring"></div>
+          <svg class="as-som-arrow-icon" viewBox="0 0 24 24" fill="#ea580c" stroke="#ffffff" stroke-width="1.5">
+            <polygon points="3 3 10 20 13 13 20 10 3 3"/>
+          </svg>
+        `;
+        box.appendChild(pointer);
+
+        // Auto-cleanup after action duration
+        setTimeout(() => {
+          try {
+            if (box) {
+              box.classList.remove("as-som-active-box");
+              if (actionPill) actionPill.remove();
+              if (pointer) pointer.remove();
+            }
+          } catch {}
+        }, 700);
+
+        return true;
+      } catch {
+        return false;
+      }
+    }, { selector, actionType, detail });
+  } catch {
+    return false;
+  }
+}
+
 export async function extractDomRepresentation(page, contentType = "fields") {
   await tagInteractiveElements(page);
 
