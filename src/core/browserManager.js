@@ -72,7 +72,7 @@ class BrowserManager {
       }
     }
 
-    // Expose process_task for the in-page chat overlay
+    // Expose process_task and model registry functions for the in-page chat overlay
     try {
       await this.context.exposeFunction("process_task", async (commandOrPayload, maybeModel) => {
         let command = commandOrPayload;
@@ -88,6 +88,24 @@ class BrowserManager {
         orchestrator.runTask(command, null, { model: selectedModel, fromOverlay: true }).catch((err) => {
           logger.error(`Task from overlay failed: ${err.message}`);
         });
+      });
+
+      const { modelRegistry } = await import("./modelRegistry.js");
+      await this.context.exposeFunction("get_models", async () => {
+        return {
+          models: modelRegistry.getModels(),
+          providers: modelRegistry.getProviders(),
+        };
+      });
+
+      await this.context.exposeFunction("save_model", async (modelData) => {
+        const added = modelRegistry.addModel(modelData);
+        return { success: true, model: added };
+      });
+
+      await this.context.exposeFunction("delete_model", async (modelId) => {
+        const success = modelRegistry.removeModel(modelId);
+        return { success };
       });
     } catch {
       // Ignore if already exposed

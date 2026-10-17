@@ -52,6 +52,16 @@
             <span class="suggestion-chip" data-query="Open wikipedia.org, search for Quantum Computing and extract summary">📖 Wikipedia Research</span>
           </div>
 
+          <div class="dash-model-bar">
+            <div class="dash-model-select-wrapper">
+              <label for="dash-model-select">AI Model</label>
+              <select id="dash-model-select" class="dash-select">
+                <option value="nvidia/nemotron-3-ultra-550b-a55b">Nemotron 550B (NVIDIA)</option>
+              </select>
+            </div>
+            <button type="button" id="dash-btn-add-model" class="btn-sm btn-outline-gold">+ Add Model</button>
+          </div>
+
           <button type="submit" id="submit-btn" class="btn btn-primary">
             <span class="btn-text">Execute Task</span>
             <span class="btn-icon">⚡</span>
@@ -141,6 +151,59 @@
         </div>
       </section>
     </main>
+  <!-- Dashboard Model Settings Modal -->
+  <div id="dash-modal-backdrop" class="modal-backdrop" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <h3>Configure AI Model &amp; Provider</h3>
+          <p class="modal-sub">Register models from NVIDIA NIM, OpenAI, Groq, Ollama, OpenRouter, or Custom API</p>
+        </div>
+        <button type="button" id="dash-btn-close-modal" class="btn-close" aria-label="Close dialog">✕</button>
+      </div>
+      <form id="dash-model-form" class="modal-form">
+        <div class="form-group">
+          <label for="dash-modal-provider">Provider</label>
+          <select id="dash-modal-provider" class="dash-input">
+            <option value="nvidia" selected>NVIDIA NIM</option>
+            <option value="openai">OpenAI</option>
+            <option value="groq">Groq</option>
+            <option value="ollama">Local Ollama</option>
+            <option value="openrouter">OpenRouter</option>
+            <option value="custom">Custom / Self-Hosted</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="dash-modal-model-id">Model Identifier *</label>
+          <input type="text" id="dash-modal-model-id" class="dash-input" placeholder="e.g. nvidia/nemotron-3.5-super-vl-120b-a12b" required />
+        </div>
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="dash-modal-model-name">Display Name</label>
+            <input type="text" id="dash-modal-model-name" class="dash-input" placeholder="e.g. Nemotron 3.5 Super VL" />
+          </div>
+          <div class="form-group flex-1">
+            <label for="dash-modal-model-desc">Description</label>
+            <input type="text" id="dash-modal-model-desc" class="dash-input" placeholder="e.g. Vision-Language Reasoning" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="dash-modal-base-url">Custom Base URL (Optional)</label>
+          <input type="url" id="dash-modal-base-url" class="dash-input" placeholder="https://integrate.api.nvidia.com/v1" />
+          <span class="field-hint" id="dash-modal-url-hint">Uses default NVIDIA NIM endpoint</span>
+        </div>
+        <div class="form-group">
+          <label for="dash-modal-api-key">API Key (Optional)</label>
+          <input type="password" id="dash-modal-api-key" class="dash-input" placeholder="Uses key from .env if empty" autocomplete="off" />
+          <span class="field-hint">Leave blank to use provider key configured in your .env</span>
+        </div>
+        <div id="dash-modal-feedback" class="modal-feedback"></div>
+        <div class="modal-actions">
+          <button type="button" id="dash-btn-cancel-modal" class="btn btn-secondary">Cancel</button>
+          <button type="submit" id="dash-btn-save-modal" class="btn btn-primary">Save Model</button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <script src="/js/app.js"></script>

@@ -133,11 +133,12 @@ document.addEventListener("DOMContentLoaded", () => {
     resetUI();
 
     try {
-      // Trigger execution via API
+      // Trigger execution via API with selected model
+      const selectedModel = dashModelSelect ? dashModelSelect.value : null;
       const res = await fetch("/api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ command, async: true }),
+        body: JSON.stringify({ command, model: selectedModel, async: true }),
       });
 
       if (!res.ok) {
@@ -321,11 +322,133 @@ document.addEventListener("DOMContentLoaded", () => {
 
   refreshHistoryBtn.addEventListener("click", loadHistory);
 
+  // --------------------------------------------------------------------------
+  // Model Registry & Settings Modal (Dashboard)
+  // --------------------------------------------------------------------------
+  const dashModelSelect = document.getElementById("dash-model-select");
+  const dashBtnAddModel = document.getElementById("dash-btn-add-model");
+  const dashModalBackdrop = document.getElementById("dash-modal-backdrop");
+  const dashBtnCloseModal = document.getElementById("dash-btn-close-modal");
+  const dashBtnCancelModal = document.getElementById("dash-btn-cancel-modal");
+  const dashModelForm = document.getElementById("dash-model-form");
+  const dashModalProvider = document.getElementById("dash-modal-provider");
+  const dashModalBaseUrl = document.getElementById("dash-modal-base-url");
+  const dashModalUrlHint = document.getElementById("dash-modal-url-hint");
+  const dashModalApiKey = document.getElementById("dash-modal-api-key");
+  const dashModalFeedback = document.getElementById("dash-modal-feedback");
+  const dashBtnSaveModal = document.getElementById("dash-btn-save-modal");
+
+  const DASH_PROVIDER_HINTS = {
+    nvidia: { url: "https://integrate.api.nvidia.com/v1", hint: "Default NVIDIA NIM API Endpoint" },
+    openai: { url: "https://api.openai.com/v1", hint: "Default OpenAI API Endpoint" },
+    groq: { url: "https://api.groq.com/openai/v1", hint: "Default Groq LPU API Endpoint" },
+    ollama: { url: "http://localhost:11434/v1", hint: "Default local Ollama instance (No key required)" },
+    openrouter: { url: "https://openrouter.ai/api/v1", hint: "Universal gateway endpoint" },
+    custom: { url: "", hint: "Specify custom endpoint" },
+  };
+
+  async function loadModels() {
+    if (!dashModelSelect) return;
+    try {
+      const res = await fetch("/api/models");
+      if (!res.ok) return;
+      const data = await res.json();
+      if (Array.isArray(data.models)) {
+        const curVal = dashModelSelect.value;
+        dashModelSelect.innerHTML = data.models
+          .map(
+            (m) =>
+              `<option value="${m.id}" ${m.id === curVal ? "selected" : ""}>${escapeHtml(m.name)} (${(m.provider || "NIM").toUpperCase()})</option>`
+          )
+          .join("");
+        if (!curVal && data.models[0]) {
+          dashModelSelect.value = data.models[0].id;
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to fetch models:", err);
+    }
+  }
+
+  if (dashBtnAddModel && dashModalBackdrop) {
+    dashBtnAddModel.addEventListener("click", () => {
+      dashModalBackdrop.style.display = "flex";
+      dashModalFeedback.className = "modal-feedback";
+      dashModalFeedback.textContent = "";
+      document.getElementById("dash-modal-model-id")?.focus();
+    });
+
+    const closeModal = () => {
+      dashModalBackdrop.style.display = "none";
+    };
+
+    dashBtnCloseModal?.addEventListener("click", closeModal);
+    dashBtnCancelModal?.addEventListener("click", closeModal);
+    dashModalBackdrop.addEventListener("click", (e) => {
+      if (e.target === dashModalBackdrop) closeModal();
+    });
+
+    dashModalProvider?.addEventListener("change", () => {
+      const prov = dashModalProvider.value;
+      const meta = DASH_PROVIDER_HINTS[prov] || DASH_PROVIDER_HINTS.custom;
+      if (dashModalBaseUrl) dashModalBaseUrl.placeholder = meta.url || "https://...";
+      if (dashModalUrlHint) dashModalUrlHint.textContent = meta.hint;
+    });
+
+    dashModelForm?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const id = document.getElementById("dash-modal-model-id").value.trim();
+      const name = document.getElementById("dash-modal-model-name").value.trim() || id;
+      const provider = dashModalProvider.value;
+      const description = document.getElementById("dash-modal-model-desc").value.trim();
+      const baseURL = dashModalBaseUrl.value.trim() || null;
+      const apiKey = dashModalApiKey.value.trim() || null;
+
+      if (!id) return;
+
+      dashBtnSaveModal.disabled = true;
+      dashBtnSaveModal.textContent = "Saving...";
+      dashModalFeedback.className = "modal-feedback";
+
+      try {
+        const res = await fetch("/api/models", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, name, provider, description, baseURL, apiKey }),
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || `HTTP ${res.status}`);
+        }
+
+        dashModalFeedback.textContent = `Model "${name}" added successfully!`;
+        dashModalFeedback.className = "modal-feedback visible success";
+
+        await loadModels();
+        if (dashModelSelect) dashModelSelect.value = id;
+
+        setTimeout(() => {
+          closeModal();
+          dashModelForm.reset();
+          dashBtnSaveModal.disabled = false;
+          dashBtnSaveModal.textContent = "Save Model";
+        }, 300);
+      } catch (err) {
+        dashModalFeedback.textContent = err.message || "Failed to save model.";
+        dashModalFeedback.className = "modal-feedback visible error";
+        dashBtnSaveModal.disabled = false;
+        dashBtnSaveModal.textContent = "Save Model";
+      }
+    });
+  }
+
   function escapeHtml(str) {
     if (!str) return "";
     return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
 
-  // Initial history load
+  // Initial load
   loadHistory();
+  loadModels();
 });
