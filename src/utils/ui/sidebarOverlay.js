@@ -2011,6 +2011,8 @@
     thumbsDown: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22h-1.5a1.5 1.5 0 0 1-1.5-1.5c0-.88.4-1.68 1-2.38z"/></svg>`,
     rotateCw: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>`,
     sliders: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><line x1="1" x2="7" y1="14" y2="14"/><line x1="9" x2="15" y1="8" y2="8"/><line x1="17" x2="23" y1="16" y2="16"/></svg>`,
+    eye: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`,
+    eyeOff: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>`,
   };
 
   // 3D Isometric Cube SVG Logo (Exact Voxle Aesthetic)
@@ -2079,6 +2081,14 @@
       </button>
       <div class="as-rail-tooltip">Clear Chat</div>
     </div>
+
+    <!-- Toggle Visual Marks -->
+    <div class="as-rail-item">
+      <button class="as-rail-btn" id="as-rail-som-toggle" aria-label="Toggle Visual Marks" style="color: #facc15;">
+        ${ICONS.eye}
+      </button>
+      <div class="as-rail-tooltip">Visual Marks (Alt+M)</div>
+    </div>
   `;
   container.appendChild(rail);
 
@@ -2131,6 +2141,7 @@
       </div>
 
       <div class="as-header-right">
+        <button class="as-icon-btn" id="as-btn-som-toggle" title="Toggle Visual Marks (Alt+M)" style="color: #facc15;">${ICONS.eye}</button>
         <button class="as-icon-btn" id="as-btn-theme" title="Toggle Theme">${ICONS.moon}</button>
         <button class="as-icon-btn" id="as-btn-clear" title="Clear Chat">${ICONS.trash}</button>
         <button class="as-icon-btn" id="as-btn-collapse" title="Collapse Sidebar (Ctrl+B)">${ICONS.panelClose}</button>
@@ -2326,6 +2337,8 @@
   const railNewBtn = rail.querySelector("#as-rail-new");
   const themeBtn = sidebar.querySelector("#as-btn-theme");
   const railThemeBtn = rail.querySelector("#as-rail-theme");
+  const somToggleBtn = sidebar.querySelector("#as-btn-som-toggle");
+  const railSomToggleBtn = rail.querySelector("#as-rail-som-toggle");
   const clearBtn = sidebar.querySelector("#as-btn-clear");
   const railClearBtn = rail.querySelector("#as-rail-clear");
 
@@ -2489,6 +2502,38 @@
 
   themeBtn.addEventListener("click", toggleTheme);
   railThemeBtn.addEventListener("click", toggleTheme);
+
+  // Toggle Visual Marks (Set-of-Marks Overlay - Phase 5)
+  let isVisualMarksActive = true;
+  function setVisualMarksVisible(visible) {
+    isVisualMarksActive = visible;
+    const overlay = document.getElementById("agentic-som-overlay");
+    if (overlay) {
+      overlay.style.display = isVisualMarksActive ? "block" : "none";
+    }
+    const icon = isVisualMarksActive ? ICONS.eye : ICONS.eyeOff;
+    if (somToggleBtn) {
+      somToggleBtn.innerHTML = icon;
+      somToggleBtn.title = isVisualMarksActive ? "Hide Visual Marks (Alt+M)" : "Show Visual Marks (Alt+M)";
+      somToggleBtn.style.color = isVisualMarksActive ? "#facc15" : "";
+    }
+    if (railSomToggleBtn) {
+      railSomToggleBtn.innerHTML = icon;
+      railSomToggleBtn.title = isVisualMarksActive ? "Hide Visual Marks (Alt+M)" : "Show Visual Marks (Alt+M)";
+      railSomToggleBtn.style.color = isVisualMarksActive ? "#facc15" : "";
+    }
+  }
+
+  if (somToggleBtn) somToggleBtn.addEventListener("click", () => setVisualMarksVisible(!isVisualMarksActive));
+  if (railSomToggleBtn) railSomToggleBtn.addEventListener("click", () => setVisualMarksVisible(!isVisualMarksActive));
+
+  // Keyboard shortcut Alt+M to toggle visual marks
+  document.addEventListener("keydown", (e) => {
+    if ((e.altKey || (e.ctrlKey && e.shiftKey)) && (e.key === "m" || e.key === "M")) {
+      e.preventDefault();
+      setVisualMarksVisible(!isVisualMarksActive);
+    }
+  });
 
   // Clear Chat History
   function clearChat() {
@@ -3675,5 +3720,7 @@
     showSkeleton: (status) => showSkeleton(status),
     hideSkeleton: () => hideSkeleton(),
     clearMessages: clearChat,
+    toggleVisualMarks: () => setVisualMarksVisible(!isVisualMarksActive),
+    setVisualMarksVisible: (v) => setVisualMarksVisible(Boolean(v)),
   };
 })();
