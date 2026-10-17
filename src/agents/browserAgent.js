@@ -16,7 +16,7 @@ You execute exactly ONE atomic tool action per step.
 
 <rules>
 1. Always choose exactly ONE tool from the list below.
-2. To interact with elements on the page (clicks, inputs), inspect the DOM or use the "mmid" attribute of the element (e.g. '5' or '[mmid="5"]').
+2. The page state is structured into visual Semantic Blocks (e.g. [Block 3 (article): "Product Title"]). To interact with elements on the page (clicks, inputs), inspect the relevant block and use the "mmid" attribute of the element (e.g. '5' or '[mmid="5"]'). Identifying the target element inside its specific block guarantees 1-shot accuracy (e.g. selecting the "Add to Cart" button inside the exact product card intended).
 3. If entering text into a search bar, set pressEnter: true unless a separate submit button is targeted.
 4. If asked to navigate to a new site, use open_url.
 5. If the current page content is needed to answer a query or find buttons, call get_dom_with_content_type.
@@ -39,6 +39,25 @@ You MUST respond with valid JSON adhering to this exact schema:
 </output_format>
 `.trim();
 
+export function formatSemanticBlocksForPrompt(dom) {
+  if (!dom) return "No DOM state available.";
+
+  if (Array.isArray(dom.semanticBlocks) && dom.semanticBlocks.length > 0) {
+    return dom.semanticBlocks.map((b) => {
+      const headerLine = `[Block ${b.blockId} (${b.type}): "${b.label}"]`;
+      const elementLines = (b.elements || []).map((el) => `    ${el}`).join("\n");
+      return `${headerLine}\n${elementLines}`;
+    }).join("\n\n");
+  }
+
+  // Graceful fallback to flat list
+  if (Array.isArray(dom.interactiveElements) && dom.interactiveElements.length > 0) {
+    return dom.interactiveElements.slice(0, 100).join("\n");
+  }
+
+  return "No interactive elements detected on the page.";
+}
+
 export class BrowserAgent {
   static async executeStep({ stepInstruction, previousActions = [], model = null }) {
     logger.info(`[BrowserAgent] Deciding action for instruction: "${stepInstruction}" [Model: ${model || "default"}]`);
@@ -52,8 +71,8 @@ export class BrowserAgent {
     if (currentUrl && currentUrl !== "about:blank") {
       try {
         const dom = await extractDomRepresentation(page, "fields");
-        domSnapshot = `Current Page Title: "${pageTitle}"\nCurrent URL: ${currentUrl}\nInteractive Elements Sample:\n` +
-          (dom.interactiveElements || []).slice(0, 100).join("\n");
+        const blockStructure = formatSemanticBlocksForPrompt(dom);
+        domSnapshot = `Current Page Title: "${pageTitle}"\nCurrent URL: ${currentUrl}\n\n=== Webpage Semantic Blocks (Visual Layout) ===\n${blockStructure}`;
       } catch (err) {
         domSnapshot = `Current URL: ${currentUrl} (DOM extraction error: ${err.message})`;
       }
