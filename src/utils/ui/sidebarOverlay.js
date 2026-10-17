@@ -1805,324 +1805,6 @@
       background: transparent !important;
     }
 
-    /* Dynamic Model Selector Header & Modal Styles */
-    .as-select-header-bar {
-      display: flex !important;
-      align-items: center !important;
-      justify-content: space-between !important;
-      padding: 6px 8px 4px 8px !important;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-      margin-bottom: 4px !important;
-    }
-
-    .as-select-add-btn {
-      all: initial !important;
-      display: inline-flex !important;
-      align-items: center !important;
-      gap: 4px !important;
-      font-size: 11px !important;
-      font-weight: 500 !important;
-      color: #facc15 !important;
-      cursor: pointer !important;
-      font-family: var(--font-sans) !important;
-      padding: 2px 6px !important;
-      border-radius: 4px !important;
-      transition: background 0.15s ease !important;
-    }
-
-    .as-select-add-btn:hover {
-      background: rgba(250, 204, 21, 0.15) !important;
-    }
-
-    .as-select-items-scroll {
-      display: flex !important;
-      flex-direction: column !important;
-      gap: 2px !important;
-      max-height: 240px !important;
-      overflow-y: auto !important;
-      scrollbar-width: thin !important;
-      scrollbar-color: rgba(255, 255, 255, 0.2) transparent !important;
-    }
-
-    .as-select-items-scroll::-webkit-scrollbar {
-      width: 4px !important;
-    }
-
-    .as-select-items-scroll::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.2) !important;
-      border-radius: 2px !important;
-    }
-
-    .as-select-item-actions {
-      display: inline-flex !important;
-      align-items: center !important;
-      gap: 4px !important;
-    }
-
-    .as-select-item-delete {
-      all: initial !important;
-      display: none !important;
-      align-items: center !important;
-      justify-content: center !important;
-      width: 18px !important;
-      height: 18px !important;
-      border-radius: 4px !important;
-      color: #71717a !important;
-      cursor: pointer !important;
-      transition: all 0.15s ease !important;
-    }
-
-    .as-select-item:hover .as-select-item-delete {
-      display: flex !important;
-    }
-
-    .as-select-item-delete:hover {
-      color: #ef4444 !important;
-      background: rgba(239, 68, 68, 0.2) !important;
-    }
-
-    .as-select-item-badge {
-      font-size: 9px !important;
-      font-weight: 600 !important;
-      text-transform: uppercase !important;
-      padding: 1px 4px !important;
-      border-radius: 3px !important;
-      background: rgba(255, 255, 255, 0.08) !important;
-      color: #a1a1aa !important;
-      margin-left: 6px !important;
-      letter-spacing: 0.3px !important;
-    }
-
-    /* Modal Backdrop & Dialog (shadcn aesthetic) */
-    .as-modal-backdrop {
-      position: fixed !important;
-      top: 0 !important;
-      left: 0 !important;
-      right: 0 !important;
-      bottom: 0 !important;
-      background: rgba(0, 0, 0, 0.72) !important;
-      backdrop-filter: blur(6px) !important;
-      z-index: 2147483647 !important;
-      display: none !important;
-      align-items: center !important;
-      justify-content: center !important;
-      padding: 16px !important;
-      box-sizing: border-box !important;
-    }
-
-    .as-modal-backdrop.open {
-      display: flex !important;
-      animation: asModalFadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
-    }
-
-    @keyframes asModalFadeIn {
-      from { opacity: 0; transform: scale(0.98); }
-      to { opacity: 1; transform: scale(1); }
-    }
-
-    .as-modal {
-      background: #141416 !important;
-      border: 1px solid rgba(255, 255, 255, 0.14) !important;
-      border-radius: 12px !important;
-      box-shadow: 0 24px 60px -10px rgba(0, 0, 0, 0.8), 0 0 1px 1px rgba(255, 255, 255, 0.08) !important;
-      width: 440px !important;
-      max-width: 100% !important;
-      box-sizing: border-box !important;
-      padding: 20px !important;
-      display: flex !important;
-      flex-direction: column !important;
-      gap: 16px !important;
-      font-family: var(--font-sans) !important;
-      color: #f4f4f5 !important;
-    }
-
-    .as-modal-header {
-      display: flex !important;
-      align-items: flex-start !important;
-      justify-content: space-between !important;
-      gap: 12px !important;
-    }
-
-    .as-modal-header-text {
-      display: flex !important;
-      flex-direction: column !important;
-      gap: 3px !important;
-    }
-
-    .as-modal-title {
-      font-size: 15px !important;
-      font-weight: 600 !important;
-      color: #ffffff !important;
-      margin: 0 !important;
-      line-height: 1.2 !important;
-    }
-
-    .as-modal-sub {
-      font-size: 11px !important;
-      color: #a1a1aa !important;
-      margin: 0 !important;
-      line-height: 1.3 !important;
-    }
-
-    .as-modal-close {
-      all: initial !important;
-      display: inline-flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      width: 26px !important;
-      height: 26px !important;
-      border-radius: 6px !important;
-      color: #71717a !important;
-      cursor: pointer !important;
-      transition: all 0.15s ease !important;
-    }
-
-    .as-modal-close:hover {
-      background: rgba(255, 255, 255, 0.1) !important;
-      color: #ffffff !important;
-    }
-
-    .as-modal-form {
-      display: flex !important;
-      flex-direction: column !important;
-      gap: 12px !important;
-    }
-
-    .as-form-group {
-      display: flex !important;
-      flex-direction: column !important;
-      gap: 4px !important;
-    }
-
-    .as-form-row {
-      display: flex !important;
-      gap: 10px !important;
-    }
-
-    .as-form-group.flex-1 {
-      flex: 1 !important;
-    }
-
-    .as-form-group label {
-      font-size: 11px !important;
-      font-weight: 600 !important;
-      color: #a1a1aa !important;
-      text-transform: uppercase !important;
-      letter-spacing: 0.4px !important;
-    }
-
-    .as-req {
-      color: #facc15 !important;
-    }
-
-    .as-optional {
-      font-weight: normal !important;
-      color: #71717a !important;
-      text-transform: none !important;
-    }
-
-    .as-modal-input {
-      all: initial !important;
-      background: #1c1c20 !important;
-      border: 1px solid rgba(255, 255, 255, 0.12) !important;
-      border-radius: 6px !important;
-      padding: 7px 10px !important;
-      font-size: 12px !important;
-      font-family: var(--font-sans) !important;
-      color: #f4f4f5 !important;
-      box-sizing: border-box !important;
-      width: 100% !important;
-      transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
-    }
-
-    .as-modal-input:focus {
-      border-color: #facc15 !important;
-      box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.15) !important;
-    }
-
-    .as-modal-select {
-      cursor: pointer !important;
-      appearance: auto !important;
-    }
-
-    .as-modal-select option {
-      background: #1c1c20 !important;
-      color: #f4f4f5 !important;
-    }
-
-    .as-form-hint {
-      font-size: 10px !important;
-      color: #71717a !important;
-      margin-top: 2px !important;
-    }
-
-    .as-modal-feedback {
-      font-size: 11px !important;
-      min-height: 14px !important;
-      color: #ef4444 !important;
-      display: none !important;
-    }
-
-    .as-modal-feedback.visible {
-      display: block !important;
-    }
-
-    .as-modal-feedback.success {
-      color: #10b981 !important;
-    }
-
-    .as-modal-footer {
-      display: flex !important;
-      align-items: center !important;
-      justify-content: flex-end !important;
-      gap: 8px !important;
-      margin-top: 4px !important;
-      padding-top: 8px !important;
-      border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
-    }
-
-    .as-btn-secondary {
-      all: initial !important;
-      padding: 6px 12px !important;
-      border-radius: 6px !important;
-      font-size: 12px !important;
-      font-weight: 500 !important;
-      color: #a1a1aa !important;
-      cursor: pointer !important;
-      font-family: var(--font-sans) !important;
-      border: 1px solid rgba(255, 255, 255, 0.1) !important;
-      background: rgba(255, 255, 255, 0.04) !important;
-      transition: all 0.15s ease !important;
-    }
-
-    .as-btn-secondary:hover {
-      background: rgba(255, 255, 255, 0.08) !important;
-      color: #ffffff !important;
-    }
-
-    .as-btn-primary {
-      all: initial !important;
-      padding: 6px 14px !important;
-      border-radius: 6px !important;
-      font-size: 12px !important;
-      font-weight: 600 !important;
-      color: #000000 !important;
-      background: #facc15 !important;
-      cursor: pointer !important;
-      font-family: var(--font-sans) !important;
-      transition: all 0.15s ease !important;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
-    }
-
-    .as-btn-primary:hover {
-      background: #eab308 !important;
-    }
-
-    .as-btn-primary:disabled {
-      opacity: 0.5 !important;
-      cursor: not-allowed !important;
-    }
-
     /* ------------------------------------------------------------------------
        shadcn/ui DropdownMenu (Upload Options Popover)
        ------------------------------------------------------------------------ */
@@ -2570,20 +2252,54 @@
               </button>
 
               <div class="as-shadcn-select-popover" id="as-model-select-popover" role="listbox">
-                <div class="as-select-header-bar">
-                  <span class="as-select-label">Available Models</span>
-                  <button type="button" class="as-select-add-btn" id="as-btn-open-model-modal" title="Add New Model">
-                    ${ICONS.plus} <span>Add Model</span>
-                  </button>
+                <div class="as-select-label">Reasoning &amp; Planning Models</div>
+                <div class="as-select-item selected" data-model="nvidia/nemotron-3-ultra-550b-a55b" data-name="Nemotron 550B" role="option" aria-selected="true">
+                  <div class="as-select-item-info">
+                    <span class="as-select-item-title">Nemotron 550B</span>
+                    <span class="as-select-item-sub">NVIDIA Ultra Reasoning</span>
+                  </div>
+                  <span class="as-select-check">${ICONS.check}</span>
                 </div>
-                <div class="as-select-items-scroll" id="as-model-items-list">
-                  <!-- Populated dynamically from ModelRegistry -->
+                <div class="as-select-item" data-model="nvidia/nemotron-4-340b-instruct" data-name="Nemotron 340B" role="option" aria-selected="false">
+                  <div class="as-select-item-info">
+                    <span class="as-select-item-title">Nemotron 340B</span>
+                    <span class="as-select-item-sub">Fast Agentic NIM</span>
+                  </div>
+                  <span class="as-select-check">${ICONS.check}</span>
+                </div>
+                <div class="as-select-item" data-model="meta/llama-3.3-70b-instruct" data-name="Llama 3.3 70B" role="option" aria-selected="false">
+                  <div class="as-select-item-info">
+                    <span class="as-select-item-title">Llama 3.3 70B</span>
+                    <span class="as-select-item-sub">Meta Frontier Intelligence</span>
+                  </div>
+                  <span class="as-select-check">${ICONS.check}</span>
+                </div>
+                <div class="as-select-item" data-model="mistralai/mistral-large-2-instruct" data-name="Mistral Large 2" role="option" aria-selected="false">
+                  <div class="as-select-item-info">
+                    <span class="as-select-item-title">Mistral Large 2</span>
+                    <span class="as-select-item-sub">123B Parameter Frontier</span>
+                  </div>
+                  <span class="as-select-check">${ICONS.check}</span>
+                </div>
+                <div class="as-select-item" data-model="deepseek-ai/deepseek-r1" data-name="DeepSeek R1" role="option" aria-selected="false">
+                  <div class="as-select-item-info">
+                    <span class="as-select-item-title">DeepSeek R1</span>
+                    <span class="as-select-item-sub">Open-R1 High Accuracy</span>
+                  </div>
+                  <span class="as-select-check">${ICONS.check}</span>
+                </div>
+                <div class="as-select-item" data-model="deepseek-ai/deepseek-v4.1-flash" data-name="DeepSeek V4.1 Flash" role="option" aria-selected="false">
+                  <div class="as-select-item-info">
+                    <span class="as-select-item-title">DeepSeek V4.1 Flash</span>
+                    <span class="as-select-item-sub">Ultra Fast High-Throughput Reasoning</span>
+                  </div>
+                  <span class="as-select-check">${ICONS.check}</span>
                 </div>
               </div>
             </div>
 
             <!-- Accurate NIM Active Status Pill with Gray Border & Text (No Colors, Slightly Rounded) -->
-            <div class="as-nim-status-pill" id="as-nim-status" title="Active AI Model &amp; Provider">
+            <div class="as-nim-status-pill" id="as-nim-status" title="NVIDIA NIM Active">
               <span id="as-nim-status-text">NIM Active</span>
             </div>
           </div>
@@ -2606,74 +2322,6 @@
     </div>
   `;
   container.appendChild(sidebar);
-
-  // Append Model Settings Modal Backdrop & Dialog
-  const modalBackdrop = document.createElement("div");
-  modalBackdrop.id = "as-model-modal-backdrop";
-  modalBackdrop.className = "as-modal-backdrop";
-  modalBackdrop.innerHTML = `
-    <div id="as-model-modal" class="as-modal" role="dialog" aria-modal="true" aria-labelledby="as-modal-title">
-      <div class="as-modal-header">
-        <div class="as-modal-header-text">
-          <h3 id="as-modal-title" class="as-modal-title">Configure AI Models &amp; Providers</h3>
-          <p class="as-modal-sub">Connect models from NVIDIA NIM, OpenAI, Groq, Ollama, OpenRouter, or Custom API</p>
-        </div>
-        <button type="button" class="as-modal-close" id="as-btn-close-model-modal" title="Close dialog">
-          ${ICONS.close}
-        </button>
-      </div>
-
-      <form id="as-model-form" class="as-modal-form">
-        <div class="as-form-group">
-          <label for="as-modal-provider">Provider</label>
-          <select id="as-modal-provider" class="as-modal-input as-modal-select">
-            <option value="nvidia" selected>NVIDIA NIM</option>
-            <option value="openai">OpenAI</option>
-            <option value="groq">Groq</option>
-            <option value="ollama">Local Ollama</option>
-            <option value="openrouter">OpenRouter</option>
-            <option value="custom">Custom / Self-Hosted (vLLM, LM Studio)</option>
-          </select>
-        </div>
-
-        <div class="as-form-group">
-          <label for="as-modal-model-id">Model ID / Identifier <span class="as-req">*</span></label>
-          <input type="text" id="as-modal-model-id" class="as-modal-input" placeholder="e.g. nvidia/nemotron-3.5-super-vl-120b-a12b" required />
-        </div>
-
-        <div class="as-form-row">
-          <div class="as-form-group flex-1">
-            <label for="as-modal-model-name">Display Name</label>
-            <input type="text" id="as-modal-model-name" class="as-modal-input" placeholder="e.g. Nemotron 3.5 Super VL" />
-          </div>
-          <div class="as-form-group flex-1">
-            <label for="as-modal-model-desc">Description</label>
-            <input type="text" id="as-modal-model-desc" class="as-modal-input" placeholder="e.g. Vision-Language Reasoning" />
-          </div>
-        </div>
-
-        <div class="as-form-group">
-          <label for="as-modal-base-url">Custom Base URL <span class="as-optional">(Optional)</span></label>
-          <input type="url" id="as-modal-base-url" class="as-modal-input" placeholder="https://integrate.api.nvidia.com/v1" />
-          <span class="as-form-hint" id="as-modal-url-hint">Uses default NVIDIA NIM endpoint</span>
-        </div>
-
-        <div class="as-form-group">
-          <label for="as-modal-api-key">API Key <span class="as-optional">(Optional)</span></label>
-          <input type="password" id="as-modal-api-key" class="as-modal-input" placeholder="Uses NVIDIA_API_KEY from .env if empty" autocomplete="off" />
-          <span class="as-form-hint">Leave blank to use provider key configured in your .env</span>
-        </div>
-
-        <div id="as-modal-feedback" class="as-modal-feedback"></div>
-
-        <div class="as-modal-footer">
-          <button type="button" class="as-btn-secondary" id="as-btn-cancel-model-modal">Cancel</button>
-          <button type="submit" class="as-btn-primary" id="as-btn-save-model-modal">Save &amp; Select Model</button>
-        </div>
-      </form>
-    </div>
-  `;
-  container.appendChild(modalBackdrop);
 
   // --------------------------------------------------------------------------
   // 5. Modular Controller & Event Bindings
@@ -3064,198 +2712,6 @@
     });
   }
 
-  // Dynamic Model Registry & Settings Modal Controller
-  const modelListContainer = sidebar.querySelector("#as-model-items-list");
-  const openModelModalBtn = sidebar.querySelector("#as-btn-open-model-modal");
-  const closeModelModalBtn = modalBackdrop.querySelector("#as-btn-close-model-modal");
-  const cancelModelModalBtn = modalBackdrop.querySelector("#as-btn-cancel-model-modal");
-  const modelForm = modalBackdrop.querySelector("#as-model-form");
-  const modalProviderSelect = modalBackdrop.querySelector("#as-modal-provider");
-  const modalBaseUrlInput = modalBackdrop.querySelector("#as-modal-base-url");
-  const modalUrlHint = modalBackdrop.querySelector("#as-modal-url-hint");
-  const modalApiKeyInput = modalBackdrop.querySelector("#as-modal-api-key");
-  const modalFeedback = modalBackdrop.querySelector("#as-modal-feedback");
-  const saveModelBtn = modalBackdrop.querySelector("#as-btn-save-model-modal");
-
-  const PROVIDER_HINTS = {
-    nvidia: {
-      url: "https://integrate.api.nvidia.com/v1",
-      hint: "Default NVIDIA NIM API Endpoint",
-      keyHint: "Uses NVIDIA_API_KEY from .env if empty",
-    },
-    openai: {
-      url: "https://api.openai.com/v1",
-      hint: "Default OpenAI API Endpoint",
-      keyHint: "Uses OPENAI_API_KEY from .env if empty",
-    },
-    groq: {
-      url: "https://api.groq.com/openai/v1",
-      hint: "Default Groq LPU API Endpoint",
-      keyHint: "Uses GROQ_API_KEY from .env if empty",
-    },
-    ollama: {
-      url: "http://localhost:11434/v1",
-      hint: "Default local Ollama instance (No API Key needed)",
-      keyHint: "Not required for local Ollama",
-    },
-    openrouter: {
-      url: "https://openrouter.ai/api/v1",
-      hint: "Universal gateway endpoint",
-      keyHint: "Uses OPENROUTER_API_KEY from .env if empty",
-    },
-    custom: {
-      url: "",
-      hint: "Specify base URL (e.g. http://localhost:8000/v1 for vLLM)",
-      keyHint: "Optional API Key for custom endpoint",
-    },
-  };
-
-  let registeredModels = Array.isArray(window.__INITIAL_MODELS__) && window.__INITIAL_MODELS__.length > 0
-    ? [...window.__INITIAL_MODELS__]
-    : [
-        { id: "nvidia/nemotron-3-ultra-550b-a55b", name: "Nemotron 550B", provider: "nvidia", description: "NVIDIA Ultra Reasoning", isDefault: true },
-        { id: "nvidia/nemotron-4-340b-instruct", name: "Nemotron 340B", provider: "nvidia", description: "Fast Agentic NIM" },
-        { id: "nvidia/nemotron-3.5-super-vl-120b-a12b", name: "Nemotron 3.5 Super VL", provider: "nvidia", description: "120B Vision-Language Reasoning" },
-        { id: "meta/llama-3.3-70b-instruct", name: "Llama 3.3 70B", provider: "nvidia", description: "Meta Frontier Intelligence" },
-        { id: "mistralai/mistral-large-2-instruct", name: "Mistral Large 2", provider: "nvidia", description: "123B Parameter Frontier" },
-        { id: "deepseek-ai/deepseek-r1", name: "DeepSeek R1", provider: "nvidia", description: "Open-R1 High Accuracy" },
-        { id: "deepseek-ai/deepseek-v4.1-flash", name: "DeepSeek V4.1 Flash", provider: "nvidia", description: "Ultra Fast High-Throughput Reasoning" },
-      ];
-
-  let activeModelId = window.agenticSelectedModel || registeredModels[0]?.id || "nvidia/nemotron-3-ultra-550b-a55b";
-  window.agenticSelectedModel = activeModelId;
-
-  function updateStatusPill(model) {
-    const nimStatusText = sidebar.querySelector("#as-nim-status-text");
-    const nimStatusPill = sidebar.querySelector("#as-nim-status");
-    if (!nimStatusText) return;
-
-    if (!model) {
-      nimStatusText.textContent = "AI Active";
-      return;
-    }
-
-    const prov = (model.provider || "").toLowerCase();
-    let text = "AI Active";
-    if (prov === "nvidia") text = "NIM Active";
-    else if (prov === "openai") text = "OpenAI Active";
-    else if (prov === "groq") text = "Groq Active";
-    else if (prov === "ollama") text = "Ollama Active";
-    else if (prov === "openrouter") text = "OpenRouter";
-    else if (prov === "custom") text = "Custom Active";
-    else text = `${model.name || "AI"} Active`;
-
-    nimStatusText.textContent = text;
-    if (nimStatusPill) {
-      nimStatusPill.title = `Model: ${model.name} (${model.id}) • Provider: ${model.provider || "NVIDIA"}`;
-    }
-  }
-
-  function renderModelList() {
-    if (!modelListContainer) return;
-    modelListContainer.innerHTML = "";
-
-    registeredModels.forEach((model) => {
-      const isSelected = model.id === activeModelId;
-      const itemEl = document.createElement("div");
-      itemEl.className = `as-select-item ${isSelected ? "selected" : ""}`;
-      itemEl.setAttribute("data-model", model.id);
-      itemEl.setAttribute("data-name", model.name);
-      itemEl.setAttribute("role", "option");
-      itemEl.setAttribute("aria-selected", String(isSelected));
-
-      itemEl.innerHTML = `
-        <div class="as-select-item-info">
-          <div style="display:flex; align-items:center;">
-            <span class="as-select-item-title">${escapeHtml(model.name)}</span>
-            <span class="as-select-item-badge">${escapeHtml(model.provider || "NIM")}</span>
-          </div>
-          <span class="as-select-item-sub">${escapeHtml(model.description || model.id)}</span>
-        </div>
-        <div class="as-select-item-actions">
-          <span class="as-select-check">${ICONS.check}</span>
-          ${model.custom ? `<button type="button" class="as-select-item-delete" data-delete-model="${escapeHtml(model.id)}" title="Delete custom model">${ICONS.trash}</button>` : ""}
-        </div>
-      `;
-
-      itemEl.addEventListener("click", (e) => {
-        e.stopPropagation();
-        activeModelId = model.id;
-        window.agenticSelectedModel = model.id;
-        if (modelNameEl) modelNameEl.textContent = model.name;
-        updateStatusPill(model);
-        modelSelectEl.classList.remove("open");
-        modelTriggerEl?.setAttribute("aria-expanded", "false");
-        renderModelList();
-        setStatus("idle", `Switched model to ${model.name}`);
-      });
-
-      const deleteBtn = itemEl.querySelector(".as-select-item-delete");
-      if (deleteBtn) {
-        deleteBtn.addEventListener("click", async (e) => {
-          e.stopPropagation();
-          const targetId = deleteBtn.getAttribute("data-delete-model");
-          if (!confirm(`Delete custom model "${model.name}" (${targetId})?`)) return;
-
-          try {
-            if (typeof window.delete_model === "function") {
-              await window.delete_model(targetId);
-            } else {
-              await fetch(`/api/models/${encodeURIComponent(targetId)}`, { method: "DELETE" });
-            }
-            registeredModels = registeredModels.filter((m) => m.id !== targetId);
-            if (activeModelId === targetId) {
-              const fallback = registeredModels[0];
-              activeModelId = fallback ? fallback.id : "nvidia/nemotron-3-ultra-550b-a55b";
-              window.agenticSelectedModel = activeModelId;
-              if (modelNameEl && fallback) modelNameEl.textContent = fallback.name;
-              updateStatusPill(fallback);
-            }
-            renderModelList();
-            setStatus("idle", `Removed model ${model.name}`);
-          } catch (err) {
-            console.error("Failed to delete model:", err);
-          }
-        });
-      }
-
-      modelListContainer.appendChild(itemEl);
-    });
-
-    // Update active label and status pill
-    const currentModel = registeredModels.find((m) => m.id === activeModelId) || registeredModels[0];
-    if (currentModel && modelNameEl) {
-      modelNameEl.textContent = currentModel.name;
-      updateStatusPill(currentModel);
-    }
-  }
-
-  async function fetchLatestModels() {
-    try {
-      if (typeof window.get_models === "function") {
-        const data = await window.get_models();
-        if (data && Array.isArray(data.models)) {
-          registeredModels = data.models;
-          renderModelList();
-          return;
-        }
-      }
-      const res = await fetch("/api/models");
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data.models)) {
-          registeredModels = data.models;
-          renderModelList();
-        }
-      }
-    } catch {
-      // Ignore background fetch failure, defaults remain intact
-    }
-  }
-
-  renderModelList();
-  fetchLatestModels();
-
   if (modelTriggerEl && modelSelectEl) {
     modelTriggerEl.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -3263,124 +2719,29 @@
       const isOpen = modelSelectEl.classList.toggle("open");
       modelTriggerEl.setAttribute("aria-expanded", String(isOpen));
     });
-  }
 
-  // Model Settings Modal Open / Close
-  function openModelModal() {
-    if (modelSelectEl) modelSelectEl.classList.remove("open");
-    modalBackdrop.classList.add("open");
-    modalFeedback.className = "as-modal-feedback";
-    modalFeedback.textContent = "";
-    const idInput = modalBackdrop.querySelector("#as-modal-model-id");
-    if (idInput) setTimeout(() => idInput.focus(), 50);
-  }
+    modelItems.forEach((item) => {
+      item.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const modelId = item.getAttribute("data-model");
+        const modelName = item.getAttribute("data-name");
 
-  function closeModelModal() {
-    modalBackdrop.classList.remove("open");
-  }
+        modelItems.forEach((i) => {
+          i.classList.remove("selected");
+          i.setAttribute("aria-selected", "false");
+        });
+        item.classList.add("selected");
+        item.setAttribute("aria-selected", "true");
 
-  if (openModelModalBtn) {
-    openModelModalBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      openModelModal();
-    });
-  }
+        if (modelNameEl) modelNameEl.textContent = modelName;
+        modelSelectEl.classList.remove("open");
+        modelTriggerEl.setAttribute("aria-expanded", "false");
 
-  if (closeModelModalBtn) {
-    closeModelModalBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      closeModelModal();
-    });
-  }
-
-  if (cancelModelModalBtn) {
-    cancelModelModalBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      closeModelModal();
-    });
-  }
-
-  modalBackdrop.addEventListener("click", (e) => {
-    if (e.target === modalBackdrop) closeModelModal();
-  });
-
-  if (modalProviderSelect) {
-    modalProviderSelect.addEventListener("change", () => {
-      const prov = modalProviderSelect.value;
-      const meta = PROVIDER_HINTS[prov] || PROVIDER_HINTS.custom;
-      if (modalBaseUrlInput) {
-        modalBaseUrlInput.placeholder = meta.url || "https://...";
-      }
-      if (modalUrlHint) {
-        modalUrlHint.textContent = meta.hint;
-      }
-      if (modalApiKeyInput) {
-        modalApiKeyInput.placeholder = meta.keyHint;
-      }
-    });
-  }
-
-  if (modelForm) {
-    modelForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const id = modalBackdrop.querySelector("#as-modal-model-id").value.trim();
-      const name = modalBackdrop.querySelector("#as-modal-model-name").value.trim() || id;
-      const provider = modalProviderSelect.value;
-      const description = modalBackdrop.querySelector("#as-modal-model-desc").value.trim();
-      const baseURL = modalBaseUrlInput.value.trim() || null;
-      const apiKey = modalApiKeyInput.value.trim() || null;
-
-      if (!id) {
-        modalFeedback.textContent = "Model ID is required.";
-        modalFeedback.className = "as-modal-feedback visible";
-        return;
-      }
-
-      saveModelBtn.disabled = true;
-      saveModelBtn.textContent = "Saving...";
-      modalFeedback.className = "as-modal-feedback";
-
-      try {
-        let added = null;
-        if (typeof window.save_model === "function") {
-          const res = await window.save_model({ id, name, provider, description, baseURL, apiKey });
-          added = res?.model;
-        } else {
-          const res = await fetch("/api/models", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id, name, provider, description, baseURL, apiKey }),
-          });
-          if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.error || `Failed with status ${res.status}`);
-          }
-          const resData = await res.json();
-          added = resData.model;
-        }
-
-        modalFeedback.textContent = `Model "${name}" added successfully!`;
-        modalFeedback.className = "as-modal-feedback visible success";
-
-        // Select the newly added model
-        activeModelId = id;
-        window.agenticSelectedModel = id;
-
-        await fetchLatestModels();
-
-        setTimeout(() => {
-          closeModelModal();
-          modelForm.reset();
-          saveModelBtn.disabled = false;
-          saveModelBtn.textContent = "Save & Select Model";
-          setStatus("idle", `Activated custom model: ${name}`);
-        }, 300);
-      } catch (err) {
-        modalFeedback.textContent = err.message || "Failed to save model.";
-        modalFeedback.className = "as-modal-feedback visible";
-        saveModelBtn.disabled = false;
-        saveModelBtn.textContent = "Save & Select Model";
-      }
+        window.agenticSelectedModel = modelId;
+        const nimStatusText = sidebar.querySelector("#as-nim-status-text");
+        if (nimStatusText) nimStatusText.textContent = `${modelName}`;
+        setStatus("idle", `Switched model to ${modelName}`);
+      });
     });
   }
 
@@ -4237,7 +3598,7 @@
     if (type === "thinking" || type === "thought") {
       let tData = text;
       if (typeof text === "string" && text.startsWith("{")) {
-        try { tData = JSON.parse(text); } catch {}
+        try { tData = JSON.parse(text); } catch { }
       }
       const tText = typeof tData === "object" ? (tData.text || "") : String(tData || "");
       const stage = typeof tData === "object" ? (tData.stage || "planner") : "planner";
@@ -4264,7 +3625,7 @@
       triggerScreenshotFlash();
       let sData = text;
       if (typeof text === "string" && text.startsWith("{")) {
-        try { sData = JSON.parse(text); } catch {}
+        try { sData = JSON.parse(text); } catch { }
       }
       const b64 = typeof sData === "object" ? sData.base64 : sData;
       if (b64) {

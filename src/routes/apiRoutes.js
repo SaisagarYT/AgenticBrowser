@@ -6,7 +6,6 @@ import { orchestrator } from "../core/orchestrator.js";
 import { TaskRepository } from "../db/repositories/taskRepository.js";
 import { LogRepository } from "../db/repositories/logRepository.js";
 import { logger } from "../utils/logger.js";
-import { modelRegistry } from "../core/modelRegistry.js";
 
 export const apiRouter = express.Router();
 
@@ -16,7 +15,7 @@ export const apiRouter = express.Router();
  * Body: { "command": "...", "client_id": "..." }
  */
 apiRouter.post("/execute_task", async (req, res) => {
-  const { command, client_id, model } = req.body || {};
+  const { command, client_id } = req.body || {};
 
   if (!command || typeof command !== "string") {
     return res.status(400).json({ error: "Missing or invalid 'command' field in request body." });
@@ -27,7 +26,7 @@ apiRouter.post("/execute_task", async (req, res) => {
 
   if (asyncMode) {
     const taskId = client_id || crypto.randomUUID();
-    orchestrator.runTask(command.trim(), taskId, { model }).catch((err) => {
+    orchestrator.runTask(command.trim(), taskId).catch((err) => {
       logger.error(`Async execution failed for task ${taskId}: ${err.message}`);
     });
 
@@ -39,7 +38,7 @@ apiRouter.post("/execute_task", async (req, res) => {
   }
 
   try {
-    const result = await orchestrator.runTask(command.trim(), client_id, { model });
+    const result = await orchestrator.runTask(command.trim(), client_id);
     return res.json(result);
   } catch (err) {
     return res.status(500).json({
@@ -51,7 +50,7 @@ apiRouter.post("/execute_task", async (req, res) => {
 
 // Standard REST task endpoint
 apiRouter.post("/tasks", async (req, res) => {
-  const { command, model, async: runAsync } = req.body || {};
+  const { command, async: runAsync } = req.body || {};
 
   if (!command) {
     return res.status(400).json({ error: "Field 'command' is required." });
@@ -60,14 +59,14 @@ apiRouter.post("/tasks", async (req, res) => {
   if (runAsync) {
     const taskId = crypto.randomUUID();
     const task = TaskRepository.create({ id: taskId, command });
-    orchestrator.runTask(command, taskId, { model }).catch((err) => {
+    orchestrator.runTask(command, taskId).catch((err) => {
       logger.error(`Async task ${taskId} error: ${err.message}`);
     });
     return res.status(202).json(task);
   }
 
   try {
-    const result = await orchestrator.runTask(command, null, { model });
+    const result = await orchestrator.runTask(command);
     return res.json(result);
   } catch (err) {
     return res.status(500).json({ error: err.message });
@@ -105,31 +104,4 @@ apiRouter.get("/health", (req, res) => {
     service: "agentic-browser-node",
     time: new Date().toISOString(),
   });
-});
-
-// Dynamic Models & Providers API
-apiRouter.get("/models", (req, res) => {
-  return res.json({
-    models: modelRegistry.getModels(),
-    providers: modelRegistry.getProviders(),
-  });
-});
-
-apiRouter.post("/models", (req, res) => {
-  try {
-    const { id, name, provider, description, baseURL, apiKey } = req.body || {};
-    if (!id) {
-      return res.status(400).json({ error: "Model ID is required." });
-    }
-    const model = modelRegistry.addModel({ id, name, provider, description, baseURL, apiKey });
-    return res.status(201).json({ success: true, model });
-  } catch (err) {
-    return res.status(400).json({ error: err.message });
-  }
-});
-
-apiRouter.delete("/models/:id(*)", (req, res) => {
-  const modelId = decodeURIComponent(req.params.id);
-  const success = modelRegistry.removeModel(modelId);
-  return res.json({ success, message: success ? `Model ${modelId} removed` : "Model not found" });
 });

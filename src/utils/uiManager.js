@@ -3,7 +3,6 @@
 import fs from "node:fs";
 import path from "node:path";
 import { logger } from "./logger.js";
-import { modelRegistry } from "../core/modelRegistry.js";
 
 const SIDEBAR_JS_PATH = path.resolve(process.cwd(), "src", "utils", "ui", "sidebarOverlay.js");
 
@@ -17,12 +16,7 @@ export class UIManager {
 
   getSidebarScript() {
     if (fs.existsSync(SIDEBAR_JS_PATH)) {
-      const code = fs.readFileSync(SIDEBAR_JS_PATH, "utf8");
-      let prelude = "";
-      try {
-        prelude = `window.__INITIAL_MODELS__ = ${JSON.stringify(modelRegistry.getModels())};\nwindow.__INITIAL_PROVIDERS__ = ${JSON.stringify(modelRegistry.getProviders())};\n`;
-      } catch { }
-      return prelude + code;
+      return fs.readFileSync(SIDEBAR_JS_PATH, "utf8");
     }
     logger.warn(`Sidebar script not found at: ${SIDEBAR_JS_PATH}`);
     return null;
@@ -49,7 +43,7 @@ export class UIManager {
       if (isNavigating && retries > 0) {
         setTimeout(() => {
           if (!page.isClosed()) {
-            this.injectOverlay(page, retries - 1).catch(() => {});
+            this.injectOverlay(page, retries - 1).catch(() => { });
           }
         }, 250);
       } else if (!isNavigating) {

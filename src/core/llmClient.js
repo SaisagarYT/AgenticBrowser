@@ -3,12 +3,9 @@
 import OpenAI from "openai";
 import { config } from "../config.js";
 import { logger } from "../utils/logger.js";
-import { modelRegistry } from "./modelRegistry.js";
 
 class LLMClient {
   constructor() {
-    this.clients = new Map();
-
     this.textClient = new OpenAI({
       apiKey: config.llm.textApiKey || "dummy-key",
       baseURL: config.llm.textBaseUrl,
@@ -18,32 +15,6 @@ class LLMClient {
       apiKey: config.llm.visionApiKey || config.llm.textApiKey || "dummy-key",
       baseURL: config.llm.visionBaseUrl || config.llm.textBaseUrl,
     });
-  }
-
-  _getClientForModel(modelId) {
-    const endpointConfig = modelRegistry.getEndpointConfig(modelId);
-    const key = `${endpointConfig.baseURL}::${endpointConfig.apiKey}`;
-
-    if (!this.clients.has(key)) {
-      if (!endpointConfig.apiKey && endpointConfig.provider !== "ollama") {
-        throw new Error(
-          `Missing API Key: Model "${modelId}" belongs to provider "${endpointConfig.provider}". Please set the API key in your .env or Model Settings.`
-        );
-      }
-
-      this.clients.set(
-        key,
-        new OpenAI({
-          apiKey: endpointConfig.apiKey || "dummy-key",
-          baseURL: endpointConfig.baseURL,
-        })
-      );
-    }
-
-    return {
-      client: this.clients.get(key),
-      provider: endpointConfig.provider,
-    };
   }
 
   _ensureApiKey() {
@@ -82,11 +53,11 @@ class LLMClient {
   }
 
   async generateJson({ systemPrompt, userPrompt, temperature = 0.5, model = config.llm.textModel, maxTokens = 2048 }) {
-    const { client } = this._getClientForModel(model);
+    this._ensureApiKey();
     try {
       logger.debug(`Calling LLM model: ${model} with JSON output`);
       const response = await this._withRetry(() =>
-        client.chat.completions.create({
+        this.textClient.chat.completions.create({
           model,
           messages: [
             { role: "system", content: systemPrompt },
@@ -116,9 +87,9 @@ class LLMClient {
   }
 
   async generateText({ systemPrompt, userPrompt, temperature = 0.5, model = config.llm.textModel, maxTokens = 2048 }) {
-    const { client } = this._getClientForModel(model);
+    this._ensureApiKey();
     const response = await this._withRetry(() =>
-      client.chat.completions.create({
+      this.textClient.chat.completions.create({
         model,
         messages: [
           { role: "system", content: systemPrompt },
