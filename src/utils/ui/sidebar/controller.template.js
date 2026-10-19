@@ -91,6 +91,8 @@
   const railThemeBtn = rail.querySelector("#as-rail-theme");
   const somToggleBtn = sidebar.querySelector("#as-btn-som-toggle");
   const railSomToggleBtn = rail.querySelector("#as-rail-som-toggle");
+  const voiceToggleBtn = sidebar.querySelector("#as-btn-voice-toggle");
+  const railVoiceToggleBtn = rail.querySelector("#as-rail-voice-toggle");
   const clearBtn = sidebar.querySelector("#as-btn-clear");
   const railClearBtn = rail.querySelector("#as-rail-clear");
   const headerChatMenuBtn = sidebar.querySelector("#as-header-chat-menu");

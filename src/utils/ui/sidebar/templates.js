@@ -47,6 +47,14 @@ export function getRailHtml(ICONS) {
       <div class="as-rail-tooltip">Visual Marks (Alt+M)</div>
     </div>
 
+    <!-- Toggle Kira Voice -->
+    <div class="as-rail-item">
+      <button class="as-rail-btn" id="as-rail-voice-toggle" aria-label="Toggle Kira Voice" style="color: #facc15;">
+        ${ICONS.volume2}
+      </button>
+      <div class="as-rail-tooltip">Kira Voice (Alt+V)</div>
+    </div>
+
     <!-- Model & Provider Settings -->
     <div class="as-rail-item">
       <button class="as-rail-btn" id="as-rail-settings" aria-label="Model Settings" title="Model &amp; Provider Settings">
@@ -176,12 +184,23 @@ export function getSidebarHtml(ICONS, VOXLE_CUBE_SVG) {
                   <span class="as-som-switch-icon">${ICONS.eye}</span>
                 </span>
               </button>
+
+              <!-- Kira Voice Toggle Switch (Same design as eye toggle, right beside it) -->
+              <button
+                class="as-som-switch as-voice-switch active"
+                id="as-btn-voice-toggle"
+                type="button"
+                role="switch"
+                aria-checked="true"
+                title="Kira Voice: Active (Alt+V)"
+              >
+                <span class="as-som-switch-thumb">
+                  <span class="as-som-switch-icon">${ICONS.volume2}</span>
+                </span>
+              </button>
             </div>
 
             <div class="as-voxle-tools-right">
-              <button class="as-voxle-mic-btn" id="as-btn-mic" type="button" title="Speak to Kira (Speech Mode)" aria-label="Speak to Kira">
-                ${ICONS.mic}
-              </button>
               <button class="as-voxle-send-btn" id="as-btn-send" title="Send message (Enter)" aria-label="Send message">
                 ${ICONS.arrowUp}
               </button>

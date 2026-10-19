@@ -3,6 +3,7 @@
 /**
  * Kira Voice Manager
  * Handles Speech-to-Text (webkitSpeechRecognition) and Kokoro Text-to-Speech (HTML5 Audio).
+ * Manages the Voice Toggle Switch (styled identical to the Visual Marks Eye Switch).
  */
 export function getVoiceManagerCode() {
   return `
@@ -19,7 +20,46 @@ export function getVoiceManagerCode() {
     autoSpeak: true,
   };
 
-  const micBtn = sidebar.querySelector("#as-btn-mic");
+  // Voice Toggle Switch Elements (voiceToggleBtn and railVoiceToggleBtn are declared in controller scope)
+
+  // --------------------------------------------------------------------------
+  // Synchronization & Switch State Management
+  // --------------------------------------------------------------------------
+  function setVoiceActive(isActive) {
+    voiceSettings.autoSpeak = isActive;
+
+    const icon = isActive ? ICONS.volume2 : ICONS.volumeX;
+
+    if (voiceToggleBtn) {
+      voiceToggleBtn.classList.toggle("active", isActive);
+      voiceToggleBtn.setAttribute("aria-checked", isActive ? "true" : "false");
+      voiceToggleBtn.title = isActive ? "Kira Voice: Active (Alt+V)" : "Kira Voice: Muted (Alt+V)";
+      const iconSpan = voiceToggleBtn.querySelector(".as-som-switch-icon");
+      if (iconSpan) {
+        iconSpan.innerHTML = icon;
+      }
+    }
+
+    if (railVoiceToggleBtn) {
+      railVoiceToggleBtn.innerHTML = icon;
+      railVoiceToggleBtn.style.color = isActive ? "#facc15" : "";
+      railVoiceToggleBtn.title = isActive ? "Kira Voice: Active (Alt+V)" : "Kira Voice: Muted (Alt+V)";
+    }
+
+    const autoSpeakToggle = sidebar.querySelector("#as-setting-toggle-autospeak");
+    if (autoSpeakToggle) {
+      autoSpeakToggle.classList.toggle("active", isActive);
+      autoSpeakToggle.setAttribute("aria-checked", isActive ? "true" : "false");
+    }
+
+    if (!isActive) {
+      stopSpeaking();
+    }
+
+    if (typeof window.kira_save_voice_settings === "function") {
+      window.kira_save_voice_settings(voiceSettings);
+    }
+  }
 
   // Load voice settings from backend
   async function loadVoiceSettings() {
@@ -28,6 +68,7 @@ export function getVoiceManagerCode() {
         const settings = await window.kira_get_voice_settings();
         if (settings) {
           voiceSettings = { ...voiceSettings, ...settings };
+          setVoiceActive(voiceSettings.autoSpeak !== false);
           syncVoiceSettingsUI();
         }
       }
@@ -38,21 +79,11 @@ export function getVoiceManagerCode() {
 
   function syncVoiceSettingsUI() {
     const voiceSelect = sidebar.querySelector("#as-voice-select");
-    const autoSpeakToggle = sidebar.querySelector("#as-setting-toggle-autospeak");
     const speedSlider = sidebar.querySelector("#as-voice-speed-slider");
     const speedVal = sidebar.querySelector("#as-voice-speed-val");
 
     if (voiceSelect && voiceSettings.activeVoice) {
       voiceSelect.value = voiceSettings.activeVoice;
-    }
-    if (autoSpeakToggle) {
-      if (voiceSettings.autoSpeak) {
-        autoSpeakToggle.classList.add("active");
-        autoSpeakToggle.setAttribute("aria-checked", "true");
-      } else {
-        autoSpeakToggle.classList.remove("active");
-        autoSpeakToggle.setAttribute("aria-checked", "false");
-      }
     }
     if (speedSlider) {
       speedSlider.value = voiceSettings.speed || 1.0;
@@ -63,6 +94,27 @@ export function getVoiceManagerCode() {
   }
 
   loadVoiceSettings();
+
+  // Toggle button event listeners
+  if (voiceToggleBtn) {
+    voiceToggleBtn.addEventListener("click", () => {
+      setVoiceActive(!voiceSettings.autoSpeak);
+    });
+  }
+
+  if (railVoiceToggleBtn) {
+    railVoiceToggleBtn.addEventListener("click", () => {
+      setVoiceActive(!voiceSettings.autoSpeak);
+    });
+  }
+
+  // Keyboard shortcut Alt+V to toggle Kira voice
+  document.addEventListener("keydown", (e) => {
+    if ((e.altKey || (e.ctrlKey && e.shiftKey)) && (e.key === "v" || e.key === "V")) {
+      e.preventDefault();
+      setVoiceActive(!voiceSettings.autoSpeak);
+    }
+  });
 
   // --------------------------------------------------------------------------
   // 1. Text-to-Speech (Kira Speaking)
@@ -84,6 +136,14 @@ export function getVoiceManagerCode() {
       triggerBtn.innerHTML = ICONS.waveform || ICONS.volume2;
     }
 
+    // Indicate active speech on the voice toggle switch
+    if (voiceToggleBtn) {
+      const iconSpan = voiceToggleBtn.querySelector(".as-som-switch-icon");
+      if (iconSpan) {
+        iconSpan.innerHTML = ICONS.waveform || ICONS.volume2;
+      }
+    }
+
     try {
       if (typeof window.kira_synthesize_speech !== "function") {
         console.warn("window.kira_synthesize_speech is not exposed.");
@@ -92,7 +152,7 @@ export function getVoiceManagerCode() {
       }
 
       if (statusLabel && !activeSpeakingBtn) {
-        statusLabel.textContent = "Kira is preparing to speak...";
+        statusLabel.textContent = "Kira is speaking...";
       }
 
       const res = await window.kira_synthesize_speech(text, {
@@ -138,6 +198,15 @@ export function getVoiceManagerCode() {
       activeSpeakingBtn.innerHTML = ICONS.volume2;
       activeSpeakingBtn = null;
     }
+    if (voiceToggleBtn) {
+      const iconSpan = voiceToggleBtn.querySelector(".as-som-switch-icon");
+      if (iconSpan) {
+        iconSpan.innerHTML = voiceSettings.autoSpeak ? ICONS.volume2 : ICONS.volumeX;
+      }
+    }
+    if (statusLabel && statusLabel.textContent === "Kira is speaking...") {
+      statusLabel.textContent = "Ready. Type a prompt below to automate.";
+    }
   }
 
   // Interrupt Kira speech when user types in textarea or presses Esc
@@ -160,10 +229,6 @@ export function getVoiceManagerCode() {
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRec) {
       console.warn("SpeechRecognition not supported in this browser environment.");
-      if (micBtn) {
-        micBtn.title = "Speech recognition not supported in this page";
-        micBtn.style.opacity = "0.5";
-      }
       return null;
     }
 
@@ -177,10 +242,6 @@ export function getVoiceManagerCode() {
 
     rec.onstart = () => {
       isListening = true;
-      if (micBtn) {
-        micBtn.classList.add("as-listening");
-        micBtn.title = "Kira is listening... (click to finish)";
-      }
       baseTextBeforeSpeech = textareaEl.value;
       if (statusLabel) statusLabel.textContent = "Listening to your voice...";
       stopSpeaking();
@@ -251,10 +312,6 @@ export function getVoiceManagerCode() {
 
   function stopListening() {
     isListening = false;
-    if (micBtn) {
-      micBtn.classList.remove("as-listening");
-      micBtn.title = "Speak to Kira (Speech Mode)";
-    }
     if (speechRecognizer) {
       try {
         speechRecognizer.stop();
@@ -263,19 +320,6 @@ export function getVoiceManagerCode() {
     if (statusLabel && statusLabel.textContent === "Listening to your voice...") {
       statusLabel.textContent = "Ready. Type a prompt below to automate.";
     }
-  }
-
-  if (micBtn) {
-    micBtn.addEventListener("click", () => {
-      if (isListening) {
-        stopListening();
-        if (textareaEl.value.trim()) {
-          triggerSubmit();
-        }
-      } else {
-        startListening();
-      }
-    });
   }
 
   // --------------------------------------------------------------------------
@@ -294,13 +338,7 @@ export function getVoiceManagerCode() {
   const autoSpeakToggle = sidebar.querySelector("#as-setting-toggle-autospeak");
   if (autoSpeakToggle) {
     autoSpeakToggle.addEventListener("click", () => {
-      const isNowActive = !autoSpeakToggle.classList.contains("active");
-      autoSpeakToggle.classList.toggle("active", isNowActive);
-      autoSpeakToggle.setAttribute("aria-checked", isNowActive ? "true" : "false");
-      voiceSettings.autoSpeak = isNowActive;
-      if (typeof window.kira_save_voice_settings === "function") {
-        window.kira_save_voice_settings(voiceSettings);
-      }
+      setVoiceActive(!autoSpeakToggle.classList.contains("active"));
     });
   }
 
@@ -333,6 +371,9 @@ export function getVoiceManagerCode() {
     isSpeaking: () => !!(activeAudioPlayer && !activeAudioPlayer.paused),
     getSettings: () => voiceSettings,
     setSettings: (s) => { voiceSettings = { ...voiceSettings, ...s }; },
+    setActive: setVoiceActive,
+    startListening,
+    stopListening,
   };
   `;
 }
