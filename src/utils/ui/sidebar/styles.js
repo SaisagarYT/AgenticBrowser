@@ -2392,6 +2392,8 @@ export function getSidebarStyles(EXPANDED_WIDTH = 420, RAIL_WIDTH = 46) {
       box-sizing: border-box !important;
       width: 100% !important;
       min-height: 88px !important;
+      cursor: text !important;
+      pointer-events: auto !important;
     }
 
     #agentic-sidebar-root.dark .as-voxle-card {
@@ -2492,6 +2494,10 @@ export function getSidebarStyles(EXPANDED_WIDTH = 420, RAIL_WIDTH = 46) {
       overflow-x: hidden !important;
       overflow-y: auto !important;
       scrollbar-width: none !important;
+      pointer-events: auto !important;
+      cursor: text !important;
+      user-select: text !important;
+      -webkit-user-select: text !important;
     }
 
     .as-voxle-textarea::-webkit-scrollbar {
@@ -2502,6 +2508,7 @@ export function getSidebarStyles(EXPANDED_WIDTH = 420, RAIL_WIDTH = 46) {
 
     .as-voxle-textarea::placeholder {
       color: #71717a !important;
+      user-select: none !important;
     }
 
     /* Bottom Action Toolbar inside the card */
@@ -2511,6 +2518,8 @@ export function getSidebarStyles(EXPANDED_WIDTH = 420, RAIL_WIDTH = 46) {
       justify-content: space-between !important;
       margin-top: 6px !important;
       padding-top: 4px !important;
+      cursor: default !important;
+      pointer-events: auto !important;
     }
 
     .as-voxle-tools-left,

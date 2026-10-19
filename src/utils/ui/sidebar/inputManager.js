@@ -153,6 +153,7 @@ export function getInputManagerCode() {
     const currentAttachments = [...attachedFiles];
     textareaEl.value = "";
     textareaEl.style.height = "40px";
+    textareaEl.scrollTop = 0;
     attachedFiles = [];
     attachmentListEl.innerHTML = "";
     attachmentListEl.style.display = "none";
@@ -190,10 +191,71 @@ export function getInputManagerCode() {
 
   sendBtn.addEventListener("click", triggerSubmit);
 
+  // Stop keyboard events on textarea from bubbling to host web pages (like GitHub, YouTube, Jira)
+  // which register global listeners on document/window for shortcuts (e.g. "/", "s", "?")
+  // and hijack keystrokes or steal focus away.
   textareaEl.addEventListener("keydown", (e) => {
+    e.stopPropagation();
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       triggerSubmit();
+    }
+  });
+
+  textareaEl.addEventListener("keyup", (e) => {
+    e.stopPropagation();
+  });
+
+  textareaEl.addEventListener("keypress", (e) => {
+    e.stopPropagation();
+  });
+
+  // Stop mousedown/pointerdown from bubbling so host web apps cannot cancel focus
+  textareaEl.addEventListener("mousedown", (e) => {
+    e.stopPropagation();
+  });
+
+  textareaEl.addEventListener("pointerdown", (e) => {
+    e.stopPropagation();
+  });
+
+  // Card click-to-focus delegation:
+  // If the user clicks anywhere inside the card padding or dead space, ensure the textarea is focused
+  // (unless clicking an interactive element like a button, dropdown, or attachment chip)
+  if (voxleCardEl) {
+    voxleCardEl.addEventListener("click", (e) => {
+      if (e.target.closest("button, select, input, .as-shadcn-select, .as-attachment-pill, a")) {
+        return;
+      }
+      if (textareaEl && document.activeElement !== textareaEl) {
+        textareaEl.focus();
+      }
+    });
+
+    voxleCardEl.addEventListener("mousedown", (e) => {
+      if (!e.target.closest("button, select, input, .as-shadcn-select, .as-attachment-pill, a")) {
+        e.stopPropagation();
+      }
+    });
+
+    voxleCardEl.addEventListener("pointerdown", (e) => {
+      if (!e.target.closest("button, select, input, .as-shadcn-select, .as-attachment-pill, a")) {
+        e.stopPropagation();
+      }
+    });
+  }
+
+  // Prevent host webpage shortcut hijacking across all sidebar inputs/textareas
+  sidebar.addEventListener("keydown", (e) => {
+    const active = document.activeElement;
+    if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable)) {
+      e.stopPropagation();
+    }
+  });
+  sidebar.addEventListener("keyup", (e) => {
+    const active = document.activeElement;
+    if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable)) {
+      e.stopPropagation();
     }
   });
 
