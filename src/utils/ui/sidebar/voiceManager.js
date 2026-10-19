@@ -43,9 +43,12 @@ export function getVoiceManagerCode() {
   let waveAnimFrameId = null;
   let smoothedHeights = [4, 4, 4, 4, 4, 4, 4, 4, 4];
   let pcmChunks = [];
+  let preRollBuffer = [];
+  let noiseFloor = 0.002;
   let isRecordingSpeech = false;
   let lastSpeechTime = 0;
   let isTranscribing = false;
+  let isStartingVisualizer = false;
 
   function getOrCreateFloatingWidget() {
     if (floatWidgetEl) return floatWidgetEl;
@@ -91,6 +94,9 @@ export function getVoiceManagerCode() {
   }
 
   async function startWaveVisualizer() {
+    if (isStartingVisualizer) return;
+    isStartingVisualizer = true;
+
     const widget = getOrCreateFloatingWidget();
     widget.style.display = "flex";
     updateFloatStatus("Listening...");
@@ -115,7 +121,11 @@ export function getVoiceManagerCode() {
             autoGainControl: true,
           },
         }).catch((err) => {
-          console.warn("[Kira Voice] getUserMedia notice:", err);
+          console.warn("[Kira Voice] getUserMedia error:", err);
+          updateFloatStatus("Mic blocked");
+          if (statusLabel) {
+            statusLabel.textContent = "Kira Voice: Microphone access blocked or not available.";
+          }
           return null;
         });
 
@@ -137,6 +147,11 @@ export function getVoiceManagerCode() {
             audioCaptureNode.connect(muteGain);
             muteGain.connect(audioContext.destination);
 
+            // Retain on window to prevent V8 garbage collection
+            window._kiraAudioCtx = audioContext;
+            window._kiraCaptureNode = audioCaptureNode;
+            window._kiraMuteGain = muteGain;
+
             audioCaptureNode.onaudioprocess = (e) => {
               if (!isVoiceModeActive || isSpeaking || isPausedForExecution || isTranscribing) {
                 return;
@@ -149,7 +164,7 @@ export function getVoiceManagerCode() {
               }
               const frameRms = Math.sqrt(sumSquares / channelData.length);
 
-              // Downsample frame to 16kHz
+              // Downsample frame to 16kHz Float32 PCM
               const targetSamples = Math.round(channelData.length / ratio);
               const downsampled = new Float32Array(targetSamples);
               for (let k = 0; k < targetSamples; k++) {
@@ -160,21 +175,43 @@ export function getVoiceManagerCode() {
                 downsampled[k] = channelData[lower] * (1 - weight) + channelData[upper] * weight;
               }
 
-              // Physical voice acoustic threshold
-              if (frameRms > 0.016) {
-                isRecordingSpeech = true;
+              // Keep rolling pre-roll ring buffer (~350ms of audio)
+              preRollBuffer.push(downsampled);
+              if (preRollBuffer.length > 5) {
+                preRollBuffer.shift();
+              }
+
+              // Dynamic Voice Activity Detection (VAD)
+              // Adapts to quiet microphones and room noise floor
+              const speechThreshold = Math.max(0.005, noiseFloor * 2.2);
+
+              if (frameRms > speechThreshold) {
+                if (!isRecordingSpeech) {
+                  isRecordingSpeech = true;
+                  updateFloatStatus("Hearing you...");
+                  if (statusLabel) {
+                    statusLabel.textContent = "Kira Voice: Hearing you...";
+                  }
+                  // Prepend pre-roll buffer so initial consonants ("h", "th", etc.) are never lost
+                  for (let p = 0; p < preRollBuffer.length; p++) {
+                    pcmChunks.push(preRollBuffer[p]);
+                  }
+                }
                 lastSpeechTime = Date.now();
-                updateFloatStatus("Listening...");
+              } else {
+                // Adapt resting ambient noise floor during silence
+                noiseFloor = noiseFloor * 0.96 + frameRms * 0.04;
               }
 
               if (isRecordingSpeech) {
                 pcmChunks.push(downsampled);
 
-                // Commit when user pauses for 1.1s after speaking OR max utterance reaches 15s
+                // Commit when user pauses for 850ms after speaking OR max utterance reaches 15s
                 const elapsedSinceSpeech = Date.now() - lastSpeechTime;
                 const totalEstimatedSamples = pcmChunks.length * targetSamples;
-                if ((elapsedSinceSpeech > 1100 && totalEstimatedSamples >= 5600) || totalEstimatedSamples > 240000) {
+                if ((elapsedSinceSpeech > 850 && totalEstimatedSamples >= 4800) || totalEstimatedSamples > 240000) {
                   isRecordingSpeech = false;
+                  updateFloatStatus("Transcribing...");
                   commitVoiceRecording();
                 }
               }
@@ -186,6 +223,8 @@ export function getVoiceManagerCode() {
       }
     } catch (e) {
       console.warn("Could not attach audio analyser:", e);
+    } finally {
+      isStartingVisualizer = false;
     }
 
     renderWaveLoop();
@@ -199,9 +238,10 @@ export function getVoiceManagerCode() {
       totalLen += pcmChunks[i].length;
     }
 
-    // Require at least 0.35s of audio (5600 samples at 16kHz)
-    if (totalLen < 5600) {
+    // Require at least 0.3s of audio (4800 samples at 16kHz)
+    if (totalLen < 4800) {
       pcmChunks = [];
+      updateFloatStatus("Listening...");
       return;
     }
 
@@ -214,9 +254,9 @@ export function getVoiceManagerCode() {
     pcmChunks = [];
 
     isTranscribing = true;
-    updateFloatStatus("Understanding...");
+    updateFloatStatus("Transcribing...");
     if (statusLabel) {
-      statusLabel.textContent = "Kira is understanding your voice...";
+      statusLabel.textContent = "Kira is transcribing your voice...";
     }
 
     try {
@@ -301,8 +341,9 @@ export function getVoiceManagerCode() {
       const centerY = height / 2;
       const now = Date.now();
 
-      // Physical acoustic speech detection
-      const isUserSpeaking = rms > 0.016;
+      // Dynamic sensitivity for visualizer waves:
+      // Sensitive down to 0.004 RMS so normal speech visibly moves the red waves!
+      const isUserSpeaking = isRecordingSpeech || (rms > Math.max(0.004, noiseFloor * 1.5));
 
       for (let i = 0; i < numBars; i++) {
         let targetHeight = 3.5; // Calm baseline
@@ -317,7 +358,7 @@ export function getVoiceManagerCode() {
           // Real live microphone speech reaction (vocal formant spectrum 180Hz - 1700Hz)
           const binVal = (freqData ? freqData[i + 1] : 0) / 255;
           const centerFactor = 1 - Math.abs(i - 4) / 5.5;
-          const energy = Math.min(1.0, Math.max(0, (rms - 0.014) * 4.5));
+          const energy = Math.min(1.0, Math.max(0, (rms - noiseFloor) * 8.0));
           targetHeight = 3.5 + (energy * 0.7 + binVal * 0.3) * centerFactor * 20;
         } else {
           // Silent resting baseline: steady 3.5px with gentle organic micro-breathe
@@ -363,6 +404,7 @@ export function getVoiceManagerCode() {
       audioCaptureNode = null;
     }
     pcmChunks = [];
+    preRollBuffer = [];
     isRecordingSpeech = false;
     isTranscribing = false;
     if (micMediaStream) {
@@ -378,6 +420,9 @@ export function getVoiceManagerCode() {
       audioContext = null;
     }
     analyserNode = null;
+    window._kiraCaptureNode = null;
+    window._kiraMuteGain = null;
+    window._kiraAudioCtx = null;
   }
 
   // --------------------------------------------------------------------------
@@ -426,7 +471,6 @@ export function getVoiceManagerCode() {
     if (isVoiceModeActive) {
       isPausedForExecution = false;
       startContinuousListening();
-      startWaveVisualizer();
       if (statusLabel) {
         statusLabel.textContent = "Kira Voice: Listening... (speak anytime)";
       }
