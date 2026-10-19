@@ -2681,6 +2681,155 @@ export function getSidebarStyles(EXPANDED_WIDTH = 420, RAIL_WIDTH = 46) {
       transform: translateX(18px) !important;
     }
 
+    /* Crimson Recording-Red Active State for Kira Voice Mic Switch */
+    .as-som-switch.as-voice-switch.active {
+      background: #ef4444 !important;
+      border-color: #dc2626 !important;
+      box-shadow: 0 0 12px rgba(239, 68, 68, 0.45) !important;
+    }
+
+    .as-som-switch.as-voice-switch.active .as-som-switch-thumb {
+      background: #ffffff !important;
+      color: #ef4444 !important;
+      transform: translateX(18px) !important;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35) !important;
+    }
+
+    #agentic-sidebar-root:not(.dark) .as-som-switch.as-voice-switch.active {
+      background: #ef4444 !important;
+      border-color: #dc2626 !important;
+    }
+
+    #agentic-sidebar-root:not(.dark) .as-som-switch.as-voice-switch.active .as-som-switch-thumb {
+      background: #ffffff !important;
+      color: #ef4444 !important;
+    }
+
+    /* ------------------------------------------------------------------------
+       Floating Bottom-Center Natural Audio Wave Widget
+       ------------------------------------------------------------------------ */
+    #as-voice-floating-widget {
+      position: fixed !important;
+      bottom: 28px !important;
+      left: 50% !important;
+      transform: translateX(-50%) translateY(0) !important;
+      z-index: 2147483640 !important;
+      pointer-events: auto !important;
+      display: none;
+      align-items: center !important;
+      gap: 12px !important;
+      padding: 6px 14px 6px 10px !important;
+      border-radius: 9999px !important;
+      background: rgba(15, 15, 20, 0.9) !important;
+      backdrop-filter: blur(24px) saturate(180%) !important;
+      -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+      border: 1px solid rgba(255, 255, 255, 0.14) !important;
+      box-shadow: 0 16px 40px -4px rgba(0, 0, 0, 0.6), 0 0 24px rgba(239, 68, 68, 0.35) !important;
+      color: #ffffff !important;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+      user-select: none !important;
+      transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1), transform 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+      animation: asFloatWidgetIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+    }
+
+    @keyframes asFloatWidgetIn {
+      from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(24px) scale(0.94);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0) scale(1);
+      }
+    }
+
+    .as-float-mic-btn {
+      width: 28px !important;
+      height: 28px !important;
+      border-radius: 50% !important;
+      background: #ef4444 !important;
+      color: #ffffff !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      flex-shrink: 0 !important;
+      animation: asRecPulseRing 2s infinite !important;
+    }
+
+    @keyframes asRecPulseRing {
+      0% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+      }
+      70% {
+        box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+      }
+    }
+
+    .as-float-mic-btn svg {
+      width: 14px !important;
+      height: 14px !important;
+    }
+
+    .as-float-info {
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: center !important;
+      line-height: 1.2 !important;
+    }
+
+    .as-float-title {
+      font-size: 12px !important;
+      font-weight: 600 !important;
+      color: #ffffff !important;
+      letter-spacing: 0.2px !important;
+    }
+
+    .as-float-status {
+      font-size: 10px !important;
+      color: #a1a1aa !important;
+      white-space: nowrap !important;
+    }
+
+    .as-float-canvas-wrapper {
+      display: flex !important;
+      align-items: center !important;
+      height: 30px !important;
+      padding: 0 4px !important;
+    }
+
+    #as-float-wave-canvas {
+      display: block !important;
+      width: 110px !important;
+      height: 28px !important;
+      border-radius: 4px !important;
+    }
+
+    .as-float-close-btn {
+      all: initial !important;
+      width: 22px !important;
+      height: 22px !important;
+      border-radius: 50% !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      cursor: pointer !important;
+      color: #71717a !important;
+      transition: all 0.15s ease !important;
+    }
+
+    .as-float-close-btn:hover {
+      color: #ffffff !important;
+      background: rgba(255, 255, 255, 0.15) !important;
+    }
+
+    .as-float-close-btn svg {
+      width: 11px !important;
+      height: 11px !important;
+    }
+
     .as-som-switch-icon {
       display: flex !important;
       align-items: center !important;

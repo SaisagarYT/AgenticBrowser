@@ -41,8 +41,8 @@ export function getRailHtml(ICONS) {
 
     <!-- Toggle Visual Marks -->
     <div class="as-rail-item">
-      <button class="as-rail-btn" id="as-rail-som-toggle" aria-label="Toggle Visual Marks" style="color: #facc15;">
-        ${ICONS.eye}
+      <button class="as-rail-btn" id="as-rail-som-toggle" aria-label="Toggle Visual Marks">
+        ${ICONS.eyeOff}
       </button>
       <div class="as-rail-tooltip">Visual Marks (Alt+M)</div>
     </div>
@@ -171,17 +171,17 @@ export function getSidebarHtml(ICONS, VOXLE_CUBE_SVG) {
                 </div>
               </div>
 
-              <!-- Visual Marks Toggle Switch -->
+              <!-- Visual Marks Toggle Switch (Closed by default) -->
               <button
-                class="as-som-switch active"
+                class="as-som-switch"
                 id="as-btn-som-toggle"
                 type="button"
                 role="switch"
-                aria-checked="true"
-                title="Visual Marks (Alt+M)"
+                aria-checked="false"
+                title="Show Visual Marks (Alt+M)"
               >
                 <span class="as-som-switch-thumb">
-                  <span class="as-som-switch-icon">${ICONS.eye}</span>
+                  <span class="as-som-switch-icon">${ICONS.eyeOff}</span>
                 </span>
               </button>
 

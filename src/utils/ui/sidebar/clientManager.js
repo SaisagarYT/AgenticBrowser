@@ -448,7 +448,7 @@ export function getClientManagerCode() {
   // --------------------------------------------------------------------------
   // Visual Marks (Set-of-Marks Overlay - Phase 5)
   // --------------------------------------------------------------------------
-  let isVisualMarksActive = true;
+  let isVisualMarksActive = false;
   function setVisualMarksVisible(visible) {
     isVisualMarksActive = visible;
     const overlay = document.getElementById("agentic-som-overlay");

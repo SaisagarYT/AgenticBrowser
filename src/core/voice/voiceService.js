@@ -89,10 +89,26 @@ export class VoiceService {
   }
 
   async synthesize(rawText, options = {}) {
-    const shouldDistill = options.distill !== false;
-    const textToSpeak = shouldDistill
-      ? generateSpokenSummary(rawText, options.userPrompt)
-      : cleanTextForSpeech(rawText);
+    let textToSpeak = "";
+    if (options.spokenText) {
+      textToSpeak = options.spokenText;
+    } else if (options.userCommand) {
+      try {
+        const { VoiceAgent } = await import("../../agents/voiceAgent.js");
+        textToSpeak = await VoiceAgent.generateVoiceResponse({
+          userCommand: options.userCommand,
+          agentOutcome: rawText,
+          taskStatus: options.taskStatus || "COMPLETED",
+          model: options.model,
+        });
+      } catch {
+        textToSpeak = generateSpokenSummary(rawText, options.userCommand);
+      }
+    } else if (options.distill !== false) {
+      textToSpeak = generateSpokenSummary(rawText, options.userPrompt);
+    } else {
+      textToSpeak = cleanTextForSpeech(rawText);
+    }
 
     if (!textToSpeak) {
       return { success: false, error: "Empty or invalid text to speak." };

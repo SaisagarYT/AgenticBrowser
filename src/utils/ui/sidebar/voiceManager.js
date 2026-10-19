@@ -2,9 +2,10 @@
 
 /**
  * Kira Voice Manager
- * Handles Hands-Free Continuous Microphone Listening (SpeechRecognition)
- * and Kokoro Text-to-Speech (HTML5 Audio) with short, human-like voice responses.
- * Manages the Voice Toggle Switch (styled identical to the Visual Marks Eye Switch).
+ * Handles Hands-Free Continuous Microphone Listening (SpeechRecognition),
+ * Floating Natural Audio Wave Widget (Web Audio API + Canvas),
+ * and Kokoro Text-to-Speech (HTML5 Audio) with dedicated Kira Companion Voice Agent.
+ * Manages the Voice Toggle Switch (styled identical to the Visual Marks Eye Switch with crimson red recording theme).
  */
 export function getVoiceManagerCode() {
   return `
@@ -26,6 +27,192 @@ export function getVoiceManagerCode() {
   };
 
   // Voice Toggle Switch Elements (voiceToggleBtn and railVoiceToggleBtn are declared in controller scope)
+
+  // --------------------------------------------------------------------------
+  // Floating Bottom-Center Natural Audio Wave Widget
+  // --------------------------------------------------------------------------
+  let floatWidgetEl = null;
+  let waveCanvas = null;
+  let waveCtx = null;
+  let audioContext = null;
+  let analyserNode = null;
+  let micMediaStream = null;
+  let waveAnimFrameId = null;
+  let smoothedHeights = [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4];
+
+  function getOrCreateFloatingWidget() {
+    if (floatWidgetEl) return floatWidgetEl;
+    floatWidgetEl = document.getElementById("as-voice-floating-widget");
+    if (!floatWidgetEl) {
+      floatWidgetEl = document.createElement("div");
+      floatWidgetEl.id = "as-voice-floating-widget";
+      floatWidgetEl.innerHTML = \`
+        <div class="as-float-mic-btn" title="Kira Voice Active">
+          \${ICONS.mic}
+        </div>
+        <div class="as-float-info">
+          <span class="as-float-title">Kira</span>
+          <span class="as-float-status" id="as-float-status-text">Listening...</span>
+        </div>
+        <div class="as-float-canvas-wrapper">
+          <canvas id="as-float-wave-canvas" width="110" height="28"></canvas>
+        </div>
+        <button class="as-float-close-btn" id="as-float-btn-close" type="button" title="Close Voice Mode (Alt+V)">
+          \${ICONS.close}
+        </button>
+      \`;
+
+      // Mount into sidebar wrapper or document body
+      const mountParent = document.getElementById("agentic-sidebar-wrapper") || document.body;
+      mountParent.appendChild(floatWidgetEl);
+
+      const closeBtn = floatWidgetEl.querySelector("#as-float-btn-close");
+      if (closeBtn) {
+        closeBtn.addEventListener("click", () => setVoiceActive(false));
+      }
+
+      waveCanvas = floatWidgetEl.querySelector("#as-float-wave-canvas");
+      if (waveCanvas) {
+        waveCtx = waveCanvas.getContext("2d");
+      }
+    }
+    return floatWidgetEl;
+  }
+
+  function updateFloatStatus(text) {
+    const el = document.getElementById("as-float-status-text");
+    if (el) el.textContent = text;
+  }
+
+  async function startWaveVisualizer() {
+    const widget = getOrCreateFloatingWidget();
+    widget.style.display = "flex";
+    updateFloatStatus("Listening...");
+
+    // Setup Web Audio Analyser
+    try {
+      if (!audioContext) {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+          audioContext = new AudioCtx();
+        }
+      }
+      if (audioContext && audioContext.state === "suspended") {
+        await audioContext.resume();
+      }
+
+      if (!micMediaStream && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        micMediaStream = await navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => null);
+        if (micMediaStream && audioContext) {
+          const source = audioContext.createMediaStreamSource(micMediaStream);
+          analyserNode = audioContext.createAnalyser();
+          analyserNode.fftSize = 64;
+          analyserNode.smoothingTimeConstant = 0.8;
+          source.connect(analyserNode);
+        }
+      }
+    } catch (e) {
+      console.warn("Could not attach audio analyser:", e);
+    }
+
+    renderWaveLoop();
+  }
+
+  function renderWaveLoop() {
+    if (!isVoiceModeActive) return;
+
+    if (waveCanvas && waveCtx) {
+      const width = waveCanvas.width;
+      const height = waveCanvas.height;
+      waveCtx.clearRect(0, 0, width, height);
+
+      let freqData = null;
+      if (analyserNode) {
+        freqData = new Uint8Array(analyserNode.frequencyBinCount);
+        analyserNode.getByteFrequencyData(freqData);
+      }
+
+      const numBars = 11;
+      const barWidth = 3.5;
+      const barGap = 4;
+      const totalWidth = numBars * barWidth + (numBars - 1) * barGap;
+      const startX = (width - totalWidth) / 2;
+      const centerY = height / 2;
+      const now = Date.now();
+
+      for (let i = 0; i < numBars; i++) {
+        let targetHeight = 4; // idle baseline
+
+        if (isSpeaking) {
+          // Playful rhythmic animation during Kira speech
+          const offset = i * 0.7;
+          targetHeight = 6 + 12 * Math.abs(Math.sin(now * 0.009 + offset));
+        } else if (freqData && freqData.length > 0) {
+          // Real live mic acoustic volume
+          const binIndex = Math.min(Math.floor((i / numBars) * (freqData.length * 0.6)), freqData.length - 1);
+          const rawVal = freqData[binIndex] || 0;
+          if (rawVal > 15) {
+            targetHeight = Math.min(26, 4 + (rawVal / 255) * 22);
+          } else {
+            // Gentle organic idle wave breathing
+            targetHeight = 4 + 3 * Math.abs(Math.sin(now * 0.004 + i * 0.5));
+          }
+        } else {
+          // Fallback smooth sinusoidal breathing
+          targetHeight = 4 + 3 * Math.abs(Math.sin(now * 0.004 + i * 0.5));
+        }
+
+        // Smooth lerp transition
+        smoothedHeights[i] += (targetHeight - smoothedHeights[i]) * 0.28;
+        const h = Math.max(3, smoothedHeights[i]);
+
+        // Gradient from crimson red (#ef4444) to rose/amber (#fb7185 / #facc15)
+        const grad = waveCtx.createLinearGradient(0, centerY - h / 2, 0, centerY + h / 2);
+        grad.addColorStop(0, "#fb7185");
+        grad.addColorStop(0.5, "#ef4444");
+        grad.addColorStop(1, "#dc2626");
+
+        waveCtx.fillStyle = grad;
+        const x = startX + i * (barWidth + barGap);
+        const y = centerY - h / 2;
+        const radius = barWidth / 2;
+
+        // Draw rounded bar
+        waveCtx.beginPath();
+        if (typeof waveCtx.roundRect === "function") {
+          waveCtx.roundRect(x, y, barWidth, h, radius);
+        } else {
+          waveCtx.rect(x, y, barWidth, h);
+        }
+        waveCtx.fill();
+      }
+    }
+
+    waveAnimFrameId = requestAnimationFrame(renderWaveLoop);
+  }
+
+  function stopWaveVisualizer() {
+    if (waveAnimFrameId) {
+      cancelAnimationFrame(waveAnimFrameId);
+      waveAnimFrameId = null;
+    }
+    if (floatWidgetEl) {
+      floatWidgetEl.style.display = "none";
+    }
+    if (micMediaStream) {
+      try {
+        micMediaStream.getTracks().forEach(t => t.stop());
+      } catch {}
+      micMediaStream = null;
+    }
+    if (audioContext && audioContext.state !== "closed") {
+      try {
+        audioContext.close();
+      } catch {}
+      audioContext = null;
+    }
+    analyserNode = null;
+  }
 
   // --------------------------------------------------------------------------
   // Synchronization & Switch State Management
@@ -53,7 +240,7 @@ export function getVoiceManagerCode() {
 
     if (railVoiceToggleBtn) {
       railVoiceToggleBtn.innerHTML = icon;
-      railVoiceToggleBtn.style.color = isActive ? "#facc15" : "";
+      railVoiceToggleBtn.style.color = isActive ? "#ef4444" : "";
       railVoiceToggleBtn.title = isActive ? "Kira Voice: Continuous Mic (Alt+V)" : "Kira Voice: Mic Off (Alt+V)";
     }
 
@@ -73,12 +260,14 @@ export function getVoiceManagerCode() {
     if (isVoiceModeActive) {
       isPausedForExecution = false;
       startContinuousListening();
+      startWaveVisualizer();
       if (statusLabel) {
         statusLabel.textContent = "Kira Voice: Listening... (speak anytime)";
       }
     } else {
       isPausedForExecution = false;
       stopContinuousListening();
+      stopWaveVisualizer();
       stopSpeaking();
       if (statusLabel && (statusLabel.textContent.includes("Listening") || statusLabel.textContent.includes("speaking") || statusLabel.textContent.includes("voice command"))) {
         statusLabel.textContent = "Ready. Type a prompt below to automate.";
@@ -179,6 +368,7 @@ export function getVoiceManagerCode() {
     }
 
     updateToggleUI(isVoiceModeActive, true);
+    updateFloatStatus("Kira Speaking...");
 
     try {
       if (typeof window.kira_synthesize_speech !== "function") {
@@ -191,8 +381,9 @@ export function getVoiceManagerCode() {
         statusLabel.textContent = "Kira is speaking...";
       }
 
-      // Synthesize short, human-like voice response (distill = true)
+      // Synthesize short, human-like voice response via dedicated companion VoiceAgent
       const res = await window.kira_synthesize_speech(text, {
+        userCommand: lastSubmittedCommand || "",
         voice: voiceSettings.activeVoice || "af_heart",
         speed: voiceSettings.speed || 1.0,
         distill: true,
@@ -248,12 +439,16 @@ export function getVoiceManagerCode() {
     // If continuous voice mode is active, immediately re-arm silent listening!
     if (isVoiceModeActive) {
       isPausedForExecution = false;
+      updateFloatStatus("Listening...");
       startContinuousListening();
       if (statusLabel) {
         statusLabel.textContent = "Kira Voice: Listening... (speak anytime)";
       }
-    } else if (statusLabel && statusLabel.textContent === "Kira is speaking...") {
-      statusLabel.textContent = "Ready. Type a prompt below to automate.";
+    } else {
+      updateFloatStatus("Off");
+      if (statusLabel && statusLabel.textContent === "Kira is speaking...") {
+        statusLabel.textContent = "Ready. Type a prompt below to automate.";
+      }
     }
   }
 
@@ -291,8 +486,11 @@ export function getVoiceManagerCode() {
     rec.onstart = () => {
       isListening = true;
       baseTextBeforeSpeech = textareaEl.value;
-      if (!isSpeaking && !isPausedForExecution && statusLabel) {
-        statusLabel.textContent = "Kira Voice: Listening... (speak anytime)";
+      if (!isSpeaking && !isPausedForExecution) {
+        updateFloatStatus("Listening...");
+        if (statusLabel) {
+          statusLabel.textContent = "Kira Voice: Listening... (speak anytime)";
+        }
       }
     };
 
@@ -318,6 +516,7 @@ export function getVoiceManagerCode() {
         autoResizeTextarea();
         textareaEl.scrollTop = textareaEl.scrollHeight;
 
+        updateFloatStatus("Listening: " + spoken.slice(-20) + "...");
         if (statusLabel) {
           statusLabel.textContent = "Listening: " + spoken.slice(-35) + "...";
         }
@@ -330,6 +529,7 @@ export function getVoiceManagerCode() {
             try {
               rec.stop();
             } catch {}
+            updateFloatStatus("Thinking...");
             if (statusLabel) {
               statusLabel.textContent = "Processing voice command...";
             }

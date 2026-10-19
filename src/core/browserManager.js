@@ -343,6 +343,11 @@ class BrowserManager {
       });
 
       // Expose Kira Voice synthesis and voice configuration functions
+      await this.context.exposeFunction("kira_generate_voice_response", async (params) => {
+        const { VoiceAgent } = await import("../agents/voiceAgent.js");
+        return await VoiceAgent.generateVoiceResponse(params || {});
+      });
+
       await this.context.exposeFunction("kira_synthesize_speech", async (text, options) => {
         const { voiceService } = await import("./voice/voiceService.js");
         return await voiceService.synthesize(text, options);
