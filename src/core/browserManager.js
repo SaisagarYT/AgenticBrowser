@@ -146,14 +146,34 @@ class BrowserManager {
 
     // Auto-track new tabs and popups (e.g. e-commerce product links with target="_blank")
     this.context.on("page", async (newPage) => {
-      logger.info(`[BrowserManager] Switching active focus to new tab: ${newPage.url()}`);
-      this.page = newPage;
-      attachPageOverlayListeners(newPage);
-
+      let isPopup = false;
       try {
-        await uiManager.injectOverlay(newPage);
+        isPopup = await newPage.evaluate(() => {
+          return Boolean(window.opener) && (window.innerWidth < 700 || window.innerHeight < 600);
+        });
       } catch {
         // Ignore
+      }
+
+      logger.info(`[BrowserManager] New page opened: ${newPage.url()} (isPopup: ${isPopup})`);
+      this.page = newPage;
+
+      newPage.on("close", () => {
+        if (this.page === newPage && this.context) {
+          const openPages = this.context.pages().filter((p) => !p.isClosed());
+          if (openPages.length > 0) {
+            this.page = openPages[openPages.length - 1];
+          }
+        }
+      });
+
+      if (!isPopup) {
+        attachPageOverlayListeners(newPage);
+        try {
+          await uiManager.injectOverlay(newPage);
+        } catch {
+          // Ignore
+        }
       }
     });
 
@@ -173,6 +193,13 @@ class BrowserManager {
 
   async getPage() {
     if (!this.page || this.page.isClosed()) {
+      if (this.context) {
+        const openPages = this.context.pages().filter((p) => !p.isClosed());
+        if (openPages.length > 0) {
+          this.page = openPages[openPages.length - 1];
+          return this.page;
+        }
+      }
       await this.initialize();
     }
     return this.page;

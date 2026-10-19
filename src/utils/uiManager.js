@@ -5,8 +5,9 @@ import path from "node:path";
 import { logger } from "./logger.js";
 
 import { modelRegistry } from "../core/modelRegistry.js";
+import { buildSidebarScript } from "./ui/sidebarOverlay.js";
 
-const SIDEBAR_JS_PATH = path.resolve(process.cwd(), "src", "utils", "ui", "sidebarOverlay.js");
+const SIDEBAR_BUNDLE_PATH = path.resolve(process.cwd(), "src", "utils", "ui", "sidebar.bundle.js");
 
 export class UIManager {
   constructor() {
@@ -17,8 +18,16 @@ export class UIManager {
   }
 
   getSidebarScript() {
-    if (fs.existsSync(SIDEBAR_JS_PATH)) {
-      const baseScript = fs.readFileSync(SIDEBAR_JS_PATH, "utf8");
+    let baseScript = null;
+    try {
+      baseScript = buildSidebarScript();
+    } catch {
+      if (fs.existsSync(SIDEBAR_BUNDLE_PATH)) {
+        baseScript = fs.readFileSync(SIDEBAR_BUNDLE_PATH, "utf8");
+      }
+    }
+
+    if (baseScript) {
       try {
         const initialModels = JSON.stringify(modelRegistry.getModels());
         const initialProviders = JSON.stringify(modelRegistry.getProviders());
@@ -40,6 +49,13 @@ window.__ANTIGRAVITY_AVAILABLE__ = true;
     if (!page || page.isClosed()) return;
 
     try {
+      // Avoid re-injecting if the sidebar is already mounted in this page
+      const isAlreadyPresent = await page.evaluate(() => {
+        return Boolean(document.getElementById("agentic-sidebar-wrapper"));
+      }).catch(() => false);
+
+      if (isAlreadyPresent) return;
+
       const script = this.getSidebarScript();
       if (!script) return;
 

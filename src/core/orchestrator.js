@@ -59,6 +59,31 @@ export class Orchestrator extends EventEmitter {
       await uiManager.addUserMessage(activePage, command, Boolean(options.fromOverlay));
       await uiManager.updateState(activePage, "processing");
 
+      // Handle simple conversational greetings immediately without executing heavy browser planner steps
+      const isGreeting = /^(hi|hello|hey|hiya|howdy|good\s+(morning|afternoon|evening)|what'?s\s+up|sup|greetings|who\s+are\s+you|what\s+can\s+you\s+do|help|thanks|thank\s+you)[.!?]*$/i.test(command.trim());
+      if (isGreeting) {
+        finalAnswer = "Hello! How can I help you with your project today?";
+        TaskRepository.complete(taskId, finalAnswer, 1, Date.now() - startTime);
+        this._emit(taskId, "task_completed", {
+          taskId,
+          finalResponse: finalAnswer,
+          totalSteps: 1,
+          durationMs: Date.now() - startTime,
+        });
+        const finalPage = await browserManager.getPage().catch(() => activePage);
+        if (finalPage && !finalPage.isClosed()) {
+          await uiManager.addSystemMessage(finalPage, finalAnswer, "done");
+          await uiManager.commandCompleted(finalPage);
+        }
+        return {
+          taskId,
+          status: "COMPLETED",
+          finalResponse: finalAnswer,
+          totalSteps: 1,
+          durationMs: Date.now() - startTime,
+        };
+      }
+
       while (stepIndex < this.maxSteps) {
         stepIndex++;
         const stepTimerStart = Date.now();
@@ -325,25 +350,11 @@ export class Orchestrator extends EventEmitter {
       activePage = await browserManager.getPage();
       await uiManager.addUserMessage(activePage, command, Boolean(options.fromOverlay));
       await uiManager.updateState(activePage, "processing");
-      await uiManager.addSystemMessage(
-        activePage,
-        JSON.stringify({
-          plan: ["Initialize Antigravity CLI Agent", "Execute Reasoning & Tool Steps", "Stream Final Response"],
-          stepIndex: 1,
-          currentInstruction: "Antigravity CLI Agent is reasoning...",
-        }),
-        "plan"
-      );
     } catch (err) {
       logger.warn(`[Orchestrator] Initial UI setup notice: ${err.message}`);
     }
 
     this._emit(taskId, "planner_thinking", { stepIndex: 1 });
-    this._emit(taskId, "plan_updated", {
-      stepIndex: 1,
-      plan: ["Initialize Antigravity CLI Agent", "Execute Reasoning & Tool Steps", "Stream Final Response"],
-      currentInstruction: "Antigravity CLI Agent running...",
-    });
 
     return new Promise((resolve, reject) => {
       let fullTokens = "";
