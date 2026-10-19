@@ -38,9 +38,14 @@ export function getVoiceManagerCode() {
   let waveCtx = null;
   let audioContext = null;
   let analyserNode = null;
+  let audioCaptureNode = null;
   let micMediaStream = null;
   let waveAnimFrameId = null;
   let smoothedHeights = [4, 4, 4, 4, 4, 4, 4, 4, 4];
+  let pcmChunks = [];
+  let isRecordingSpeech = false;
+  let lastSpeechTime = 0;
+  let isTranscribing = false;
 
   function getOrCreateFloatingWidget() {
     if (floatWidgetEl) return floatWidgetEl;
@@ -90,7 +95,7 @@ export function getVoiceManagerCode() {
     widget.style.display = "flex";
     updateFloatStatus("Listening...");
 
-    // Setup Web Audio Analyser
+    // Setup Web Audio Analyser & Real-time Speech Capture
     try {
       if (!audioContext) {
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -120,6 +125,63 @@ export function getVoiceManagerCode() {
           analyserNode.fftSize = 256;
           analyserNode.smoothingTimeConstant = 0.3; // Snappy live acoustic tracking
           source.connect(analyserNode);
+
+          // Connect speech audio recording processor (16kHz for local Whisper ASR)
+          if (!audioCaptureNode) {
+            const inputSampleRate = audioContext.sampleRate;
+            const ratio = inputSampleRate / 16000;
+            audioCaptureNode = audioContext.createScriptProcessor(4096, 1, 1);
+
+            const muteGain = audioContext.createGain();
+            muteGain.gain.value = 0;
+            audioCaptureNode.connect(muteGain);
+            muteGain.connect(audioContext.destination);
+
+            audioCaptureNode.onaudioprocess = (e) => {
+              if (!isVoiceModeActive || isSpeaking || isPausedForExecution || isTranscribing) {
+                return;
+              }
+
+              const channelData = e.inputBuffer.getChannelData(0);
+              let sumSquares = 0;
+              for (let k = 0; k < channelData.length; k++) {
+                sumSquares += channelData[k] * channelData[k];
+              }
+              const frameRms = Math.sqrt(sumSquares / channelData.length);
+
+              // Downsample frame to 16kHz
+              const targetSamples = Math.round(channelData.length / ratio);
+              const downsampled = new Float32Array(targetSamples);
+              for (let k = 0; k < targetSamples; k++) {
+                const origIdx = k * ratio;
+                const lower = Math.floor(origIdx);
+                const upper = Math.min(lower + 1, channelData.length - 1);
+                const weight = origIdx - lower;
+                downsampled[k] = channelData[lower] * (1 - weight) + channelData[upper] * weight;
+              }
+
+              // Physical voice acoustic threshold
+              if (frameRms > 0.016) {
+                isRecordingSpeech = true;
+                lastSpeechTime = Date.now();
+                updateFloatStatus("Listening...");
+              }
+
+              if (isRecordingSpeech) {
+                pcmChunks.push(downsampled);
+
+                // Commit when user pauses for 1.1s after speaking OR max utterance reaches 15s
+                const elapsedSinceSpeech = Date.now() - lastSpeechTime;
+                const totalEstimatedSamples = pcmChunks.length * targetSamples;
+                if ((elapsedSinceSpeech > 1100 && totalEstimatedSamples >= 5600) || totalEstimatedSamples > 240000) {
+                  isRecordingSpeech = false;
+                  commitVoiceRecording();
+                }
+              }
+            };
+
+            source.connect(audioCaptureNode);
+          }
         }
       }
     } catch (e) {
@@ -127,6 +189,82 @@ export function getVoiceManagerCode() {
     }
 
     renderWaveLoop();
+  }
+
+  async function commitVoiceRecording() {
+    if (pcmChunks.length === 0 || isTranscribing || isPausedForExecution || isSpeaking) return;
+
+    let totalLen = 0;
+    for (let i = 0; i < pcmChunks.length; i++) {
+      totalLen += pcmChunks[i].length;
+    }
+
+    // Require at least 0.35s of audio (5600 samples at 16kHz)
+    if (totalLen < 5600) {
+      pcmChunks = [];
+      return;
+    }
+
+    const merged = new Float32Array(totalLen);
+    let offset = 0;
+    for (let i = 0; i < pcmChunks.length; i++) {
+      merged.set(pcmChunks[i], offset);
+      offset += pcmChunks[i].length;
+    }
+    pcmChunks = [];
+
+    isTranscribing = true;
+    updateFloatStatus("Understanding...");
+    if (statusLabel) {
+      statusLabel.textContent = "Kira is understanding your voice...";
+    }
+
+    try {
+      const uint8 = new Uint8Array(merged.buffer);
+      let binary = "";
+      const chunkSize = 8192;
+      for (let i = 0; i < uint8.length; i += chunkSize) {
+        binary += String.fromCharCode.apply(null, uint8.subarray(i, i + chunkSize));
+      }
+      const base64Audio = btoa(binary);
+
+      let resultText = "";
+      if (typeof window.kira_transcribe_audio === "function") {
+        const res = await window.kira_transcribe_audio(base64Audio);
+        if (res && res.success && res.text) {
+          resultText = res.text.trim();
+        }
+      }
+
+      if (resultText && resultText.length > 0) {
+        console.log("[Kira Voice] Whisper transcribed:", resultText);
+        isPausedForExecution = true;
+        updateFloatStatus("Thinking...");
+        textareaEl.value = resultText;
+        autoResizeTextarea();
+        if (statusLabel) {
+          statusLabel.textContent = "Processing: " + resultText.slice(0, 30) + "...";
+        }
+        triggerSubmit();
+
+        if (executionWatchdogTimer) clearTimeout(executionWatchdogTimer);
+        executionWatchdogTimer = setTimeout(() => {
+          if (isVoiceModeActive && isPausedForExecution && !isSpeaking) {
+            resumeListening();
+          }
+        }, 20000);
+      } else {
+        updateFloatStatus("Listening...");
+        if (statusLabel) {
+          statusLabel.textContent = "Kira Voice: Listening... (speak anytime)";
+        }
+      }
+    } catch (err) {
+      console.error("[Kira Voice] Speech transcription error:", err);
+      updateFloatStatus("Listening...");
+    } finally {
+      isTranscribing = false;
+    }
   }
 
   function renderWaveLoop() {
@@ -163,7 +301,7 @@ export function getVoiceManagerCode() {
       const centerY = height / 2;
       const now = Date.now();
 
-      // Check if user is actively speaking based on physical acoustic power
+      // Physical acoustic speech detection
       const isUserSpeaking = rms > 0.016;
 
       for (let i = 0; i < numBars; i++) {
@@ -218,6 +356,15 @@ export function getVoiceManagerCode() {
     if (floatWidgetEl) {
       floatWidgetEl.style.display = "none";
     }
+    if (audioCaptureNode) {
+      try {
+        audioCaptureNode.disconnect();
+      } catch {}
+      audioCaptureNode = null;
+    }
+    pcmChunks = [];
+    isRecordingSpeech = false;
+    isTranscribing = false;
     if (micMediaStream) {
       try {
         micMediaStream.getTracks().forEach(t => t.stop());
@@ -518,147 +665,22 @@ export function getVoiceManagerCode() {
   });
 
   // --------------------------------------------------------------------------
-  // 2. Speech-to-Text (Hands-Free Continuous Listening Loop)
+  // 2. Speech-to-Text (Continuous Listening Loop via Local Whisper)
   // --------------------------------------------------------------------------
-  function setupSpeechRecognition() {
-    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRec) {
-      console.warn("SpeechRecognition not supported in this browser environment.");
-      return null;
-    }
-
-    const rec = new SpeechRec();
-    rec.continuous = true;
-    rec.interimResults = true;
-    rec.lang = "en-US";
-
-    let silenceTimer = null;
-    let baseTextBeforeSpeech = "";
-
-    rec.onstart = () => {
-      isListening = true;
-      baseTextBeforeSpeech = textareaEl.value;
-      if (!isSpeaking && !isPausedForExecution) {
-        updateFloatStatus("Listening...");
-        if (statusLabel) {
-          statusLabel.textContent = "Kira Voice: Listening... (speak anytime)";
-        }
-      }
-    };
-
-    rec.onresult = (event) => {
-      // Discard recognition while Kira is speaking or processing a task
-      if (isSpeaking || isPausedForExecution) return;
-
-      let interimTranscript = "";
-      let finalTranscript = "";
-
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        if (event.results[i].isFinal) {
-          finalTranscript += event.results[i][0].transcript;
-        } else {
-          interimTranscript += event.results[i][0].transcript;
-        }
-      }
-
-      const spoken = (finalTranscript + interimTranscript).trim();
-      if (spoken) {
-        const separator = baseTextBeforeSpeech && !baseTextBeforeSpeech.endsWith(" ") ? " " : "";
-        textareaEl.value = baseTextBeforeSpeech + separator + spoken;
-        autoResizeTextarea();
-        textareaEl.scrollTop = textareaEl.scrollHeight;
-
-        updateFloatStatus("Listening: " + spoken.slice(-20) + "...");
-        if (statusLabel) {
-          statusLabel.textContent = "Listening: " + spoken.slice(-35) + "...";
-        }
-
-        // Auto-submit after 1.8 seconds of natural conversational pause
-        if (silenceTimer) clearTimeout(silenceTimer);
-        silenceTimer = setTimeout(() => {
-          if (isVoiceModeActive && textareaEl.value.trim().length > 0) {
-            isPausedForExecution = true;
-            try {
-              rec.stop();
-            } catch {}
-            updateFloatStatus("Thinking...");
-            if (statusLabel) {
-              statusLabel.textContent = "Processing voice command...";
-            }
-            triggerSubmit();
-            baseTextBeforeSpeech = "";
-
-            // Safety watchdog: Automatically re-arm listening if execution takes > 20s
-            if (executionWatchdogTimer) clearTimeout(executionWatchdogTimer);
-            executionWatchdogTimer = setTimeout(() => {
-              if (isVoiceModeActive && isPausedForExecution && !isSpeaking) {
-                console.log("[Kira Voice] Watchdog: auto-rearming listening after timeout");
-                resumeListening();
-              }
-            }, 20000);
-          }
-        }, 1800);
-      }
-    };
-
-    rec.onerror = (event) => {
-      // "no-speech" is normal when the room is silent — DO NOT stop!
-      if (event.error === "no-speech") {
-        return;
-      }
-      console.warn("Speech recognition notice:", event.error);
-      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-        setVoiceActive(false);
-        if (statusLabel) {
-          statusLabel.textContent = "Microphone access was denied in browser permissions.";
-        }
-      }
-    };
-
-    rec.onend = () => {
-      isListening = false;
-      // ALWAYS-ON auto-rearm loop: if voice mode is enabled, keep listening!
-      if (isVoiceModeActive && !isSpeaking && !isPausedForExecution) {
-        if (restartTimeout) clearTimeout(restartTimeout);
-        restartTimeout = setTimeout(() => {
-          if (isVoiceModeActive && !isSpeaking && !isPausedForExecution) {
-            try {
-              rec.start();
-            } catch {}
-          }
-        }, 120);
-      }
-    };
-
-    return rec;
-  }
-
   function startContinuousListening() {
-    if (isListening) return;
-    try {
-      if (!speechRecognizer) {
-        speechRecognizer = setupSpeechRecognition();
-      }
-      speechRecognizer.start();
-    } catch {
-      // Re-initialize cleanly if recognizer was in stale state
-      try {
-        speechRecognizer = setupSpeechRecognition();
-        speechRecognizer.start();
-      } catch (err) {
-        console.warn("[Kira Voice] speechRecognizer start notice:", err);
-      }
-    }
+    isListening = true;
+    pcmChunks = [];
+    isRecordingSpeech = false;
+    isTranscribing = false;
+    startWaveVisualizer();
   }
 
   function stopContinuousListening() {
     isListening = false;
-    if (restartTimeout) clearTimeout(restartTimeout);
-    if (speechRecognizer) {
-      try {
-        speechRecognizer.abort();
-      } catch {}
-    }
+    pcmChunks = [];
+    isRecordingSpeech = false;
+    isTranscribing = false;
+    stopWaveVisualizer();
   }
 
   // --------------------------------------------------------------------------

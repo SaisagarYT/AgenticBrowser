@@ -362,6 +362,17 @@ class BrowserManager {
         const { voiceService } = await import("./voice/voiceService.js");
         return voiceService.saveSettings(settings);
       });
+
+      await this.context.exposeFunction("kira_transcribe_audio", async (base64Audio) => {
+        const { getSTTService } = await import("./voice/sttService.js");
+        const stt = getSTTService();
+        return await stt.transcribe(base64Audio);
+      });
+
+      // Background pre-warm Whisper ASR transcriber
+      import("./voice/sttService.js").then(({ getSTTService }) => {
+        getSTTService().getTranscriber().catch(() => {});
+      }).catch(() => {});
     } catch {
       // Ignore if already exposed
     }
