@@ -27,6 +27,7 @@ The Browser Agent can ONLY execute ONE atomic action at a time.
      - Repeat for each requested paper (e.g. Paper 1, Paper 2, Paper 3).
      - Final Step: Conclude with final_response summarizing the downloaded papers and confirming their saved locations in the downloads folder.
    - The user explicitly expects to see the browser navigate to the page and click the buttons on the screen!
+8. Scrolling & Exploration: If a task requires browsing multiple items, discovering options further down a page, or locating an element not immediately visible upon page load, include a step to scroll down using scroll_page (e.g. "Scroll down to reveal more results").
 </critical_rules>
 
 <output_format>

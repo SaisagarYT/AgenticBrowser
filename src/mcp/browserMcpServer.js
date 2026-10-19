@@ -126,6 +126,44 @@ const TOOLS = [
     },
   },
   {
+    name: "browser_scroll",
+    description: "Scroll the page viewport or a specific container to reveal content below/above the fold, explore feeds, or trigger infinite scroll.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        direction: {
+          type: "string",
+          enum: ["down", "up", "top", "bottom", "left", "right"],
+          description: "Scroll direction (default 'down')",
+          default: "down",
+        },
+        amount: {
+          type: "string",
+          description: "Scroll distance in pixels (e.g. '600'), 'half_page', 'full_page', or 'auto'",
+          default: "auto",
+        },
+        selector: {
+          type: "string",
+          description: "Optional mmid or CSS selector for a specific scrollable container or feed",
+        },
+      },
+    },
+  },
+  {
+    name: "browser_scroll_to_element",
+    description: "Scroll specifically to bring a target element (button, link, heading, card) into the center of the viewport.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        selector: {
+          type: "string",
+          description: "The mmid number (e.g. '12' or '[mmid=\"12\"]') or CSS selector of the element to scroll into view",
+        },
+      },
+      required: ["selector"],
+    },
+  },
+  {
     name: "browser_take_screenshot",
     description: "Capture a screenshot of the current page viewport for visual verification.",
     inputSchema: {
@@ -164,7 +202,9 @@ async function handleToolCall(name, args) {
   if (skill === "type") skill = "enter_text_using_selector";
   if (skill === "type_and_click") skill = "enter_text_and_click";
   if (skill === "press_key") skill = "press_key_combination";
-  if (skill === "take_screenshot") skill = "take_screenshot";
+  if (skill === "take_screenshot" || skill === "screenshot") skill = "take_screenshot";
+  if (skill === "scroll") skill = "scroll_page";
+  if (skill === "scroll_to_element") skill = "scroll_to_element";
 
   if (skill === "final_response") {
     const answer = args.answer || "";

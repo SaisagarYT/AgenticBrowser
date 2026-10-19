@@ -11,6 +11,7 @@ import { getDomContent } from "./getDomContent.js";
 import { extractPdfText } from "./pdfExtractor.js";
 import { takeScreenshot } from "./takeScreenshot.js";
 import { finalResponse } from "./finalResponse.js";
+import { scrollPage, scrollToElement } from "./scrollPage.js";
 import { SkillError } from "../utils/errors.js";
 
 export const SKILL_REGISTRY = {
@@ -24,6 +25,8 @@ export const SKILL_REGISTRY = {
   get_dom_with_content_type: getDomContent,
   pdf_text_extractor: extractPdfText,
   take_screenshot: takeScreenshot,
+  scroll_page: scrollPage,
+  scroll_to_element: scrollToElement,
   final_response: finalResponse,
 };
 
@@ -67,6 +70,22 @@ export const TOOL_DESCRIPTIONS = [
     name: "get_dom_with_content_type",
     description: "Extract the page DOM to inspect interactive elements tagged with mmid attributes or read clean text.",
     parameters: { contentType: "'fields' (interactive items) or 'text_only' (readable text)" },
+  },
+  {
+    name: "scroll_page",
+    description: "Scroll the page viewport or a specific container to reveal elements below/above the fold, explore search results, trigger infinite scroll, or reach the bottom/top.",
+    parameters: {
+      direction: "'down' (default), 'up', 'top', 'bottom', 'left', or 'right'",
+      amount: "number of pixels (e.g. 600), 'half_page', 'full_page', or 'auto' (optional)",
+      selector: "string (optional mmid or selector for a specific scrollable container or feed)",
+    },
+  },
+  {
+    name: "scroll_to_element",
+    description: "Scroll specifically to bring a target element (button, link, heading, or card by mmid) into the center of the viewport so it is visible and clickable.",
+    parameters: {
+      selector: "string (mmid e.g. '15' or CSS selector)",
+    },
   },
   {
     name: "pdf_text_extractor",

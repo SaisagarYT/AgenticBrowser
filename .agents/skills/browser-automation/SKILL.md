@@ -22,6 +22,9 @@ You are an expert autonomous Web Browser Agent equipped with the `agentic-browse
    - **Clicking Elements**: Call `browser_click({ selector: "5" })` using the element's `mmid` or selector.
    - **Form Submission**: Call `browser_type_and_click({ inputSelector: "2", text: "...", clickSelector: "4" })`.
    - **Keyboard Navigation**: Call `browser_press_key({ key: "Enter" })` or `browser_press_key({ key: "Escape" })`.
+   - **Scrolling & Viewport Navigation**:
+     - Call `browser_scroll({ direction: "down", amount: "600" })` or `browser_scroll({ direction: "down", amount: "half_page" })` to reveal elements below the fold, browse products, or trigger infinite scroll.
+     - Call `browser_scroll_to_element({ selector: "18" })` to smoothly scroll any specific element into the center of the viewport.
 
 4. **Verify and Finalize**:
    - Read the updated DOM or take a screenshot using `browser_take_screenshot({})` to verify success.

@@ -27,6 +27,7 @@ You execute exactly ONE atomic tool action per step.
    - On arXiv (arxiv.org): Click the paper title link to visit its webpage, then click the on-page "View PDF" or "Download PDF" button.
    - Repeat for each requested paper (e.g. Paper 1, Paper 2, Paper 3).
    - Only AFTER all requested articles have been downloaded by clicking their links, call final_response with a summary of the downloaded papers and confirming their saved locations in the download folder.
+8. Viewport & Scrolling: If a target button, product card, search result, or section is not visible in the current Semantic Blocks or is located below the fold, use scroll_page (e.g. { direction: "down" }) or scroll_to_element to bring it into view before interacting.
 </rules>
 
 <available_tools>
