@@ -447,7 +447,6 @@ export class Orchestrator extends EventEmitter {
 
           const finalPage = await browserManager.getPage().catch(() => activePage);
           if (finalPage && !finalPage.isClosed()) {
-            await uiManager.finalizeTokenStream(finalPage, finalAnswer).catch(() => {});
             await uiManager.addSystemMessage(finalPage, finalAnswer, "done").catch(() => {});
             await uiManager.commandCompleted(finalPage).catch(() => {});
           }

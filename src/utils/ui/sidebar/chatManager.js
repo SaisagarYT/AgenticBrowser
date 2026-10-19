@@ -190,6 +190,29 @@ export function getChatManagerCode() {
   function appendAiResponseCard(text, isInstant = false) {
     if (heroView) heroView.style.display = "none";
 
+    // 1. If an active streaming card is already in progress, finalize it instead of creating a second card!
+    if (currentStreamingCard && currentStreamingCard.container && currentStreamingCard.container.parentNode) {
+      finalizeStreamingAiCard(text);
+      return;
+    }
+
+    // 2. Duplicate prevention: If the last message is already an AI response card, update it rather than appending a duplicate!
+    const lastEl = contentEl.lastElementChild;
+    if (lastEl && lastEl.classList.contains("as-ai-response-container")) {
+      const bodyEl = lastEl.querySelector(".as-ai-message-body");
+      if (bodyEl) {
+        bodyEl.innerHTML = formatAiMarkdown(text);
+        const toolbarEl = lastEl.querySelector(".as-ai-toolbar");
+        if (toolbarEl) {
+          toolbarEl.style.opacity = "1";
+          toolbarEl.style.pointerEvents = "auto";
+        }
+        attachToolbarListeners(lastEl, text);
+        contentEl.scrollTop = contentEl.scrollHeight;
+        return;
+      }
+    }
+
     const container = document.createElement("div");
     container.className = "as-ai-response-container";
 
