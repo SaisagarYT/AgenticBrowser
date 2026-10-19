@@ -192,7 +192,7 @@ export class Orchestrator extends EventEmitter {
         });
 
         if (currentPage && !currentPage.isClosed()) {
-          const actionDesc = actionResult.rationale || (actionResult.toolName === "final_response" ? "Final response prepared." : `Executed ${actionResult.toolName}${actionResult.parameters ? ": " + JSON.stringify(actionResult.parameters) : ""}`);
+          const actionDesc = actionResult.actionName || actionResult.rationale || (actionResult.toolName === "final_response" ? "Final response prepared." : `Executed ${actionResult.toolName}${actionResult.parameters ? ": " + JSON.stringify(actionResult.parameters) : ""}`);
           await uiManager.addSystemMessage(currentPage, actionDesc, "browser");
         }
 

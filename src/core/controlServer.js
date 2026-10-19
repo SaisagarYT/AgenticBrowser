@@ -107,7 +107,7 @@ export async function startControlServer(preferredPort = DEFAULT_PORT) {
             const isSilent = Boolean(data.silent || params.silent);
             const page = await browserManager.getPage().catch(() => null);
             if (page && !page.isClosed() && !isSilent) {
-              const actionLabel = `Tool: ${skillName} ${JSON.stringify(params)}`;
+              const actionLabel = params.intent || params.action_name || params.description || `Tool: ${skillName} ${JSON.stringify(params)}`;
               await uiManager.addSystemMessage(page, actionLabel, "browser").catch(() => {});
             }
 

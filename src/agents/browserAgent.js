@@ -37,6 +37,7 @@ ${JSON.stringify(TOOL_DESCRIPTIONS, null, 2)}
 <output_format>
 You MUST respond with valid JSON adhering to this exact schema:
 {
+  "action_name": "A concise, natural language title for this action (e.g. 'Navigate to GitHub login', 'Inspect page layout', 'Enter username', 'Click Submit')",
   "tool": "name_of_the_tool_to_call",
   "parameters": {
     "key": "value"
@@ -117,6 +118,7 @@ Select the single best tool and parameters to accomplish this step.
       const executionResult = await executeSkill(decision.tool, decision.parameters || {});
 
       return {
+        actionName: decision.action_name || decision.intent || "",
         toolName: decision.tool,
         parameters: decision.parameters || {},
         rationale: decision.rationale || "",

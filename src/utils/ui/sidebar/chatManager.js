@@ -644,56 +644,46 @@ export function getChatManagerCode() {
 
     let tool = "";
     let params = null;
+    let explicitIntent = "";
 
-    // Pattern 1: Tool: <name> <json> or Tool: <name>: <json>
-    const toolPrefixMatch = text.match(/^(?:Tool|Executed|Action)\s*:\s*([a-zA-Z0-9_\-]+)\s*(?::\s*)?([\s\S]*)$/i);
-    if (toolPrefixMatch) {
-      tool = toolPrefixMatch[1].trim();
-      const rest = toolPrefixMatch[2].trim();
-      if (rest) {
-        try {
-          params = JSON.parse(rest);
-        } catch {
-          params = { raw: rest };
-        }
-      }
-    } else {
-      // Pattern 2: Executed <name>: <json>
-      const execMatch = text.match(/^Executed\s+([a-zA-Z0-9_\-]+)\s*(?::\s*)?([\s\S]*)$/i);
-      if (execMatch) {
-        tool = execMatch[1].trim();
-        const rest = execMatch[2].trim();
-        if (rest) {
-          try {
-            params = JSON.parse(rest);
-          } catch {
-            params = { raw: rest };
-          }
-        }
+    // Case 1: Pure JSON payload
+    if (text.startsWith("{") && text.endsWith("}")) {
+      try {
+        params = JSON.parse(text);
+        tool = params.tool || params.toolName || params.action || "";
+        explicitIntent = params.intent || params.action_name || params.description || params.title || "";
+      } catch {}
+    }
+
+    // Case 2: Prefixed format (e.g. "Tool: open_url {...}" or "Executed click_element: {...}")
+    if (!tool && (text.startsWith("Tool:") || text.startsWith("Executed:") || text.startsWith("Action:") || text.startsWith("Executed "))) {
+      const colonIdx = text.indexOf(":");
+      const afterPrefix = colonIdx !== -1 ? text.slice(colonIdx + 1).trim() : text.slice(8).trim();
+      const firstSpace = afterPrefix.search(/\\s/);
+      if (firstSpace !== -1) {
+        tool = afterPrefix.slice(0, firstSpace).trim().replace(/^:/, "");
+        const rest = afterPrefix.slice(firstSpace).trim().replace(/^:\\s*/, "");
+        try { params = JSON.parse(rest); } catch { params = { raw: rest }; }
       } else {
-        // Pattern 3: <name> <json>
-        const nameJsonMatch = text.match(/^([a-zA-Z0-9_]+)\s+(\{[\s\S]*\})$/);
-        if (nameJsonMatch) {
-          tool = nameJsonMatch[1].trim();
-          try {
-            params = JSON.parse(nameJsonMatch[2]);
-          } catch {
-            params = { raw: nameJsonMatch[2] };
-          }
-        } else if (text.startsWith("{") && text.endsWith("}")) {
-          try {
-            params = JSON.parse(text);
-            tool = params.tool || params.toolName || params.action || "action";
-          } catch {
-            // Raw text
-          }
-        }
+        tool = afterPrefix;
+      }
+    } else if (!tool) {
+      const spaceIdx = text.indexOf(" ");
+      if (spaceIdx !== -1 && text.slice(spaceIdx).trim().startsWith("{")) {
+        tool = text.slice(0, spaceIdx).trim();
+        try { params = JSON.parse(text.slice(spaceIdx).trim()); } catch { params = { raw: text.slice(spaceIdx).trim() }; }
+      }
+    }
+
+    if (params && typeof params === "object") {
+      if (!explicitIntent) {
+        explicitIntent = params.intent || params.action_name || params.description || params.title || "";
       }
     }
 
     const normTool = (tool || "").toLowerCase().replace(/^browser_/, "");
 
-    let title = "";
+    let title = explicitIntent || "";
     let typeClass = "as-timeline-completed";
     let iconSvg = ICONS.check;
     let badge = normTool ? normTool.toUpperCase() : "ACTION";
@@ -704,21 +694,44 @@ export function getChatManagerCode() {
       let host = url;
       try {
         const u = new URL(url);
-        host = u.hostname.replace(/^www\./, "");
-      } catch {
-        // Fallback
+        host = u.hostname.replace(/^www\\./, "") + (u.pathname && u.pathname !== "/" ? u.pathname : "");
+      } catch {}
+      if (!title) {
+        title = host ? ("Navigated to " + host) : "Navigated to target URL";
       }
-      title = host ? ("Navigated to " + host) : "Navigated to target URL";
       typeClass = "as-timeline-navigate";
       iconSvg = ICONS.globe || ICONS.check;
       badge = "OPEN_URL";
       if (url) {
         details.push({ label: "Target URL", value: url, isLink: true });
       }
+    } else if (normTool.includes("dom") || normTool.includes("extract")) {
+      if (!title) {
+        title = "Inspected interactive page fields & layout";
+      }
+      typeClass = "as-timeline-search";
+      iconSvg = ICONS.search || ICONS.check;
+      badge = "INSPECT";
+      if (params?.contentType) {
+        details.push({ label: "Scope", value: params.contentType, isCode: true });
+      }
+    } else if (normTool.includes("final_response")) {
+      if (!title) {
+        title = "Prepared final task response";
+      }
+      typeClass = "as-timeline-completed";
+      iconSvg = ICONS.check;
+      badge = "COMPLETED";
+      if (params?.answer) {
+        const ans = String(params.answer);
+        details.push({ label: "Summary", value: ans.length > 95 ? ans.slice(0, 95) + "..." : ans });
+      }
     } else if (normTool.includes("screenshot") || normTool.includes("capture")) {
       const name = params?.name || params?.filename || "settings_verified";
       const displayName = name.endsWith(".png") ? name : (name + ".png");
-      title = "Captured screenshot: " + name.replace(/\.png$/, "");
+      if (!title) {
+        title = "Captured screenshot: " + name.replace(/\\.png$/, "");
+      }
       typeClass = "as-timeline-camera";
       iconSvg = ICONS.camera || ICONS.check;
       badge = "SCREENSHOT";
@@ -728,7 +741,9 @@ export function getChatManagerCode() {
       }
     } else if (normTool.includes("click")) {
       const sel = params?.selector || params?.target || params?.text || "target element";
-      title = "Clicked element " + (sel.length > 28 ? (sel.slice(0, 28) + "...") : sel);
+      if (!title) {
+        title = "Clicked element " + (sel.length > 28 ? (sel.slice(0, 28) + "...") : sel);
+      }
       typeClass = "as-timeline-click";
       iconSvg = ICONS.mousePointer || ICONS.check;
       badge = "CLICK";
@@ -741,7 +756,9 @@ export function getChatManagerCode() {
     } else if (normTool.includes("type") || normTool.includes("input") || normTool.includes("fill")) {
       const textVal = params?.text || params?.value || "";
       const preview = textVal.length > 24 ? (textVal.slice(0, 24) + "...") : textVal;
-      title = preview ? ('Entered "' + preview + '"') : "Entered text input";
+      if (!title) {
+        title = preview ? ('Entered "' + preview + '"') : "Entered text input";
+      }
       typeClass = "as-timeline-type";
       iconSvg = ICONS.type || ICONS.check;
       badge = "INPUT";
@@ -754,7 +771,9 @@ export function getChatManagerCode() {
     } else if (normTool.includes("scroll")) {
       const dir = params?.direction || "down";
       const target = params?.selector || "";
-      title = target ? ("Scrolled to " + target) : ("Scrolled page " + dir);
+      if (!title) {
+        title = target ? ("Scrolled to " + target) : ("Scrolled page " + dir);
+      }
       typeClass = "as-timeline-scroll";
       iconSvg = ICONS.arrowDown || ICONS.check;
       badge = "SCROLL";
@@ -769,7 +788,9 @@ export function getChatManagerCode() {
       }
     } else if (normTool.includes("search")) {
       const q = params?.query || params?.q || "";
-      title = q ? ('Searched for "' + q + '"') : "Executed search query";
+      if (!title) {
+        title = q ? ('Searched for "' + q + '"') : "Executed search query";
+      }
       typeClass = "as-timeline-search";
       iconSvg = ICONS.search || ICONS.check;
       badge = "SEARCH";
@@ -777,13 +798,15 @@ export function getChatManagerCode() {
         details.push({ label: "Query", value: q, isCode: true });
       }
     } else if (normTool) {
-      title = "Executed " + normTool.replace(/_/g, " ");
+      if (!title) {
+        title = "Executed " + normTool.replace(/_/g, " ");
+      }
       typeClass = "as-timeline-completed";
       iconSvg = ICONS.check;
       badge = normTool.toUpperCase();
       if (params && typeof params === "object") {
         for (const [k, v] of Object.entries(params)) {
-          if (v !== undefined && v !== null && typeof v !== "object") {
+          if (v !== undefined && v !== null && typeof v !== "object" && k !== "intent" && k !== "action_name") {
             details.push({ label: k, value: String(v), isCode: true });
           }
         }
