@@ -38,7 +38,7 @@ export function getVoiceManagerCode() {
   let analyserNode = null;
   let micMediaStream = null;
   let waveAnimFrameId = null;
-  let smoothedHeights = [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4];
+  let smoothedHeights = [4, 4, 4, 4, 4, 4, 4, 4, 4];
 
   function getOrCreateFloatingWidget() {
     if (floatWidgetEl) return floatWidgetEl;
@@ -46,21 +46,20 @@ export function getVoiceManagerCode() {
     if (!floatWidgetEl) {
       floatWidgetEl = document.createElement("div");
       floatWidgetEl.id = "as-voice-floating-widget";
-      floatWidgetEl.innerHTML = \`
-        <div class="as-float-mic-btn" title="Kira Voice Active">
-          \${ICONS.mic}
-        </div>
-        <div class="as-float-info">
-          <span class="as-float-title">Kira</span>
-          <span class="as-float-status" id="as-float-status-text">Listening...</span>
-        </div>
-        <div class="as-float-canvas-wrapper">
-          <canvas id="as-float-wave-canvas" width="110" height="28"></canvas>
-        </div>
-        <button class="as-float-close-btn" id="as-float-btn-close" type="button" title="Close Voice Mode (Alt+V)">
-          \${ICONS.close}
-        </button>
-      \`;
+      floatWidgetEl.innerHTML =
+        '<div class="as-float-mic-btn" title="Kira Voice Active">' +
+        ICONS.mic +
+        '</div>' +
+        '<div class="as-float-info">' +
+        '  <span class="as-float-title">Kira</span>' +
+        '  <span class="as-float-status" id="as-float-status-text">Listening...</span>' +
+        '</div>' +
+        '<div class="as-float-canvas-wrapper">' +
+        '  <canvas id="as-float-wave-canvas" width="100" height="24"></canvas>' +
+        '</div>' +
+        '<button class="as-float-close-btn" id="as-float-btn-close" type="button" title="Close Voice Mode (Alt+V)">' +
+        ICONS.close +
+        '</button>';
 
       // Mount into sidebar wrapper or document body
       const mountParent = document.getElementById("agentic-sidebar-wrapper") || document.body;
@@ -132,9 +131,9 @@ export function getVoiceManagerCode() {
         analyserNode.getByteFrequencyData(freqData);
       }
 
-      const numBars = 11;
-      const barWidth = 3.5;
-      const barGap = 4;
+      const numBars = 9;
+      const barWidth = 3;
+      const barGap = 3.5;
       const totalWidth = numBars * barWidth + (numBars - 1) * barGap;
       const startX = (width - totalWidth) / 2;
       const centerY = height / 2;
@@ -144,35 +143,30 @@ export function getVoiceManagerCode() {
         let targetHeight = 4; // idle baseline
 
         if (isSpeaking) {
-          // Playful rhythmic animation during Kira speech
+          // Subtle rhythmic animation during Kira speech
           const offset = i * 0.7;
-          targetHeight = 6 + 12 * Math.abs(Math.sin(now * 0.009 + offset));
+          targetHeight = 5 + 10 * Math.abs(Math.sin(now * 0.009 + offset));
         } else if (freqData && freqData.length > 0) {
           // Real live mic acoustic volume
           const binIndex = Math.min(Math.floor((i / numBars) * (freqData.length * 0.6)), freqData.length - 1);
           const rawVal = freqData[binIndex] || 0;
           if (rawVal > 15) {
-            targetHeight = Math.min(26, 4 + (rawVal / 255) * 22);
+            targetHeight = Math.min(22, 4 + (rawVal / 255) * 18);
           } else {
             // Gentle organic idle wave breathing
-            targetHeight = 4 + 3 * Math.abs(Math.sin(now * 0.004 + i * 0.5));
+            targetHeight = 3.5 + 2.5 * Math.abs(Math.sin(now * 0.004 + i * 0.5));
           }
         } else {
           // Fallback smooth sinusoidal breathing
-          targetHeight = 4 + 3 * Math.abs(Math.sin(now * 0.004 + i * 0.5));
+          targetHeight = 3.5 + 2.5 * Math.abs(Math.sin(now * 0.004 + i * 0.5));
         }
 
         // Smooth lerp transition
         smoothedHeights[i] += (targetHeight - smoothedHeights[i]) * 0.28;
         const h = Math.max(3, smoothedHeights[i]);
 
-        // Gradient from crimson red (#ef4444) to rose/amber (#fb7185 / #facc15)
-        const grad = waveCtx.createLinearGradient(0, centerY - h / 2, 0, centerY + h / 2);
-        grad.addColorStop(0, "#fb7185");
-        grad.addColorStop(0.5, "#ef4444");
-        grad.addColorStop(1, "#dc2626");
-
-        waveCtx.fillStyle = grad;
+        // Clean, consistent, professional red color
+        waveCtx.fillStyle = "#ef4444";
         const x = startX + i * (barWidth + barGap);
         const y = centerY - h / 2;
         const radius = barWidth / 2;

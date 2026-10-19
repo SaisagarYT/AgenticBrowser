@@ -2236,9 +2236,6 @@ export function getSidebarStyles(EXPANDED_WIDTH = 420, RAIL_WIDTH = 46) {
       font-style: italic !important;
     }
 
-    .as-som-switch.as-voice-switch.active {
-      box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.25) !important;
-    }
 
     /* ------------------------------------------------------------------------
        Scholarly Article & Artifact Cards
@@ -2681,61 +2678,64 @@ export function getSidebarStyles(EXPANDED_WIDTH = 420, RAIL_WIDTH = 46) {
       transform: translateX(18px) !important;
     }
 
-    /* Crimson Recording-Red Active State for Kira Voice Mic Switch */
-    .as-som-switch.as-voice-switch.active {
-      background: #ef4444 !important;
-      border-color: #dc2626 !important;
-      box-shadow: 0 0 12px rgba(239, 68, 68, 0.45) !important;
-    }
-
-    .as-som-switch.as-voice-switch.active .as-som-switch-thumb {
-      background: #ffffff !important;
-      color: #ef4444 !important;
-      transform: translateX(18px) !important;
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35) !important;
-    }
-
+    /* Crimson Recording-Red Active State for Kira Voice Mic Switch (Strictly no glow) */
+    .as-som-switch.as-voice-switch.active,
+    #agentic-sidebar-root.dark .as-som-switch.as-voice-switch.active,
     #agentic-sidebar-root:not(.dark) .as-som-switch.as-voice-switch.active {
       background: #ef4444 !important;
       border-color: #dc2626 !important;
+      box-shadow: none !important;
+      outline: none !important;
     }
 
+    .as-som-switch.as-voice-switch.active .as-som-switch-thumb,
+    #agentic-sidebar-root.dark .as-som-switch.as-voice-switch.active .as-som-switch-thumb,
     #agentic-sidebar-root:not(.dark) .as-som-switch.as-voice-switch.active .as-som-switch-thumb {
       background: #ffffff !important;
       color: #ef4444 !important;
+      transform: translateX(18px) !important;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+    }
+
+    .as-som-switch.as-voice-switch:focus,
+    .as-som-switch.as-voice-switch:focus-visible,
+    .as-som-switch.as-voice-switch:hover,
+    .as-som-switch.as-voice-switch.active:hover,
+    .as-som-switch.as-voice-switch.active:focus {
+      box-shadow: none !important;
+      outline: none !important;
     }
 
     /* ------------------------------------------------------------------------
-       Floating Bottom-Center Natural Audio Wave Widget
+       Floating Bottom-Center Natural Audio Wave Widget (Professional & Consistent)
        ------------------------------------------------------------------------ */
     #as-voice-floating-widget {
       position: fixed !important;
-      bottom: 28px !important;
+      bottom: 24px !important;
       left: 50% !important;
       transform: translateX(-50%) translateY(0) !important;
       z-index: 2147483640 !important;
       pointer-events: auto !important;
       display: none;
       align-items: center !important;
-      gap: 12px !important;
-      padding: 6px 14px 6px 10px !important;
-      border-radius: 9999px !important;
-      background: rgba(15, 15, 20, 0.9) !important;
-      backdrop-filter: blur(24px) saturate(180%) !important;
-      -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
-      border: 1px solid rgba(255, 255, 255, 0.14) !important;
-      box-shadow: 0 16px 40px -4px rgba(0, 0, 0, 0.6), 0 0 24px rgba(239, 68, 68, 0.35) !important;
-      color: #ffffff !important;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+      gap: 10px !important;
+      padding: 6px 12px !important;
+      border-radius: calc(var(--radius) - 4px) !important; /* Strict 8px global standard */
+      background: #18181b !important;
+      border: 1px solid #27272a !important;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45) !important;
+      color: #fafafa !important;
+      font-family: var(--font-sans) !important;
       user-select: none !important;
-      transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1), transform 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
-      animation: asFloatWidgetIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+      transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+      animation: asFloatWidgetIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+      box-sizing: border-box !important;
     }
 
     @keyframes asFloatWidgetIn {
       from {
         opacity: 0;
-        transform: translateX(-50%) translateY(24px) scale(0.94);
+        transform: translateX(-50%) translateY(16px) scale(0.96);
       }
       to {
         opacity: 1;
@@ -2744,90 +2744,84 @@ export function getSidebarStyles(EXPANDED_WIDTH = 420, RAIL_WIDTH = 46) {
     }
 
     .as-float-mic-btn {
-      width: 28px !important;
-      height: 28px !important;
-      border-radius: 50% !important;
-      background: #ef4444 !important;
-      color: #ffffff !important;
+      width: 26px !important;
+      height: 26px !important;
+      border-radius: calc(var(--radius) - 6px) !important; /* Strict 6px control radius */
+      background: #27272a !important;
+      border: 1px solid #3f3f46 !important;
+      color: #ef4444 !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
       flex-shrink: 0 !important;
-      animation: asRecPulseRing 2s infinite !important;
-    }
-
-    @keyframes asRecPulseRing {
-      0% {
-        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
-      }
-      70% {
-        box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
-      }
-      100% {
-        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
-      }
+      animation: none !important;
+      box-shadow: none !important;
+      cursor: default !important;
+      pointer-events: none !important;
+      box-sizing: border-box !important;
     }
 
     .as-float-mic-btn svg {
-      width: 14px !important;
-      height: 14px !important;
+      width: 13px !important;
+      height: 13px !important;
     }
 
     .as-float-info {
       display: flex !important;
       flex-direction: column !important;
       justify-content: center !important;
-      line-height: 1.2 !important;
+      line-height: 1.25 !important;
     }
 
     .as-float-title {
-      font-size: 12px !important;
-      font-weight: 600 !important;
-      color: #ffffff !important;
-      letter-spacing: 0.2px !important;
+      font-size: 11.5px !important;
+      font-weight: 550 !important;
+      color: #fafafa !important;
+      letter-spacing: 0.1px !important;
     }
 
     .as-float-status {
       font-size: 10px !important;
-      color: #a1a1aa !important;
+      color: #71717a !important;
       white-space: nowrap !important;
     }
 
     .as-float-canvas-wrapper {
       display: flex !important;
       align-items: center !important;
-      height: 30px !important;
-      padding: 0 4px !important;
+      height: 26px !important;
+      padding: 0 2px !important;
     }
 
     #as-float-wave-canvas {
       display: block !important;
-      width: 110px !important;
-      height: 28px !important;
+      width: 100px !important;
+      height: 24px !important;
       border-radius: 4px !important;
     }
 
     .as-float-close-btn {
       all: initial !important;
-      width: 22px !important;
-      height: 22px !important;
-      border-radius: 50% !important;
+      width: 20px !important;
+      height: 20px !important;
+      border-radius: 4px !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
       cursor: pointer !important;
       color: #71717a !important;
       transition: all 0.15s ease !important;
+      box-sizing: border-box !important;
     }
 
     .as-float-close-btn:hover {
-      color: #ffffff !important;
-      background: rgba(255, 255, 255, 0.15) !important;
+      color: #fafafa !important;
+      background: #27272a !important;
     }
 
     .as-float-close-btn svg {
-      width: 11px !important;
-      height: 11px !important;
+      width: 10px !important;
+      height: 10px !important;
     }
 
     .as-som-switch-icon {
@@ -3481,7 +3475,7 @@ export function getSidebarStyles(EXPANDED_WIDTH = 420, RAIL_WIDTH = 46) {
     #agentic-sidebar-root:not(.dark) .as-som-switch:hover {
       border-color: #a1a1aa !important;
     }
-    #agentic-sidebar-root:not(.dark) .as-som-switch.active {
+    #agentic-sidebar-root:not(.dark) .as-som-switch.active:not(.as-voice-switch) {
       background: #facc15 !important;
       border-color: #eab308 !important;
     }
@@ -3553,7 +3547,7 @@ export function getSidebarStyles(EXPANDED_WIDTH = 420, RAIL_WIDTH = 46) {
       background: #27272a !important;
       border: 1px solid rgba(255, 255, 255, 0.12) !important;
     }
-    #agentic-sidebar-root.dark .as-som-switch.active {
+    #agentic-sidebar-root.dark .as-som-switch.active:not(.as-voice-switch) {
       background: #facc15 !important;
       border-color: #eab308 !important;
     }
