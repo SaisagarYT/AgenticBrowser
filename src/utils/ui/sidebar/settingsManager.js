@@ -49,6 +49,7 @@ export function getSettingsManagerCode() {
     providers: sidebar.querySelector("#as-tab-page-providers"),
     models: sidebar.querySelector("#as-tab-page-models"),
     automation: sidebar.querySelector("#as-tab-page-automation"),
+    voice: sidebar.querySelector("#as-tab-page-voice"),
   };
   let expandedProviderId = null;
 

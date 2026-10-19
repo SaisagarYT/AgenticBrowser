@@ -124,5 +124,6 @@
   /* __SETTINGS_MODULE__ */
   /* __CHAT_MODULE__ */
   /* __INPUT_MODULE__ */
+  /* __VOICE_MODULE__ */
   /* __CLIENT_MODULE__ */
 })();

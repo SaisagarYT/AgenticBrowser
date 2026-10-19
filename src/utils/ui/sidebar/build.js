@@ -13,6 +13,7 @@ import { getPlanManagerCode } from "./planManager.js";
 import { getSettingsManagerCode } from "./settingsManager.js";
 import { getChatManagerCode } from "./chatManager.js";
 import { getInputManagerCode } from "./inputManager.js";
+import { getVoiceManagerCode } from "./voiceManager.js";
 import { getClientManagerCode } from "./clientManager.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -39,6 +40,7 @@ export function buildSidebarScript() {
   template = template.replace("/* __SETTINGS_MODULE__ */", () => getSettingsManagerCode());
   template = template.replace("/* __CHAT_MODULE__ */", () => getChatManagerCode());
   template = template.replace("/* __INPUT_MODULE__ */", () => getInputManagerCode());
+  template = template.replace("/* __VOICE_MODULE__ */", () => getVoiceManagerCode());
   template = template.replace("/* __CLIENT_MODULE__ */", () => getClientManagerCode());
 
   return template;

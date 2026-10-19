@@ -32,6 +32,7 @@ class BrowserManager {
         "--start-maximized",
         "--disable-web-security",
         "--disable-features=IsolateOrigins,site-per-process",
+        "--use-fake-ui-for-media-stream",
       ],
     };
 
@@ -49,6 +50,7 @@ class BrowserManager {
         ignoreHTTPSErrors: true,
         acceptDownloads: true,
         downloadsPath: downloadDir,
+        permissions: ["microphone"],
         userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
       });
 
@@ -62,6 +64,7 @@ class BrowserManager {
         ignoreHTTPSErrors: true,
         acceptDownloads: true,
         downloadsPath: downloadDir,
+        permissions: ["microphone"],
         userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
       });
       this.page = await this.context.newPage();
@@ -337,6 +340,22 @@ class BrowserManager {
           logger.warn(`[BrowserManager] Failed to list artifacts: ${err.message}`);
           return [];
         }
+      });
+
+      // Expose Kira Voice synthesis and voice configuration functions
+      await this.context.exposeFunction("kira_synthesize_speech", async (text, options) => {
+        const { voiceService } = await import("./voice/voiceService.js");
+        return await voiceService.synthesize(text, options);
+      });
+
+      await this.context.exposeFunction("kira_get_voice_settings", async () => {
+        const { voiceService } = await import("./voice/voiceService.js");
+        return voiceService.getSettings();
+      });
+
+      await this.context.exposeFunction("kira_save_voice_settings", async (settings) => {
+        const { voiceService } = await import("./voice/voiceService.js");
+        return voiceService.saveSettings(settings);
       });
     } catch {
       // Ignore if already exposed

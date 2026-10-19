@@ -282,6 +282,9 @@ export function getChatManagerCode() {
       <div class="as-ai-message-body">\${isInstant ? formattedBody : ""}</div>
 
       <div class="as-ai-toolbar" style="\${isInstant ? 'opacity: 1; pointer-events: auto;' : 'opacity: 0; pointer-events: none;'}">
+        <button class="as-ai-tool-btn as-btn-speak" title="Listen to Kira" type="button">
+          \${ICONS.volume2}
+        </button>
         <button class="as-ai-tool-btn as-btn-copy" title="Copy response" type="button">
           \${ICONS.copy}
         </button>
@@ -312,7 +315,11 @@ export function getChatManagerCode() {
 
     if (!isInstant && bodyEl) {
       try {
-        typewriteMarkdown(bodyEl, text, toolbarEl);
+        typewriteMarkdown(bodyEl, text, toolbarEl, () => {
+          if (window.kiraVoice && window.kiraVoice.getSettings().autoSpeak) {
+            window.kiraVoice.speak(text, container.querySelector(".as-btn-speak"));
+          }
+        });
       } catch (err) {
         console.error("Typewriter error fallback:", err);
         bodyEl.innerHTML = formatAiMarkdown(text);
@@ -320,6 +327,13 @@ export function getChatManagerCode() {
           toolbarEl.style.opacity = "1";
           toolbarEl.style.pointerEvents = "auto";
         }
+        if (window.kiraVoice && window.kiraVoice.getSettings().autoSpeak) {
+          window.kiraVoice.speak(text, container.querySelector(".as-btn-speak"));
+        }
+      }
+    } else if (isInstant) {
+      if (window.kiraVoice && window.kiraVoice.getSettings().autoSpeak) {
+        window.kiraVoice.speak(text, container.querySelector(".as-btn-speak"));
       }
     }
   }
@@ -341,7 +355,18 @@ export function getChatManagerCode() {
       });
     }
 
-    // 2. Copy Button
+    // 2. Speak Button (Kira Voice)
+    const speakBtn = container.querySelector(".as-btn-speak");
+    if (speakBtn && !speakBtn._bound) {
+      speakBtn._bound = true;
+      speakBtn.addEventListener("click", () => {
+        if (window.kiraVoice) {
+          window.kiraVoice.speak(rawText, speakBtn);
+        }
+      });
+    }
+
+    // 3. Copy Button
     const copyBtn = container.querySelector(".as-btn-copy");
     if (copyBtn && !copyBtn._bound) {
       copyBtn._bound = true;

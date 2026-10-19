@@ -30,6 +30,8 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "kokoro-js": "^1.2.1",
+    "msedge-tts": "^2.1.0",
     "openai": "^4.86.1",
     "pdf-parse": "^1.1.1",
     "playwright": "^1.50.1"

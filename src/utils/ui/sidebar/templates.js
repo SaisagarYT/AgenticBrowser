@@ -179,6 +179,9 @@ export function getSidebarHtml(ICONS, VOXLE_CUBE_SVG) {
             </div>
 
             <div class="as-voxle-tools-right">
+              <button class="as-voxle-mic-btn" id="as-btn-mic" type="button" title="Speak to Kira (Speech Mode)" aria-label="Speak to Kira">
+                ${ICONS.mic}
+              </button>
               <button class="as-voxle-send-btn" id="as-btn-send" title="Send message (Enter)" aria-label="Send message">
                 ${ICONS.arrowUp}
               </button>
@@ -218,6 +221,10 @@ export function getSidebarHtml(ICONS, VOXLE_CUBE_SVG) {
         <button class="as-settings-tab" data-tab="automation" type="button">
           ${ICONS.sliders}
           <span>Automation</span>
+        </button>
+        <button class="as-settings-tab" data-tab="voice" type="button">
+          ${ICONS.volume2}
+          <span>Kira Voice</span>
         </button>
       </div>
 
@@ -376,6 +383,71 @@ export function getSidebarHtml(ICONS, VOXLE_CUBE_SVG) {
             <div class="as-settings-card-header">
               <div class="as-settings-card-title">Security &amp; Privacy</div>
               <div class="as-settings-card-sub">All credentials and configurations remain strictly on your local machine in data/models_config.json. No third-party data tracking.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 4: Kira Voice & Audio Preferences -->
+        <div class="as-settings-tab-page" id="as-tab-page-voice">
+          <div class="as-section-header">
+            <div class="as-section-title">Kira Voice &amp; Speech</div>
+            <div class="as-section-sub">Configure Kira's offline Kokoro-82M neural voice, speech speed, and auto-read responses.</div>
+          </div>
+
+          <div class="as-settings-card">
+            <!-- Voice Persona Selector -->
+            <div class="as-setting-row" style="flex-direction: column; align-items: stretch; gap: 8px;">
+              <div class="as-setting-info">
+                <div class="as-setting-label">Voice Persona</div>
+                <div class="as-setting-desc">Choose Kira's speech character and accent (powered by Kokoro-82M ONNX).</div>
+              </div>
+              <select class="as-settings-select" id="as-voice-select" style="width: 100%; margin-top: 4px;">
+                <option value="af_heart">Kira — Warm &amp; Natural (Default)</option>
+                <option value="af_sky">Kira — Gentle &amp; Friendly</option>
+                <option value="af_bella">Kira — Confident &amp; Energetic</option>
+                <option value="af_nicole">Kira — Professional &amp; Crisp</option>
+                <option value="bf_emma">Kira — British Articulate</option>
+                <option value="bf_isabella">Kira — British Soft</option>
+                <option value="bm_george">Kira — British Butler (Male)</option>
+                <option value="am_michael">Kira — American Natural (Male)</option>
+              </select>
+            </div>
+
+            <div class="as-setting-divider"></div>
+
+            <!-- Auto-Speak Responses Switch -->
+            <div class="as-setting-row">
+              <div class="as-setting-info">
+                <div class="as-setting-label">Auto-Read Responses</div>
+                <div class="as-setting-desc">Kira automatically speaks her responses aloud when automation tasks finish.</div>
+              </div>
+              <button class="as-switch-btn active" id="as-setting-toggle-autospeak" type="button" role="switch" aria-checked="true">
+                <span class="as-switch-thumb"></span>
+              </button>
+            </div>
+
+            <div class="as-setting-divider"></div>
+
+            <!-- Speech Speed Slider -->
+            <div class="as-setting-row" style="flex-direction: column; align-items: stretch; gap: 8px;">
+              <div class="as-setting-info" style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <div class="as-setting-label">Speech Speed</div>
+                  <div class="as-setting-desc">Adjust pacing of spoken words (0.8x to 1.3x).</div>
+                </div>
+                <span id="as-voice-speed-val" style="font-size: 12px; font-weight: 600; color: #a1a1aa;">1.00x</span>
+              </div>
+              <input type="range" id="as-voice-speed-slider" min="0.8" max="1.3" step="0.05" value="1.0" class="as-range-slider" style="width: 100%;" />
+            </div>
+
+            <div class="as-setting-divider"></div>
+
+            <!-- Test Voice Button -->
+            <div class="as-setting-row" style="justify-content: flex-end;">
+              <button class="as-btn-brand-primary" id="as-btn-test-voice" type="button" style="padding: 6px 14px; font-size: 12px;">
+                ${ICONS.volume2}
+                <span>Test Kira Voice</span>
+              </button>
             </div>
           </div>
         </div>

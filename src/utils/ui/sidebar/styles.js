@@ -3021,6 +3021,93 @@ export function getSidebarStyles(EXPANDED_WIDTH = 420, RAIL_WIDTH = 46) {
       box-shadow: none !important;
     }
 
+    /* ------------------------------------------------------------------------
+       Kira Voice & Speech Controls (STT Mic & TTS Waveform)
+       ------------------------------------------------------------------------ */
+    .as-voxle-mic-btn {
+      all: initial !important;
+      width: 28px !important;
+      height: 28px !important;
+      border-radius: 50% !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      cursor: pointer !important;
+      color: #a1a1aa !important;
+      background: transparent !important;
+      border: 1px solid transparent !important;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+      box-sizing: border-box !important;
+    }
+
+    .as-voxle-mic-btn:hover {
+      color: #fafafa !important;
+      background: rgba(255, 255, 255, 0.1) !important;
+      border-color: rgba(255, 255, 255, 0.15) !important;
+    }
+
+    .as-voxle-mic-btn.as-listening {
+      background: #ef4444 !important;
+      color: #ffffff !important;
+      border-color: #f87171 !important;
+      animation: as-mic-pulse 1.4s infinite !important;
+    }
+
+    @keyframes as-mic-pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6);
+        transform: scale(1);
+      }
+      50% {
+        box-shadow: 0 0 0 7px rgba(239, 68, 68, 0);
+        transform: scale(1.08);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+        transform: scale(1);
+      }
+    }
+
+    /* Speaking Toolbar Button on AI bubbles */
+    .as-ai-tool-btn.as-btn-speak.as-speaking {
+      color: #10b981 !important;
+      background: rgba(16, 185, 129, 0.15) !important;
+      border-color: rgba(16, 185, 129, 0.3) !important;
+      animation: as-speak-bounce 0.8s infinite alternate ease-in-out !important;
+    }
+
+    @keyframes as-speak-bounce {
+      from { transform: scale(0.96); }
+      to { transform: scale(1.06); }
+    }
+
+    /* Range Slider Styling for Voice Speed */
+    .as-range-slider {
+      -webkit-appearance: none !important;
+      appearance: none !important;
+      height: 5px !important;
+      border-radius: 4px !important;
+      background: rgba(255, 255, 255, 0.14) !important;
+      outline: none !important;
+      cursor: pointer !important;
+      transition: background 0.2s ease !important;
+    }
+
+    .as-range-slider::-webkit-slider-thumb {
+      -webkit-appearance: none !important;
+      appearance: none !important;
+      width: 15px !important;
+      height: 15px !important;
+      border-radius: 50% !important;
+      background: #facc15 !important;
+      cursor: pointer !important;
+      transition: transform 0.1s ease !important;
+    }
+
+    .as-range-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.2) !important;
+    }
+
     .as-input-hint {
       display: flex;
       justify-content: space-between;
