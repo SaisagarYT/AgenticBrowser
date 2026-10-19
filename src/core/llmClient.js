@@ -3,6 +3,7 @@
 import OpenAI from "openai";
 import { config } from "../config.js";
 import { logger } from "../utils/logger.js";
+import { modelRegistry } from "./modelRegistry.js";
 
 class LLMClient {
   constructor() {
@@ -17,12 +18,26 @@ class LLMClient {
     });
   }
 
-  _ensureApiKey() {
-    if (!config.llm.textApiKey || config.llm.textApiKey === "dummy-key") {
-      throw new Error(
-        "Missing API Key: Please set AGENTIC_BROWSER_TEXT_API_KEY in your .env file (e.g. nvapi-...) to enable the agent."
-      );
+  _getClientForModel(model) {
+    const endpoint = modelRegistry.getEndpointConfig(model);
+    if (!endpoint.apiKey && endpoint.provider !== "ollama" && endpoint.provider !== "antigravity") {
+      // Fallback to textApiKey if present
+      if (config.llm.textApiKey && config.llm.textApiKey !== "dummy-key") {
+        endpoint.apiKey = config.llm.textApiKey;
+      } else {
+        throw new Error(
+          `Missing API Key for provider "${endpoint.provider}". Please configure the API key in Settings.`
+        );
+      }
     }
+
+    return {
+      client: new OpenAI({
+        apiKey: endpoint.apiKey || "dummy-key",
+        baseURL: endpoint.baseURL,
+      }),
+      endpoint,
+    };
   }
 
   async _withRetry(fn, retries = 3, delayMs = 1500) {
@@ -53,11 +68,40 @@ class LLMClient {
   }
 
   async generateJson({ systemPrompt, userPrompt, temperature = 0.5, model = config.llm.textModel, maxTokens = 2048 }) {
-    this._ensureApiKey();
+    const { client, endpoint } = this._getClientForModel(model);
+
+    if (endpoint.provider === "anthropic") {
+      const anthropicRes = await this._withRetry(async () => {
+        const r = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": endpoint.apiKey,
+            "anthropic-version": "2023-06-01",
+          },
+          body: JSON.stringify({
+            model,
+            system: `${systemPrompt}\n\nIMPORTANT: Respond ONLY with valid JSON. Do not include markdown or explanations.`,
+            messages: [{ role: "user", content: userPrompt }],
+            max_tokens: maxTokens,
+            temperature,
+          }),
+        });
+        if (!r.ok) {
+          const errDetail = await r.text();
+          throw new Error(`Anthropic API error (${r.status}): ${errDetail}`);
+        }
+        return await r.json();
+      });
+
+      const raw = anthropicRes.content?.[0]?.text?.trim() || "{}";
+      return this._extractJson(raw);
+    }
+
     try {
-      logger.debug(`Calling LLM model: ${model} with JSON output`);
+      logger.debug(`Calling LLM model: ${model} [Provider: ${endpoint.provider}] with JSON output`);
       const response = await this._withRetry(() =>
-        this.textClient.chat.completions.create({
+        client.chat.completions.create({
           model,
           messages: [
             { role: "system", content: systemPrompt },
@@ -72,7 +116,7 @@ class LLMClient {
       const raw = response.choices?.[0]?.message?.content?.trim() || "{}";
       return this._extractJson(raw);
     } catch (err) {
-      // Fallback: try parsing JSON from code blocks if response_format is unsupported by third-party proxies
+      // Fallback: try parsing JSON from plain text if response_format is unsupported by third-party proxies
       logger.warn(`JSON completion error (${err.message}). Attempting plain text fallback.`);
       const fallback = await this.generateText({
         systemPrompt: `${systemPrompt}\n\nIMPORTANT: Respond ONLY with valid JSON. Do not include any explanations, prologue, epilogue, or markdown formatting outside the JSON object.`,
@@ -87,9 +131,37 @@ class LLMClient {
   }
 
   async generateText({ systemPrompt, userPrompt, temperature = 0.5, model = config.llm.textModel, maxTokens = 2048 }) {
-    this._ensureApiKey();
+    const { client, endpoint } = this._getClientForModel(model);
+
+    if (endpoint.provider === "anthropic") {
+      const anthropicRes = await this._withRetry(async () => {
+        const r = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": endpoint.apiKey,
+            "anthropic-version": "2023-06-01",
+          },
+          body: JSON.stringify({
+            model,
+            system: systemPrompt,
+            messages: [{ role: "user", content: userPrompt }],
+            max_tokens: maxTokens,
+            temperature,
+          }),
+        });
+        if (!r.ok) {
+          const errDetail = await r.text();
+          throw new Error(`Anthropic API error (${r.status}): ${errDetail}`);
+        }
+        return await r.json();
+      });
+
+      return anthropicRes.content?.[0]?.text?.trim() || "";
+    }
+
     const response = await this._withRetry(() =>
-      this.textClient.chat.completions.create({
+      client.chat.completions.create({
         model,
         messages: [
           { role: "system", content: systemPrompt },

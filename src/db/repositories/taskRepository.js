@@ -3,14 +3,14 @@
 import { getDatabase } from "../database.js";
 
 export class TaskRepository {
-  static create({ id, command }) {
+  static create({ id, command, sessionId = null }) {
     const db = getDatabase();
     const now = new Date().toISOString();
     const stmt = db.prepare(`
-      INSERT INTO tasks (id, command, status, created_at, updated_at)
-      VALUES (?, ?, 'PENDING', ?, ?)
+      INSERT INTO tasks (id, session_id, command, status, created_at, updated_at)
+      VALUES (?, ?, ?, 'PENDING', ?, ?)
     `);
-    stmt.run(id, command, now, now);
+    stmt.run(id, sessionId, command, now, now);
     return this.getById(id);
   }
 
@@ -26,6 +26,15 @@ export class TaskRepository {
       SELECT * FROM tasks ORDER BY created_at DESC LIMIT ? OFFSET ?
     `);
     return stmt.all(limit, offset);
+  }
+
+  static listBySession(sessionId) {
+    if (!sessionId) return [];
+    const db = getDatabase();
+    const stmt = db.prepare(`
+      SELECT * FROM tasks WHERE session_id = ? ORDER BY created_at ASC
+    `);
+    return stmt.all(sessionId);
   }
 
   static updateStatus(id, status, error = null) {
@@ -89,5 +98,19 @@ export class TaskRepository {
     const db = getDatabase();
     const stmt = db.prepare(`DELETE FROM tasks WHERE id = ?`);
     stmt.run(id);
+  }
+
+  static clearAll() {
+    const db = getDatabase();
+    try {
+      db.prepare(`DELETE FROM critiques`).run();
+      db.prepare(`DELETE FROM actions`).run();
+      db.prepare(`DELETE FROM plan_steps`).run();
+      db.prepare(`DELETE FROM plans`).run();
+      db.prepare(`DELETE FROM tasks`).run();
+      return true;
+    } catch {
+      return false;
+    }
   }
 }

@@ -4,10 +4,12 @@
 import readline from "node:readline";
 import { orchestrator } from "../src/core/orchestrator.js";
 import { browserManager } from "../src/core/browserManager.js";
+import { AntigravityCliClient } from "../src/core/antigravityCliClient.js";
 import { getDatabase } from "../src/db/database.js";
 
 // Initialize SQLite database
 getDatabase();
+AntigravityCliClient.warmup();
 
 async function main() {
   const args = process.argv.slice(2);

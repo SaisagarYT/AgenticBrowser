@@ -97,6 +97,26 @@ export function getChatManagerCode() {
     // Pure symbol-free skeleton
   }
 
+  let activeTypewriter = null;
+
+  function finishActiveTypewriter() {
+    if (activeTypewriter) {
+      clearInterval(activeTypewriter.timer);
+      const current = activeTypewriter;
+      activeTypewriter = null;
+      try {
+        if (current.bodyEl) {
+          current.bodyEl.innerHTML = formatAiMarkdown(current.fullText);
+        }
+        if (current.toolbarEl) {
+          current.toolbarEl.style.opacity = "1";
+          current.toolbarEl.style.pointerEvents = "auto";
+        }
+        contentEl.scrollTop = contentEl.scrollHeight;
+      } catch { }
+    }
+  }
+
   function hideSkeleton() {
     if (currentSkeletonEl) {
       const el = currentSkeletonEl;
@@ -112,9 +132,62 @@ export function getChatManagerCode() {
   }
 
   // --------------------------------------------------------------------------
+  // Typewriter Streaming Animation Engine (ChatGPT / Claude style)
+  // --------------------------------------------------------------------------
+  function typewriteMarkdown(bodyEl, fullText, toolbarEl, onDone) {
+    const safeText = String(fullText || "");
+    if (!safeText.trim()) {
+      bodyEl.innerHTML = formatAiMarkdown(safeText);
+      if (toolbarEl) {
+        toolbarEl.style.opacity = "1";
+        toolbarEl.style.pointerEvents = "auto";
+      }
+      if (typeof onDone === "function") onDone();
+      return;
+    }
+
+    // Finish any prior ongoing typewriter smoothly before starting a new one
+    finishActiveTypewriter();
+
+    const tokens = safeText.split(/(\\s+)/).filter(Boolean);
+    let tokenIdx = 0;
+    let accumulated = "";
+
+    const totalTokens = tokens.length;
+    const targetDurationMs = Math.max(500, Math.min(2400, totalTokens * 12));
+    const tickIntervalMs = 16;
+    const totalTicks = Math.max(1, Math.floor(targetDurationMs / tickIntervalMs));
+    const tokensPerTick = Math.max(1, Math.ceil(totalTokens / totalTicks));
+
+    // Initial state: show blinking terminal cursor immediately
+    bodyEl.innerHTML = '<span class="as-streaming-cursor"></span>';
+
+    const timer = setInterval(() => {
+      for (let i = 0; i < tokensPerTick && tokenIdx < totalTokens; i++) {
+        accumulated += tokens[tokenIdx++];
+      }
+
+      bodyEl.innerHTML = formatAiMarkdown(accumulated) + '<span class="as-streaming-cursor"></span>';
+      contentEl.scrollTop = contentEl.scrollHeight;
+
+      if (tokenIdx >= totalTokens) {
+        finishActiveTypewriter();
+        if (typeof onDone === "function") onDone();
+      }
+    }, tickIntervalMs);
+
+    activeTypewriter = {
+      timer,
+      bodyEl,
+      fullText: safeText,
+      toolbarEl,
+    };
+  }
+
+  // --------------------------------------------------------------------------
   // AI Response Card & Action Toolbar
   // --------------------------------------------------------------------------
-  function appendAiResponseCard(text) {
+  function appendAiResponseCard(text, isInstant = false) {
     if (heroView) heroView.style.display = "none";
 
     const container = document.createElement("div");
@@ -175,11 +248,9 @@ export function getChatManagerCode() {
         </div>
       </div>
 
-      <div class="as-ai-message-body">
-        \${formattedBody}
-      </div>
+      <div class="as-ai-message-body">\${isInstant ? formattedBody : ""}</div>
 
-      <div class="as-ai-toolbar">
+      <div class="as-ai-toolbar" style="\${isInstant ? 'opacity: 1; pointer-events: auto;' : 'opacity: 0; pointer-events: none;'}">
         <button class="as-ai-tool-btn as-btn-copy" title="Copy response" type="button">
           \${ICONS.copy}
         </button>
@@ -200,10 +271,36 @@ export function getChatManagerCode() {
       </div>
     \`;
 
+    contentEl.appendChild(container);
+    contentEl.scrollTop = contentEl.scrollHeight;
+
+    const bodyEl = container.querySelector(".as-ai-message-body");
+    const toolbarEl = container.querySelector(".as-ai-toolbar");
+
+    attachToolbarListeners(container, text);
+
+    if (!isInstant && bodyEl) {
+      try {
+        typewriteMarkdown(bodyEl, text, toolbarEl);
+      } catch (err) {
+        console.error("Typewriter error fallback:", err);
+        bodyEl.innerHTML = formatAiMarkdown(text);
+        if (toolbarEl) {
+          toolbarEl.style.opacity = "1";
+          toolbarEl.style.pointerEvents = "auto";
+        }
+      }
+    }
+  }
+
+  function attachToolbarListeners(container, rawText) {
+    const cleanPlainText = stripStartSymbols(rawText || "");
+
     // 1. Thought Process accordion toggle
     const thoughtBar = container.querySelector(".as-thought-bar");
     const thoughtDrawer = container.querySelector(".as-thought-drawer");
-    if (thoughtBar && thoughtDrawer) {
+    if (thoughtBar && thoughtDrawer && !thoughtBar._bound) {
+      thoughtBar._bound = true;
       thoughtBar.addEventListener("click", (e) => {
         e.stopPropagation();
         const isOpen = thoughtDrawer.style.display !== "none";
@@ -215,7 +312,8 @@ export function getChatManagerCode() {
 
     // 2. Copy Button
     const copyBtn = container.querySelector(".as-btn-copy");
-    if (copyBtn) {
+    if (copyBtn && !copyBtn._bound) {
+      copyBtn._bound = true;
       copyBtn.addEventListener("click", async () => {
         try {
           await navigator.clipboard.writeText(cleanPlainText);
@@ -231,7 +329,8 @@ export function getChatManagerCode() {
 
     // 3. Refine Button
     const refineBtn = container.querySelector(".as-btn-refine");
-    if (refineBtn) {
+    if (refineBtn && !refineBtn._bound) {
+      refineBtn._bound = true;
       refineBtn.addEventListener("click", () => {
         textareaEl.value = "Please refine this response with additional detail:";
         autoResizeTextarea();
@@ -241,7 +340,8 @@ export function getChatManagerCode() {
 
     // 4. Dislike Button
     const dislikeBtn = container.querySelector(".as-btn-dislike");
-    if (dislikeBtn) {
+    if (dislikeBtn && !dislikeBtn._bound) {
+      dislikeBtn._bound = true;
       dislikeBtn.addEventListener("click", () => {
         dislikeBtn.style.color = "#ef4444";
         setStatus("idle", "Feedback noted: Response marked unhelpful");
@@ -250,7 +350,8 @@ export function getChatManagerCode() {
 
     // 5. Retry Button
     const retryBtn = container.querySelector(".as-btn-retry");
-    if (retryBtn) {
+    if (retryBtn && !retryBtn._bound) {
+      retryBtn._bound = true;
       retryBtn.addEventListener("click", () => {
         if (lastSubmittedCommand) {
           textareaEl.value = lastSubmittedCommand;
@@ -262,7 +363,8 @@ export function getChatManagerCode() {
 
     // 6. Personalize Message Button
     const personalizeBtn = container.querySelector(".as-btn-personalize");
-    if (personalizeBtn) {
+    if (personalizeBtn && !personalizeBtn._bound) {
+      personalizeBtn._bound = true;
       personalizeBtn.addEventListener("click", () => {
         textareaEl.value = "Personalize this response for my specific project workflow:";
         autoResizeTextarea();
@@ -272,15 +374,138 @@ export function getChatManagerCode() {
 
     // Zoom listener for screenshots in thought drawer
     container.querySelectorAll(".as-thought-screenshot-thumb").forEach((thumbEl) => {
-      thumbEl.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const b64 = thumbEl.getAttribute("data-base64");
-        if (b64) openScreenshotModal(b64);
-      });
+      if (!thumbEl._bound) {
+        thumbEl._bound = true;
+        thumbEl.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const b64 = thumbEl.getAttribute("data-base64");
+          if (b64) openScreenshotModal(b64);
+        });
+      }
     });
+  }
 
-    contentEl.appendChild(container);
-    contentEl.scrollTop = contentEl.scrollHeight;
+  // --------------------------------------------------------------------------
+  // Real-time Live Token Streaming Engine
+  // --------------------------------------------------------------------------
+  let currentStreamingCard = null;
+
+  function streamTokenToAiCard(accumulatedText) {
+    if (heroView) heroView.style.display = "none";
+    hideSkeleton();
+
+    if (!currentStreamingCard || !currentStreamingCard.container.parentNode) {
+      const container = document.createElement("div");
+      container.className = "as-ai-response-container";
+
+      const elapsedSec = Math.max(1, Math.round((Date.now() - currentTaskStartTime) / 1000));
+      const stepCount = currentTaskThoughts.length || (planItems.length > 0 ? planItems.length : 1);
+      const sourcesCount = Math.max(1, stepCount);
+
+      let thoughtsListHtml = "";
+      if (currentTaskThoughts.length > 0) {
+        thoughtsListHtml = currentTaskThoughts
+          .map((t) => {
+            let label = stripStartSymbols(t.text);
+            return \`
+              <div class="as-thought-step-line">
+                <span class="as-thought-step-bullet">•</span>
+                <span>\${escapeHtml(label)}</span>
+              </div>
+            \`;
+          })
+          .join("");
+      } else {
+        thoughtsListHtml = \`
+          <div class="as-thought-step-line">
+            <span class="as-thought-step-bullet">•</span>
+            <span>Analyzed execution context and generated structured response</span>
+          </div>
+        \`;
+      }
+
+      container.innerHTML = \`
+        <div class="as-thought-wrapper">
+          <button class="as-thought-bar" type="button" aria-expanded="false" title="Click to view thought process">
+            <div class="as-thought-left">
+              <span class="as-thought-icon">\${ICONS.lightbulb}</span>
+              <span class="as-thought-label">Thought for \${elapsedSec} second\${elapsedSec === 1 ? "" : "s"}</span>
+              <span class="as-thought-chevron">\${ICONS.chevronRight}</span>
+            </div>
+            <div class="as-thought-right">
+              <div class="as-sources-badge">
+                <div class="as-sources-icons">
+                  <span class="as-source-pill"></span>
+                  <span class="as-source-pill"></span>
+                  <span class="as-source-pill"></span>
+                </div>
+                <span>\${sourcesCount} sources</span>
+              </div>
+            </div>
+          </button>
+          <div class="as-thought-drawer" style="display: none;">
+            <div class="as-thought-drawer-inner">
+              \${thoughtsListHtml}
+            </div>
+          </div>
+        </div>
+
+        <div class="as-ai-message-body"><span class="as-streaming-cursor"></span></div>
+
+        <div class="as-ai-toolbar" style="opacity: 0; pointer-events: none;">
+          <button class="as-ai-tool-btn as-btn-copy" title="Copy response" type="button">
+            \${ICONS.copy}
+          </button>
+          <button class="as-ai-tool-btn as-btn-refine" title="Refine response" type="button">
+            \${ICONS.sparkles}
+          </button>
+          <button class="as-ai-tool-btn as-btn-dislike" title="Dislike response" type="button">
+            \${ICONS.thumbsDown}
+          </button>
+          <button class="as-ai-tool-btn as-btn-retry" title="Retry command" type="button">
+            \${ICONS.rotateCw}
+          </button>
+          <div class="as-ai-tool-divider"></div>
+          <button class="as-ai-tool-text-btn as-btn-personalize" title="Personalize message" type="button">
+            \${ICONS.sliders}
+            <span>Personalize message</span>
+          </button>
+        </div>
+      \`;
+
+      contentEl.appendChild(container);
+      contentEl.scrollTop = contentEl.scrollHeight;
+
+      attachToolbarListeners(container, "");
+
+      currentStreamingCard = {
+        container,
+        bodyEl: container.querySelector(".as-ai-message-body"),
+        toolbarEl: container.querySelector(".as-ai-toolbar"),
+      };
+    }
+
+    if (currentStreamingCard && currentStreamingCard.bodyEl) {
+      currentStreamingCard.bodyEl.innerHTML = formatAiMarkdown(accumulatedText) + '<span class="as-streaming-cursor"></span>';
+      contentEl.scrollTop = contentEl.scrollHeight;
+    }
+  }
+
+  function finalizeStreamingAiCard(finalText) {
+    hideSkeleton();
+    if (currentStreamingCard && currentStreamingCard.bodyEl) {
+      const card = currentStreamingCard;
+      currentStreamingCard = null;
+      card.bodyEl.innerHTML = formatAiMarkdown(finalText);
+      if (card.toolbarEl) {
+        card.toolbarEl.style.opacity = "1";
+        card.toolbarEl.style.pointerEvents = "auto";
+      }
+      attachToolbarListeners(card.container, finalText);
+      contentEl.scrollTop = contentEl.scrollHeight;
+      return true;
+    }
+    return false;
   }
 
   // --------------------------------------------------------------------------
@@ -387,7 +612,9 @@ export function getChatManagerCode() {
     if (type === "done") {
       completeAllPlanSteps();
       hideSkeleton();
-      appendAiResponseCard(text);
+      if (!finalizeStreamingAiCard(text)) {
+        appendAiResponseCard(text);
+      }
       return;
     }
 

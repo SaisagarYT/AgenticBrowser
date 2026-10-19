@@ -93,6 +93,8 @@
   const railSomToggleBtn = rail.querySelector("#as-rail-som-toggle");
   const clearBtn = sidebar.querySelector("#as-btn-clear");
   const railClearBtn = rail.querySelector("#as-rail-clear");
+  const headerChatMenuBtn = sidebar.querySelector("#as-header-chat-menu");
+  const headerNewChatBtn = sidebar.querySelector("#as-header-new-chat");
 
   // Single Hovering Plan Card Elements & State
   const planWrapper = sidebar.querySelector("#as-plan-wrapper");
@@ -111,6 +113,9 @@
   const sheet = sidebar.querySelector("#as-sheet");
   const sheetOverlay = sidebar.querySelector("#as-sheet-overlay");
   const sheetNewChat = sidebar.querySelector("#as-sheet-new-chat");
+  const sheetCloseBtn = sidebar.querySelector("#as-sheet-close-btn");
+  const sheetSearchInput = sidebar.querySelector("#as-sheet-search");
+  const sheetSessionCount = sidebar.querySelector("#as-sheet-session-count");
   const sheetHistoryList = sidebar.querySelector("#as-sheet-history-list");
 
   /* __MARKDOWN_MODULE__ */

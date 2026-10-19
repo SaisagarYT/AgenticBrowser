@@ -62,32 +62,34 @@ export function getSidebarHtml(ICONS, VOXLE_CUBE_SVG) {
     <!-- shadcn Sheet Overlay (Drawer for Sessions / History) -->
     <div class="as-sheet-overlay" id="as-sheet-overlay"></div>
     <div class="as-sheet" id="as-sheet">
+      <!-- Sheet Header with Title, Session Badge & Close Button -->
+      <div class="as-sheet-header">
+        <div class="as-sheet-header-left">
+          <span class="as-sheet-title">Chat History</span>
+          <span class="as-sheet-header-badge" id="as-sheet-session-count">0</span>
+        </div>
+        <button class="as-sheet-close-btn" id="as-sheet-close-btn" title="Close drawer (Esc)">
+          ${ICONS.close}
+        </button>
+      </div>
+
+      <!-- + New Chat Button with global radius matching other components -->
       <button class="as-sheet-new-btn" id="as-sheet-new-chat">
         ${ICONS.plus}
         <span>New chat</span>
       </button>
 
-      <div class="as-sheet-nav">
-        <div class="as-sheet-link active">
-          ${ICONS.messageSquare}
-          <span>Chats</span>
-        </div>
-        <div class="as-sheet-link">
-          ${ICONS.folder}
-          <span>Automations</span>
-        </div>
-        <div class="as-sheet-link">
-          ${ICONS.fileText}
-          <span>Artifacts</span>
-        </div>
+      <!-- Search conversations filter -->
+      <div class="as-sheet-search-box">
+        <span class="as-sheet-search-icon">${ICONS.search}</span>
+        <input type="text" class="as-sheet-search-input" id="as-sheet-search" placeholder="Search conversations..." />
       </div>
 
-      <div class="as-sheet-section-title">Recent Tasks</div>
-      <div class="as-sheet-history-list" id="as-sheet-history-list">
-        <div class="as-sheet-history-item" data-task="Search Google for RTX 4050 laptop prices">Search Google for RTX 4050 laptop prices</div>
-        <div class="as-sheet-history-item" data-task="Extract top 3 Hacker News stories">Extract top 3 Hacker News stories</div>
-        <div class="as-sheet-history-item" data-task="Research Node.js history on Wikipedia">Research Node.js history on Wikipedia</div>
-      </div>
+      <!-- Section Label -->
+      <div class="as-sheet-section-title">Recent Conversations</div>
+      
+      <!-- Session List Container -->
+      <div class="as-sheet-history-list" id="as-sheet-history-list"></div>
     </div>
 
     <!-- Inside Chat Container with Rounded Edges -->
@@ -114,7 +116,7 @@ export function getSidebarHtml(ICONS, VOXLE_CUBE_SVG) {
     </div>
 
     <!-- VIEW 1: Main Chat View (#as-view-chat) -->
-    <div class="as-view-chat" id="as-view-chat">
+    <div class="as-view-chat active" id="as-view-chat">
 
       <!-- Plan Wrapper (Hidden - Plan rendered inline in feed) -->
       <div class="as-plan-wrapper" id="as-plan-wrapper" style="display: none !important;"></div>
@@ -191,88 +193,160 @@ export function getSidebarHtml(ICONS, VOXLE_CUBE_SVG) {
     </div>
 
     <!-- VIEW 2: In-Place Model Settings Screen (#as-view-settings) -->
-    <div class="as-view-settings" id="as-view-settings" style="display: none;">
+    <div class="as-view-settings" id="as-view-settings">
+      <!-- Topbar Header -->
       <div class="as-settings-topbar">
-        <button class="as-btn-back" id="as-btn-back-to-chat" type="button">
+        <button class="as-btn-back" id="as-btn-back-to-chat" type="button" title="Back to chat">
           ${ICONS.arrowLeft}
           <span>Back to Chat</span>
         </button>
-        <div class="as-settings-header-title">Model Settings</div>
+        <div class="as-settings-topbar-title">Settings &amp; AI Models</div>
+        <div class="as-settings-topbar-actions">
+          <span class="as-settings-hub-badge">${ICONS.sparkles} Universal Hub</span>
+        </div>
       </div>
 
+      <!-- Settings Navigation Tabs (shadcn tabs) -->
+      <div class="as-settings-tabs-bar">
+        <button class="as-settings-tab active" data-tab="providers" type="button">
+          ${ICONS.cpu}
+          <span>AI Providers</span>
+        </button>
+        <button class="as-settings-tab" data-tab="models" type="button">
+          ${ICONS.bot}
+          <span>Active Models</span>
+          <span class="as-tab-badge" id="as-tab-active-count">0</span>
+        </button>
+        <button class="as-settings-tab" data-tab="automation" type="button">
+          ${ICONS.sliders}
+          <span>Automation</span>
+        </button>
+      </div>
+
+      <!-- Settings Scrollable Content Area -->
       <div class="as-settings-scroll-area">
-        <!-- Card 1: Add New Model Form -->
-        <div class="as-settings-card">
-          <div class="as-settings-card-header">
-            <div class="as-settings-card-title">Add New Model</div>
-            <div class="as-settings-card-sub">Configure an AI model with your provider and API key to enable the agent.</div>
+        <!-- TAB 1: AI Providers & Setup -->
+        <div class="as-settings-tab-page active" id="as-tab-page-providers">
+          <!-- Bento Grid of Providers -->
+          <div class="as-section-header">
+            <div class="as-section-title">AI Provider Hub</div>
+            <div class="as-section-sub">Select a provider to configure credentials, test live connection latency, and select models.</div>
           </div>
 
-          <form id="as-settings-model-form" class="as-settings-form">
-            <div class="as-settings-field">
-              <label class="as-settings-label" for="as-input-provider">Provider</label>
-              <select class="as-settings-select" id="as-input-provider">
-                <option value="nvidia">NVIDIA NIM</option>
-                <option value="openai">OpenAI</option>
-                <option value="groq">Groq</option>
-                <option value="ollama">Local Ollama</option>
-                <option value="openrouter">OpenRouter</option>
-                <option value="antigravity">Google Antigravity CLI (Local Agent)</option>
-                <option value="custom">Custom / Self-Hosted</option>
-              </select>
-            </div>
+          <div class="as-providers-bento-grid" id="as-providers-bento-grid">
+            <!-- Populated dynamically via renderProvidersBento() in settingsManager.js -->
+          </div>
 
-            <!-- Antigravity Connected Status Banner (Shown when Provider is Antigravity) -->
-            <div class="as-antigravity-status-banner" id="as-field-ag-banner" style="display: none;">
-              <span class="as-ag-badge-icon">⚡</span>
-              <div class="as-ag-badge-content">
-                <div class="as-ag-badge-title">Local Google Antigravity CLI Connected</div>
-                <div class="as-ag-badge-desc">Authenticated binary found at ~/.gemini/bin/agy.exe. Uses your active CLI session — zero API keys or remote endpoints required.</div>
-              </div>
-            </div>
-
-            <div class="as-settings-field" id="as-field-model-id">
-              <label class="as-settings-label" for="as-input-model-id">Model ID</label>
-              <input class="as-settings-input" id="as-input-model-id" type="text" placeholder="e.g. nvidia/nemotron-3-ultra-550b-a55b or gpt-4o" required />
-            </div>
-
-            <div class="as-settings-field">
-              <label class="as-settings-label" for="as-input-model-name">Display Name (Optional)</label>
-              <input class="as-settings-input" id="as-input-model-name" type="text" placeholder="e.g. Nemotron Ultra or GPT-4o" />
-            </div>
-
-            <div class="as-settings-field" id="as-field-api-key">
-              <label class="as-settings-label" for="as-input-api-key">API Key</label>
-              <div class="as-input-password-wrapper">
-                <input class="as-settings-input" id="as-input-api-key" type="password" placeholder="Enter provider API key (nvapi-..., sk-..., etc.)" />
-                <button type="button" class="as-btn-toggle-eye" id="as-btn-toggle-key">${ICONS.eye}</button>
-              </div>
-              <span class="as-settings-hint" id="as-key-hint">Stored locally in data/models_config.json</span>
-            </div>
-
-            <div class="as-settings-field" id="as-field-base-url">
-              <label class="as-settings-label" for="as-input-base-url">Base URL (Optional)</label>
-              <input class="as-settings-input" id="as-input-base-url" type="text" placeholder="Default provider endpoint" />
-            </div>
-
-            <div class="as-settings-form-actions">
-              <button class="as-settings-btn-save" id="as-btn-save-model" type="submit">
-                ${ICONS.plus}
-                <span>Save &amp; Activate Model</span>
-              </button>
-            </div>
-          </form>
+          <!-- Active Selected Provider Configuration Card -->
+          <div class="as-provider-detail-card" id="as-provider-detail-card">
+            <!-- Populated dynamically via selectProvider() in settingsManager.js -->
+          </div>
         </div>
 
-        <!-- Card 2: Configured Models List -->
-        <div class="as-settings-card">
-          <div class="as-settings-card-header">
-            <div class="as-settings-card-title">Configured Models</div>
-            <div class="as-settings-card-sub">Models ready for autonomous browser task automation.</div>
+        <!-- TAB 2: Active Configured Models List -->
+        <div class="as-settings-tab-page" id="as-tab-page-models">
+          <div class="as-section-header">
+            <div class="as-section-title">Configured Models</div>
+            <div class="as-section-sub">Models currently enabled and ready for autonomous browser task automation.</div>
           </div>
 
           <div class="as-configured-models-list" id="as-configured-models-list">
-            <div class="as-empty-models-notice">No models configured yet. Add a model above to begin.</div>
+            <!-- Populated dynamically via renderConfiguredModels() -->
+          </div>
+
+          <!-- Quick Add Custom Model Card -->
+          <div class="as-custom-model-card">
+            <div class="as-custom-model-header" id="as-btn-toggle-custom-model">
+              <div class="as-custom-model-title">
+                ${ICONS.plus}
+                <span>Add Custom Model ID</span>
+              </div>
+              <span class="as-custom-model-chevron">${ICONS.chevronDown}</span>
+            </div>
+            <form id="as-custom-model-form" class="as-custom-model-body" style="display: none;">
+              <div class="as-settings-field">
+                <label class="as-settings-label" for="as-custom-provider-select">Provider</label>
+                <select class="as-settings-select" id="as-custom-provider-select">
+                  <option value="nvidia">NVIDIA NIM</option>
+                  <option value="openai">OpenAI</option>
+                  <option value="anthropic">Anthropic Claude</option>
+                  <option value="gemini">Google Gemini</option>
+                  <option value="deepseek">DeepSeek</option>
+                  <option value="groq">Groq</option>
+                  <option value="ollama">Local Ollama</option>
+                  <option value="openrouter">OpenRouter</option>
+                  <option value="custom">Custom Endpoint</option>
+                </select>
+              </div>
+              <div class="as-settings-field">
+                <label class="as-settings-label" for="as-custom-model-id-input">Model ID</label>
+                <input class="as-settings-input" id="as-custom-model-id-input" type="text" placeholder="e.g. gpt-4o-2024-11-20 or custom-model" required />
+              </div>
+              <div class="as-settings-field">
+                <label class="as-settings-label" for="as-custom-model-name-input">Display Name (Optional)</label>
+                <input class="as-settings-input" id="as-custom-model-name-input" type="text" placeholder="e.g. GPT-4o Custom" />
+              </div>
+              <div class="as-settings-form-actions">
+                <button class="as-btn-brand-primary" type="submit">
+                  ${ICONS.plus}
+                  <span>Add to Active Models</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- TAB 3: Automation & Vision Preferences -->
+        <div class="as-settings-tab-page" id="as-tab-page-automation">
+          <div class="as-section-header">
+            <div class="as-section-title">Browser Automation &amp; Vision</div>
+            <div class="as-section-sub">Configure grounding visual markers, screenshot resolution, and execution safety.</div>
+          </div>
+
+          <div class="as-settings-card">
+            <div class="as-setting-row">
+              <div class="as-setting-info">
+                <div class="as-setting-label">Visual Set-of-Marks (SoM)</div>
+                <div class="as-setting-desc">Inject interactive numerical bounding labels on DOM elements for high-precision model clicking.</div>
+              </div>
+              <button class="as-switch-btn active" id="as-setting-toggle-som" type="button" role="switch" aria-checked="true">
+                <span class="as-switch-thumb"></span>
+              </button>
+            </div>
+
+            <div class="as-setting-divider"></div>
+
+            <div class="as-setting-row">
+              <div class="as-setting-info">
+                <div class="as-setting-label">Vision Resolution</div>
+                <div class="as-setting-desc">High resolution increases element recognition accuracy; standard resolution reduces latency and token usage.</div>
+              </div>
+              <select class="as-settings-select as-select-sm" id="as-setting-vision-res">
+                <option value="high" selected>High (1280px Crisp)</option>
+                <option value="standard">Standard (1024px Fast)</option>
+              </select>
+            </div>
+
+            <div class="as-setting-divider"></div>
+
+            <div class="as-setting-row">
+              <div class="as-setting-info">
+                <div class="as-setting-label">Step Timeout</div>
+                <div class="as-setting-desc">Maximum duration to wait for page animations and network responses before taking the next step.</div>
+              </div>
+              <select class="as-settings-select as-select-sm" id="as-setting-timeout">
+                <option value="15000">15 seconds</option>
+                <option value="30000" selected>30 seconds (Default)</option>
+                <option value="60000">60 seconds</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="as-settings-card">
+            <div class="as-settings-card-header">
+              <div class="as-settings-card-title">Security &amp; Privacy</div>
+              <div class="as-settings-card-sub">All credentials and configurations remain strictly on your local machine in data/models_config.json. No third-party data tracking.</div>
+            </div>
           </div>
         </div>
       </div>

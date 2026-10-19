@@ -10,6 +10,7 @@ import { BrowserAgent } from "../agents/browserAgent.js";
 import { CritiqueAgent } from "../agents/critiqueAgent.js";
 import { analyzeScreenshots } from "../utils/ssAnalysis.js";
 import { TaskRepository } from "../db/repositories/taskRepository.js";
+import { SessionRepository } from "../db/repositories/sessionRepository.js";
 import { PlanRepository } from "../db/repositories/planRepository.js";
 import { ActionRepository } from "../db/repositories/actionRepository.js";
 import { CritiqueRepository } from "../db/repositories/critiqueRepository.js";
@@ -27,23 +28,37 @@ export class Orchestrator extends EventEmitter {
   async runTask(command, existingTaskId = null, options = {}) {
     const taskId = existingTaskId || randomUUID();
     const taskModel = options.model || null;
+    let sessionId = options.sessionId || null;
     const startTime = Date.now();
 
-    logger.info(`[Orchestrator] Starting task "${taskId}": "${command}" [Model: ${taskModel || "default"}]`);
+    // Ensure session exists or create one
+    if (sessionId) {
+      const existingSession = SessionRepository.getById(sessionId);
+      if (!existingSession) {
+        SessionRepository.create({ id: sessionId, title: command.trim().slice(0, 80), model: taskModel });
+      }
+    } else {
+      const newSession = SessionRepository.create({ title: command.trim().slice(0, 80), model: taskModel });
+      sessionId = newSession.id;
+    }
+
+    logger.info(`[Orchestrator] Starting task "${taskId}" under session "${sessionId}": "${command}" [Model: ${taskModel || "default"}]`);
+    uiManager.setActiveSession(sessionId, command.trim().slice(0, 80));
     const existing = TaskRepository.getById(taskId);
     if (!existing) {
-      TaskRepository.create({ id: taskId, command });
+      TaskRepository.create({ id: taskId, command, sessionId });
     } else {
       TaskRepository.updateStatus(taskId, "RUNNING");
     }
-    this._emit(taskId, "task_started", { taskId, command, model: taskModel });
+    SessionRepository.touch(sessionId, { status: "ACTIVE", model: taskModel });
+    this._emit(taskId, "task_started", { taskId, sessionId, command, model: taskModel });
 
     // Route to Antigravity CLI Agent if requested
     const isAntigravity = options.agent === "antigravity" ||
       (typeof taskModel === "string" && taskModel.toLowerCase().includes("antigravity"));
 
     if (isAntigravity) {
-      return this._runAntigravityTask(command, taskId, options, startTime);
+      return this._runAntigravityTask(command, taskId, sessionId, options, startTime);
     }
 
     let currentPlan = null;
@@ -64,8 +79,10 @@ export class Orchestrator extends EventEmitter {
       if (isGreeting) {
         finalAnswer = "Hello! How can I help you with your project today?";
         TaskRepository.complete(taskId, finalAnswer, 1, Date.now() - startTime);
+        SessionRepository.touch(sessionId, { status: "COMPLETED", model: taskModel });
         this._emit(taskId, "task_completed", {
           taskId,
+          sessionId,
           finalResponse: finalAnswer,
           totalSteps: 1,
           durationMs: Date.now() - startTime,
@@ -75,8 +92,13 @@ export class Orchestrator extends EventEmitter {
           await uiManager.addSystemMessage(finalPage, finalAnswer, "done");
           await uiManager.commandCompleted(finalPage);
         }
+
+        // Trigger AI session title generation asynchronously
+        this._autoGenerateSessionTitle(sessionId, command, finalAnswer, taskModel).catch(() => {});
+
         return {
           taskId,
+          sessionId,
           status: "COMPLETED",
           finalResponse: finalAnswer,
           totalSteps: 1,
@@ -91,12 +113,14 @@ export class Orchestrator extends EventEmitter {
 
         // 1. Planner Phase
         this._emit(taskId, "planner_thinking", { stepIndex });
+        const priorTurns = SessionRepository.getRecentTurnsContext(sessionId, 4);
         const planResult = await PlannerAgent.plan({
           query: command,
           currentPlan,
           feedback,
           stepIndex: stepIndex - 1,
           model: taskModel,
+          conversationHistory: priorTurns,
         });
 
         if (planResult.is_conversational) {
@@ -296,8 +320,10 @@ export class Orchestrator extends EventEmitter {
       }
 
       TaskRepository.complete(taskId, finalAnswer, stepIndex, durationMs);
+      SessionRepository.touch(sessionId, { status: "COMPLETED", model: taskModel });
       this._emit(taskId, "task_completed", {
         taskId,
+        sessionId,
         finalResponse: finalAnswer,
         totalSteps: stepIndex,
         durationMs,
@@ -309,8 +335,12 @@ export class Orchestrator extends EventEmitter {
         await uiManager.commandCompleted(finalPage);
       }
 
+      // Trigger AI session title generation asynchronously
+      this._autoGenerateSessionTitle(sessionId, command, finalAnswer, taskModel).catch(() => {});
+
       return {
         taskId,
+        sessionId,
         status: "COMPLETED",
         finalResponse: finalAnswer,
         totalSteps: stepIndex,
@@ -320,7 +350,8 @@ export class Orchestrator extends EventEmitter {
       const durationMs = Date.now() - startTime;
       logger.error(`[Orchestrator] Task failed: ${err.message}`, err);
       TaskRepository.fail(taskId, err.message, stepIndex, durationMs);
-      this._emit(taskId, "task_failed", { taskId, error: err.message });
+      SessionRepository.touch(sessionId, { status: "FAILED", model: taskModel });
+      this._emit(taskId, "task_failed", { taskId, sessionId, error: err.message });
 
       try {
         const errorPage = await browserManager.getPage().catch(() => null);
@@ -341,8 +372,8 @@ export class Orchestrator extends EventEmitter {
     }
   }
 
-  async _runAntigravityTask(command, taskId, options, startTime) {
-    logger.info(`[Orchestrator] Running Antigravity CLI Agent for task "${taskId}": "${command}"`);
+  async _runAntigravityTask(command, taskId, sessionId, options, startTime) {
+    logger.info(`[Orchestrator] Running Antigravity CLI Agent for task "${taskId}" under session "${sessionId}": "${command}"`);
     let activePage = null;
 
     try {
@@ -366,6 +397,10 @@ export class Orchestrator extends EventEmitter {
         onToken: async (delta, accumulated) => {
           fullTokens = accumulated;
           this._emit(taskId, "agent_token", { delta, accumulated });
+          const currPage = await browserManager.getPage().catch(() => activePage);
+          if (currPage && !currPage.isClosed()) {
+            await uiManager.streamToken(currPage, accumulated).catch(() => {});
+          }
         },
         onThought: async (thoughtText) => {
           this._emit(taskId, "agent_thought", { text: thoughtText });
@@ -401,8 +436,10 @@ export class Orchestrator extends EventEmitter {
           const finalAnswer = result.response || fullTokens || "Task completed successfully.";
 
           TaskRepository.complete(taskId, finalAnswer, stepCount, durationMs);
+          SessionRepository.touch(sessionId, { status: "COMPLETED", model: options.model || null });
           this._emit(taskId, "task_completed", {
             taskId,
+            sessionId,
             finalResponse: finalAnswer,
             totalSteps: stepCount,
             durationMs,
@@ -410,12 +447,17 @@ export class Orchestrator extends EventEmitter {
 
           const finalPage = await browserManager.getPage().catch(() => activePage);
           if (finalPage && !finalPage.isClosed()) {
+            await uiManager.finalizeTokenStream(finalPage, finalAnswer).catch(() => {});
             await uiManager.addSystemMessage(finalPage, finalAnswer, "done").catch(() => {});
             await uiManager.commandCompleted(finalPage).catch(() => {});
           }
 
+          // Trigger AI session title generation asynchronously
+          this._autoGenerateSessionTitle(sessionId, command, finalAnswer, options.model || null).catch(() => {});
+
           resolve({
             taskId,
+            sessionId,
             status: "COMPLETED",
             finalResponse: finalAnswer,
             totalSteps: stepCount,
@@ -427,7 +469,8 @@ export class Orchestrator extends EventEmitter {
           const durationMs = Date.now() - startTime;
           logger.error(`[Orchestrator] Antigravity task error: ${err.message}`);
           TaskRepository.fail(taskId, err.message, stepCount, durationMs);
-          this._emit(taskId, "task_failed", { taskId, error: err.message });
+          SessionRepository.touch(sessionId, { status: "FAILED", model: options.model || null });
+          this._emit(taskId, "task_failed", { taskId, sessionId, error: err.message });
 
           const finalPage = await browserManager.getPage().catch(() => activePage);
           if (finalPage && !finalPage.isClosed()) {
@@ -439,6 +482,52 @@ export class Orchestrator extends EventEmitter {
         },
       });
     });
+  }
+
+  async _autoGenerateSessionTitle(sessionId, command, finalAnswer, model) {
+    if (!sessionId) return;
+    try {
+      const session = SessionRepository.getById(sessionId);
+      const isDefaultTitle = !session || !session.title || session.title === "New AI Chat" ||
+        session.title === command.trim().slice(0, 80) || session.total_turns <= 1;
+
+      if (!isDefaultTitle) return;
+
+      const { llmClient } = await import("./llmClient.js");
+      const titlePrompt = `Generate a very short, professional, descriptive 3 to 5 word title for this chat conversation.
+User Request: "${command}"
+Assistant Response: "${(finalAnswer || "").slice(0, 250)}"
+
+Rules:
+- Exactly 3 to 5 words.
+- Do NOT use quotes, brackets, or ending punctuation.
+- Be concise and descriptive (e.g., "Amazon Headphone Search", "Weather Forecast Check", "AI Assistant Overview", "React Code Refactoring").
+Title:`;
+
+      const generated = await llmClient.generateText({
+        systemPrompt: "You are a concise title generator. Output only the short 3-5 word title text, nothing else.",
+        userPrompt: titlePrompt,
+        model,
+        temperature: 0.3,
+        maxTokens: 25,
+      }).catch(() => null);
+
+      let cleanTitle = (generated || "").replace(/["'`*#]/g, "").replace(/\.+$/, "").trim();
+      if (cleanTitle && cleanTitle.length >= 3 && cleanTitle.length <= 60 && !cleanTitle.toLowerCase().includes("user request")) {
+        logger.info(`[Orchestrator] AI generated title for session "${sessionId}": "${cleanTitle}"`);
+        SessionRepository.updateTitle(sessionId, cleanTitle);
+        uiManager.setActiveSession(sessionId, cleanTitle);
+
+        const activePage = await browserManager.getPage().catch(() => null);
+        if (activePage && !activePage.isClosed()) {
+          await activePage.evaluate(({ sid, title }) => {
+            window.agenticSidebar?.updateSessionTitle?.(sid, title);
+          }, { sid: sessionId, title: cleanTitle }).catch(() => {});
+        }
+      }
+    } catch (err) {
+      logger.debug(`[Orchestrator] AI title generation notice: ${err.message}`);
+    }
   }
 
   _emit(taskId, event, data) {

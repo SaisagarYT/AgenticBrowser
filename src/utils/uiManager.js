@@ -15,6 +15,19 @@ export class UIManager {
     this.conversationHistory = [];
     this.isCollapsed = false;
     this.statusText = "Ready. Type a prompt below to automate.";
+    this.activeSessionId = null;
+    this.activeSessionTitle = null;
+  }
+
+  setActiveSession(sessionId, title = null) {
+    this.activeSessionId = sessionId;
+    if (title) this.activeSessionTitle = title;
+  }
+
+  clearSession() {
+    this.activeSessionId = null;
+    this.activeSessionTitle = null;
+    this.conversationHistory = [];
   }
 
   getSidebarScript() {
@@ -31,10 +44,14 @@ export class UIManager {
       try {
         const initialModels = JSON.stringify(modelRegistry.getModels());
         const initialProviders = JSON.stringify(modelRegistry.getProviders());
+        const activeSess = this.activeSessionId ? JSON.stringify(this.activeSessionId) : "null";
+        const activeTitle = this.activeSessionTitle ? JSON.stringify(this.activeSessionTitle) : "null";
         const initScript = `
 window.__INITIAL_MODELS__ = ${initialModels};
 window.__INITIAL_PROVIDERS__ = ${initialProviders};
 window.__ANTIGRAVITY_AVAILABLE__ = true;
+window.__ACTIVE_SESSION_ID__ = window.__ACTIVE_SESSION_ID__ || ${activeSess};
+window.__ACTIVE_SESSION_TITLE__ = window.__ACTIVE_SESSION_TITLE__ || ${activeTitle};
 `;
         return initScript + "\n" + baseScript;
       } catch {
@@ -107,6 +124,28 @@ window.__ANTIGRAVITY_AVAILABLE__ = true;
       await page.evaluate(({ msg, type }) => {
         window.agenticSidebar?.addSystemMessage(msg, type);
       }, { msg: message, type: messageType });
+    } catch {
+      // Ignore
+    }
+  }
+
+  async streamToken(page, accumulatedText) {
+    if (!page || page.isClosed()) return;
+    try {
+      await page.evaluate((text) => {
+        window.agenticSidebar?.streamToken?.(text);
+      }, accumulatedText);
+    } catch {
+      // Ignore
+    }
+  }
+
+  async finalizeTokenStream(page, finalText) {
+    if (!page || page.isClosed()) return;
+    try {
+      await page.evaluate((text) => {
+        window.agenticSidebar?.finalizeTokenStream?.(text);
+      }, finalText);
     } catch {
       // Ignore
     }

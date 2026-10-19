@@ -47,10 +47,21 @@ For conversational / direct queries:
 `.trim();
 
 export class PlannerAgent {
-  static async plan({ query, currentPlan = null, feedback = null, stepIndex = 0, model = null }) {
+  static async plan({ query, currentPlan = null, feedback = null, stepIndex = 0, model = null, conversationHistory = [] }) {
     logger.info(`[PlannerAgent] Formulating plan for step ${stepIndex + 1} [Model: ${model || "default"}]`);
 
-    let userPrompt = `User Request: "${query}"\n`;
+    let userPrompt = "";
+    if (Array.isArray(conversationHistory) && conversationHistory.length > 0) {
+      userPrompt += "Previous Multi-Turn Conversation Thread in this session:\n";
+      conversationHistory.forEach((turn, idx) => {
+        const cleanCmd = (turn.command || "").trim();
+        const cleanResp = (turn.final_response || turn.finalResponse || "Task executed.").trim();
+        userPrompt += `[Turn ${idx + 1}]\nUser: "${cleanCmd}"\nAssistant: "${cleanResp.slice(0, 300)}"\n\n`;
+      });
+      userPrompt += `Current Follow-up Request: "${query}"\n`;
+    } else {
+      userPrompt += `User Request: "${query}"\n`;
+    }
 
     if (currentPlan && currentPlan.length > 0) {
       userPrompt += `\nExisting Plan:\n${currentPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}\n`;
@@ -60,8 +71,10 @@ export class PlannerAgent {
     if (feedback) {
       userPrompt += `\nCritique Feedback from previous action:\n"${feedback}"\n`;
       userPrompt += `\nPlease inspect this feedback carefully. If the previous step failed or got stuck, revise the plan with an alternative path. If successful, progress to the next logical step.\n`;
-    } else {
+    } else if (!conversationHistory || conversationHistory.length === 0) {
       userPrompt += `\nThis is a brand new task. Generate a complete initial plan and pick the first step, or respond conversationally if it is general chat/greeting.\n`;
+    } else {
+      userPrompt += `\nThis is a follow-up turn in an existing session. Interpret the current follow-up in the context of the previous turns, and generate an actionable plan or conversational response.\n`;
     }
 
     try {

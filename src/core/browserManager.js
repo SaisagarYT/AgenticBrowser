@@ -82,18 +82,20 @@ class BrowserManager {
 
     // Expose process_task for the in-page chat overlay
     try {
-      await this.context.exposeFunction("process_task", async (commandOrPayload, maybeModel) => {
+      await this.context.exposeFunction("process_task", async (commandOrPayload, maybeModel, maybeSessionId) => {
         let command = commandOrPayload;
         let selectedModel = maybeModel || null;
+        let sessionId = maybeSessionId || null;
 
         if (typeof commandOrPayload === "object" && commandOrPayload !== null) {
           command = commandOrPayload.command;
           selectedModel = commandOrPayload.model || selectedModel;
+          sessionId = commandOrPayload.sessionId || sessionId;
         }
 
-        logger.info(`Received command from in-page chat overlay: "${command}" [Model: ${selectedModel || "default"}]`);
+        logger.info(`Received command from in-page chat overlay: "${command}" [Model: ${selectedModel || "default"}, Session: ${sessionId || "new"}]`);
         const { orchestrator } = await import("./orchestrator.js");
-        orchestrator.runTask(command, null, { model: selectedModel, fromOverlay: true }).catch((err) => {
+        orchestrator.runTask(command, null, { model: selectedModel, sessionId, fromOverlay: true }).catch((err) => {
           logger.error(`Task from overlay failed: ${err.message}`);
         });
       });
@@ -119,6 +121,55 @@ class BrowserManager {
         const { modelRegistry } = await import("./modelRegistry.js");
         const removed = modelRegistry.removeModel(modelId);
         return { success: removed };
+      });
+
+      await this.context.exposeFunction("test_provider", async (providerId, apiKey, customBaseUrl) => {
+        const { modelRegistry } = await import("./modelRegistry.js");
+        return await modelRegistry.testProvider({ providerId, apiKey, customBaseUrl });
+      });
+
+      await this.context.exposeFunction("save_provider_config", async (config) => {
+        const { modelRegistry } = await import("./modelRegistry.js");
+        return modelRegistry.saveProviderConfig(config);
+      });
+
+      await this.context.exposeFunction("reset_antigravity_session", async () => {
+        const { AntigravityCliClient } = await import("./antigravityCliClient.js");
+        return AntigravityCliClient.resetSession();
+      });
+
+      // Expose session & multi-turn chat history management functions
+      await this.context.exposeFunction("get_chat_history", async () => {
+        const { SessionRepository } = await import("../db/repositories/sessionRepository.js");
+        return SessionRepository.list({ limit: 50 });
+      });
+
+      await this.context.exposeFunction("get_chat_session", async (sessionId) => {
+        const { SessionRepository } = await import("../db/repositories/sessionRepository.js");
+        const { TaskRepository } = await import("../db/repositories/taskRepository.js");
+        const fullSession = SessionRepository.getFullSession(sessionId);
+        if (fullSession) return fullSession;
+        // Fallback for single legacy task IDs
+        return TaskRepository.getFullTaskDetails(sessionId);
+      });
+
+      await this.context.exposeFunction("delete_chat_session", async (sessionId) => {
+        const { SessionRepository } = await import("../db/repositories/sessionRepository.js");
+        const { TaskRepository } = await import("../db/repositories/taskRepository.js");
+        SessionRepository.delete(sessionId);
+        TaskRepository.delete(sessionId);
+        return { success: true };
+      });
+
+      await this.context.exposeFunction("update_chat_session_title", async (sessionId, newTitle) => {
+        const { SessionRepository } = await import("../db/repositories/sessionRepository.js");
+        SessionRepository.updateTitle(sessionId, newTitle);
+        return { success: true };
+      });
+
+      await this.context.exposeFunction("clear_chat_history", async () => {
+        const { SessionRepository } = await import("../db/repositories/sessionRepository.js");
+        return { success: SessionRepository.clearAll() };
       });
     } catch {
       // Ignore if already exposed

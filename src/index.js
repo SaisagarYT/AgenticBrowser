@@ -4,8 +4,10 @@ import { createServer } from "./server.js";
 import { config } from "./config.js";
 import { logger } from "./utils/logger.js";
 import { browserManager } from "./core/browserManager.js";
+import { AntigravityCliClient } from "./core/antigravityCliClient.js";
 
 const app = createServer();
+AntigravityCliClient.warmup();
 
 const server = app.listen(config.port, config.host, () => {
   logger.info("==========================================================");

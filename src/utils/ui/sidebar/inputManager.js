@@ -13,6 +13,8 @@ export function getInputManagerCode() {
   // --------------------------------------------------------------------------
   function clearChat() {
     hideSkeleton();
+    if (typeof finishActiveTypewriter === "function") finishActiveTypewriter();
+    currentStreamingCard = null;
     const cards = contentEl.querySelectorAll(".as-bubble-user, .as-card-step, .as-ai-response-container, .as-inline-plan-card, .as-skeleton-container");
     cards.forEach((c) => c.remove());
     if (heroView) heroView.style.display = "flex";
@@ -156,17 +158,27 @@ export function getInputManagerCode() {
     showSkeleton();
     setStatus("processing", "Planning step-by-step strategy...");
 
-    // Record in history list
-    if (text) addHistoryItem(text);
-
     let fullCommand = text;
     if (currentAttachments.length > 0) {
       const fileNames = currentAttachments.map((f) => f.name).join(", ");
       fullCommand = fullCommand ? \`\${fullCommand} (Attached: \${fileNames})\` : \`Process attached: \${fileNames}\`;
     }
 
+    // Initialize or maintain active session ID across multi-turn prompts
+    if (!window.__ACTIVE_SESSION_ID__) {
+      window.__ACTIVE_SESSION_ID__ = "sess_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
+      const titleSpan = headerChatMenuBtn?.querySelector("span");
+      if (titleSpan && text) {
+        titleSpan.textContent = text.length > 22 ? text.slice(0, 22) + "..." : text;
+      }
+    }
+
     if (typeof window.process_task === "function") {
-      window.process_task(fullCommand, activeModel);
+      window.process_task({
+        command: fullCommand,
+        model: activeModel,
+        sessionId: window.__ACTIVE_SESSION_ID__,
+      });
     } else {
       console.warn("window.process_task is not attached yet.");
     }
