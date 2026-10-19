@@ -74,7 +74,7 @@ export function getPlanManagerCode() {
             .join("");
         } else if (item.status === "in-progress") {
           logsHtml = \`
-            <div class="as-plan-step-interior-line" style="color: #facc15;">
+            <div class="as-plan-step-interior-line" style="color: inherit; opacity: 0.85;">
               <span class="as-plan-step-interior-bullet">•</span>
               <span>Executing step action in browser...</span>
             </div>
@@ -266,7 +266,8 @@ export function getPlanManagerCode() {
   }
 
   function recordStepAction(actionDesc) {
-    const cleanAction = stripStartSymbols(actionDesc);
+    const parsed = typeof parseActionPayload === "function" ? parseActionPayload(actionDesc) : null;
+    const cleanAction = parsed ? parsed.title : stripStartSymbols(actionDesc);
     let activeItem = planItems.find((item) => item.status === "in-progress");
     if (!activeItem) {
       activeItem = planItems.find((item) => item.status === "pending");

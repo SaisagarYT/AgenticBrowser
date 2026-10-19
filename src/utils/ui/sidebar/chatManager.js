@@ -13,6 +13,10 @@ export function getChatManagerCode() {
   // --------------------------------------------------------------------------
   function appendUserBubble(text, attachments = []) {
     if (heroView) heroView.style.display = "none";
+    activeTimelineContainer = null;
+    activeTimelineStream = null;
+    activeTimelineCountBadge = null;
+    activeTimelineItemCount = 0;
 
     // Immediate duplicate prevention (e.g. local echo + backend addUserMessage call)
     const lastEl = contentEl.lastElementChild;
@@ -189,6 +193,10 @@ export function getChatManagerCode() {
   // --------------------------------------------------------------------------
   function appendAiResponseCard(text, isInstant = false) {
     if (heroView) heroView.style.display = "none";
+    activeTimelineContainer = null;
+    activeTimelineStream = null;
+    activeTimelineCountBadge = null;
+    activeTimelineItemCount = 0;
 
     // 1. If an active streaming card is already in progress, finalize it instead of creating a second card!
     if (currentStreamingCard && currentStreamingCard.container && currentStreamingCard.container.parentNode) {
@@ -516,6 +524,10 @@ export function getChatManagerCode() {
 
   function finalizeStreamingAiCard(finalText) {
     hideSkeleton();
+    activeTimelineContainer = null;
+    activeTimelineStream = null;
+    activeTimelineCountBadge = null;
+    activeTimelineItemCount = 0;
     if (currentStreamingCard && currentStreamingCard.bodyEl) {
       const card = currentStreamingCard;
       currentStreamingCard = null;
@@ -607,6 +619,289 @@ export function getChatManagerCode() {
   }
 
   // --------------------------------------------------------------------------
+  // Activity Stepper & Action Timeline Component (Reference-matched)
+  // --------------------------------------------------------------------------
+  let activeTimelineContainer = null;
+  let activeTimelineStream = null;
+  let activeTimelineCountBadge = null;
+  let activeTimelineItemCount = 0;
+
+  function parseActionPayload(rawText) {
+    if (!rawText) {
+      return {
+        toolName: "ACTION",
+        title: "Browser Action",
+        typeClass: "as-timeline-completed",
+        iconSvg: ICONS.check,
+        badge: "ACTION",
+        details: []
+      };
+    }
+
+    let text = String(rawText).trim();
+    // Strip leading decoration symbols (⚡, 🤖, 📋, etc.)
+    text = text.replace(/^[⚡🤖🔧📋ℹ️📸\s*]+/, "").trim();
+
+    let tool = "";
+    let params = null;
+
+    // Pattern 1: Tool: <name> <json> or Tool: <name>: <json>
+    const toolPrefixMatch = text.match(/^(?:Tool|Executed|Action)\s*:\s*([a-zA-Z0-9_\-]+)\s*(?::\s*)?([\s\S]*)$/i);
+    if (toolPrefixMatch) {
+      tool = toolPrefixMatch[1].trim();
+      const rest = toolPrefixMatch[2].trim();
+      if (rest) {
+        try {
+          params = JSON.parse(rest);
+        } catch {
+          params = { raw: rest };
+        }
+      }
+    } else {
+      // Pattern 2: Executed <name>: <json>
+      const execMatch = text.match(/^Executed\s+([a-zA-Z0-9_\-]+)\s*(?::\s*)?([\s\S]*)$/i);
+      if (execMatch) {
+        tool = execMatch[1].trim();
+        const rest = execMatch[2].trim();
+        if (rest) {
+          try {
+            params = JSON.parse(rest);
+          } catch {
+            params = { raw: rest };
+          }
+        }
+      } else {
+        // Pattern 3: <name> <json>
+        const nameJsonMatch = text.match(/^([a-zA-Z0-9_]+)\s+(\{[\s\S]*\})$/);
+        if (nameJsonMatch) {
+          tool = nameJsonMatch[1].trim();
+          try {
+            params = JSON.parse(nameJsonMatch[2]);
+          } catch {
+            params = { raw: nameJsonMatch[2] };
+          }
+        } else if (text.startsWith("{") && text.endsWith("}")) {
+          try {
+            params = JSON.parse(text);
+            tool = params.tool || params.toolName || params.action || "action";
+          } catch {
+            // Raw text
+          }
+        }
+      }
+    }
+
+    const normTool = (tool || "").toLowerCase().replace(/^browser_/, "");
+
+    let title = "";
+    let typeClass = "as-timeline-completed";
+    let iconSvg = ICONS.check;
+    let badge = normTool ? normTool.toUpperCase() : "ACTION";
+    const details = [];
+
+    if (normTool.includes("open_url") || normTool.includes("goto") || normTool.includes("navigate")) {
+      const url = params?.url || params?.href || "";
+      let host = url;
+      try {
+        const u = new URL(url);
+        host = u.hostname.replace(/^www\./, "");
+      } catch {
+        // Fallback
+      }
+      title = host ? ("Navigated to " + host) : "Navigated to target URL";
+      typeClass = "as-timeline-navigate";
+      iconSvg = ICONS.globe || ICONS.check;
+      badge = "OPEN_URL";
+      if (url) {
+        details.push({ label: "Target URL", value: url, isLink: true });
+      }
+    } else if (normTool.includes("screenshot") || normTool.includes("capture")) {
+      const name = params?.name || params?.filename || "settings_verified";
+      const displayName = name.endsWith(".png") ? name : (name + ".png");
+      title = "Captured screenshot: " + name.replace(/\.png$/, "");
+      typeClass = "as-timeline-camera";
+      iconSvg = ICONS.camera || ICONS.check;
+      badge = "SCREENSHOT";
+      details.push({ label: "Artifact", value: displayName, isCode: true });
+      if (params?.fullPage) {
+        details.push({ label: "Mode", value: "Full page capture" });
+      }
+    } else if (normTool.includes("click")) {
+      const sel = params?.selector || params?.target || params?.text || "target element";
+      title = "Clicked element " + (sel.length > 28 ? (sel.slice(0, 28) + "...") : sel);
+      typeClass = "as-timeline-click";
+      iconSvg = ICONS.mousePointer || ICONS.check;
+      badge = "CLICK";
+      if (params?.selector) {
+        details.push({ label: "Selector", value: params.selector, isCode: true });
+      }
+      if (params?.text) {
+        details.push({ label: "Label", value: '"' + params.text + '"' });
+      }
+    } else if (normTool.includes("type") || normTool.includes("input") || normTool.includes("fill")) {
+      const textVal = params?.text || params?.value || "";
+      const preview = textVal.length > 24 ? (textVal.slice(0, 24) + "...") : textVal;
+      title = preview ? ('Entered "' + preview + '"') : "Entered text input";
+      typeClass = "as-timeline-type";
+      iconSvg = ICONS.type || ICONS.check;
+      badge = "INPUT";
+      if (params?.selector) {
+        details.push({ label: "Field", value: params.selector, isCode: true });
+      }
+      if (textVal) {
+        details.push({ label: "Text", value: '"' + textVal + '"', isCode: true });
+      }
+    } else if (normTool.includes("scroll")) {
+      const dir = params?.direction || "down";
+      const target = params?.selector || "";
+      title = target ? ("Scrolled to " + target) : ("Scrolled page " + dir);
+      typeClass = "as-timeline-scroll";
+      iconSvg = ICONS.arrowDown || ICONS.check;
+      badge = "SCROLL";
+      if (params?.direction) {
+        details.push({ label: "Direction", value: params.direction });
+      }
+      if (params?.amount) {
+        details.push({ label: "Distance", value: params.amount + "px" });
+      }
+      if (params?.selector) {
+        details.push({ label: "Target", value: params.selector, isCode: true });
+      }
+    } else if (normTool.includes("search")) {
+      const q = params?.query || params?.q || "";
+      title = q ? ('Searched for "' + q + '"') : "Executed search query";
+      typeClass = "as-timeline-search";
+      iconSvg = ICONS.search || ICONS.check;
+      badge = "SEARCH";
+      if (q) {
+        details.push({ label: "Query", value: q, isCode: true });
+      }
+    } else if (normTool) {
+      title = "Executed " + normTool.replace(/_/g, " ");
+      typeClass = "as-timeline-completed";
+      iconSvg = ICONS.check;
+      badge = normTool.toUpperCase();
+      if (params && typeof params === "object") {
+        for (const [k, v] of Object.entries(params)) {
+          if (v !== undefined && v !== null && typeof v !== "object") {
+            details.push({ label: k, value: String(v), isCode: true });
+          }
+        }
+      } else if (params?.raw) {
+        details.push({ label: "Parameters", value: String(params.raw), isCode: true });
+      }
+    } else {
+      title = text;
+      typeClass = "as-timeline-completed";
+      iconSvg = ICONS.check;
+      badge = "ACTION";
+    }
+
+    return {
+      toolName: normTool || "action",
+      title,
+      typeClass,
+      iconSvg,
+      badge,
+      details
+    };
+  }
+
+  function appendActionTimelineItem(rawText) {
+    if (heroView) heroView.style.display = "none";
+    hideSkeleton();
+
+    // Check if last element in chat is the active timeline container
+    const lastEl = contentEl.lastElementChild;
+    const isContinuingTimeline = activeTimelineContainer && lastEl === activeTimelineContainer;
+
+    if (!isContinuingTimeline) {
+      activeTimelineContainer = document.createElement("div");
+      activeTimelineContainer.className = "as-action-timeline-container";
+      activeTimelineItemCount = 0;
+
+      const header = document.createElement("div");
+      header.className = "as-timeline-header";
+      header.innerHTML = \`
+        <div class="as-timeline-title-row">
+          <span class="as-timeline-title">Agent Activity</span>
+          <span class="as-timeline-count-badge">1 action</span>
+        </div>
+        <div class="as-timeline-subtitle">Autonomous actions executed during this session.</div>
+      \`;
+      activeTimelineContainer.appendChild(header);
+
+      activeTimelineStream = document.createElement("div");
+      activeTimelineStream.className = "as-timeline-stream";
+      activeTimelineContainer.appendChild(activeTimelineStream);
+
+      activeTimelineCountBadge = header.querySelector(".as-timeline-count-badge");
+      contentEl.appendChild(activeTimelineContainer);
+    }
+
+    activeTimelineItemCount++;
+    if (activeTimelineCountBadge) {
+      activeTimelineCountBadge.textContent = \`\${activeTimelineItemCount} action\${activeTimelineItemCount === 1 ? "" : "s"}\`;
+    }
+
+    const parsed = parseActionPayload(rawText);
+
+    let cardHtml = "";
+    if (parsed.details && parsed.details.length > 0) {
+      const rowsHtml = parsed.details.map((d) => {
+        let valHtml = "";
+        if (d.isLink) {
+          valHtml = \`<a href="\${escapeHtml(d.value)}" target="_blank" rel="noopener noreferrer" class="as-timeline-card-link">\${escapeHtml(d.value)}</a>\`;
+        } else if (d.isCode) {
+          valHtml = \`<code class="as-timeline-card-code">\${escapeHtml(d.value)}</code>\`;
+        } else {
+          valHtml = \`<span class="as-timeline-card-value">\${escapeHtml(d.value)}</span>\`;
+        }
+        return \`
+          <div class="as-timeline-card-row">
+            <span class="as-timeline-card-label">\${escapeHtml(d.label)}:</span>
+            \${valHtml}
+          </div>
+        \`;
+      }).join("");
+
+      cardHtml = \`
+        <div class="as-timeline-card">
+          <div class="as-timeline-card-header">
+            <div class="as-timeline-card-author">
+              <div class="as-timeline-card-avatar">\${ICONS.bot}</div>
+              <span class="as-timeline-card-name">Browser Agent</span>
+            </div>
+            <span class="as-timeline-card-badge">\${escapeHtml(parsed.badge)}</span>
+          </div>
+          <div class="as-timeline-card-body">
+            \${rowsHtml}
+          </div>
+        </div>
+      \`;
+    }
+
+    const itemEl = document.createElement("div");
+    itemEl.className = \`as-timeline-item \${parsed.typeClass}\`;
+    itemEl.innerHTML = \`
+      <div class="as-timeline-node-col">
+        <div class="as-timeline-node">\${parsed.iconSvg}</div>
+        <div class="as-timeline-line"></div>
+      </div>
+      <div class="as-timeline-content-col">
+        <div class="as-timeline-item-header">
+          <span class="as-timeline-item-title">\${escapeHtml(parsed.title)}</span>
+          <span class="as-timeline-item-time">just now</span>
+        </div>
+        \${cardHtml}
+      </div>
+    \`;
+
+    activeTimelineStream.appendChild(itemEl);
+    contentEl.scrollTop = contentEl.scrollHeight;
+  }
+
+  // --------------------------------------------------------------------------
   // Step & System Event Message Router
   // --------------------------------------------------------------------------
   function appendStepCard(text, type = "step") {
@@ -689,17 +984,7 @@ export function getChatManagerCode() {
       if (planItems.length > 0) {
         recordStepAction(text);
       } else {
-        const card = document.createElement("div");
-        card.className = "as-card-step";
-        const cleanText = stripStartSymbols(text);
-        card.innerHTML = \`
-          <div class="as-card-header">
-            <span class="as-badge as-badge-browser">\${ICONS.bot} <span>Action</span></span>
-          </div>
-          <div class="as-card-body">\${escapeHtml(cleanText)}</div>
-        \`;
-        contentEl.appendChild(card);
-        contentEl.scrollTop = contentEl.scrollHeight;
+        appendActionTimelineItem(text);
       }
       currentTaskThoughts.push({ type: "action", stage: "browser", text: stripStartSymbols(text), time: Date.now() });
       return; // Handled
@@ -728,19 +1013,9 @@ export function getChatManagerCode() {
       return;
     }
 
-    // Fallback for any other system message
+    // Fallback for any other system message: render on activity timeline stepper
     hideSkeleton();
-    const card = document.createElement("div");
-    card.className = "as-card-step";
-    const cleanText = stripStartSymbols(text);
-    card.innerHTML = \`
-      <div class="as-card-header">
-        <span class="as-badge as-badge-browser">\${ICONS.bot} <span>Action</span></span>
-      </div>
-      <div class="as-card-body">\${escapeHtml(cleanText)}</div>
-    \`;
-    contentEl.appendChild(card);
-    contentEl.scrollTop = contentEl.scrollHeight;
+    appendActionTimelineItem(text);
   }
   `;
 }

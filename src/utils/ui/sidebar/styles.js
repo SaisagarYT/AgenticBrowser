@@ -1227,19 +1227,432 @@ export function getSidebarStyles(EXPANDED_WIDTH = 420, RAIL_WIDTH = 46) {
       -webkit-text-fill-color: #ffffff !important;
     }
 
+    /* ========================================================================
+       Activity Timeline / Action Component (Exact Match to Reference Stepper)
+       ======================================================================== */
+    .as-action-timeline-container {
+      align-self: stretch !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 12px !important;
+      padding: 13px 15px !important;
+      border-radius: 8px !important;
+      box-sizing: border-box !important;
+      width: 100% !important;
+      animation: asFadeUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+      transition: background 0.15s ease, border-color 0.15s ease !important;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02) !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-action-timeline-container {
+      background: #ffffff !important;
+      border: 1px solid #e4e4e7 !important;
+    }
+    #agentic-sidebar-root.dark .as-action-timeline-container {
+      background: #18181b !important;
+      border: 1px solid #27272a !important;
+    }
+
+    .as-timeline-header {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 2.5px !important;
+      padding-bottom: 8px !important;
+      border-bottom: 1px solid #e4e4e7 !important;
+    }
+    #agentic-sidebar-root.dark .as-timeline-header {
+      border-bottom: 1px solid #27272a !important;
+    }
+
+    .as-timeline-title-row {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+    }
+
+    .as-timeline-title {
+      font-size: 13px !important;
+      font-weight: 600 !important;
+      color: inherit !important;
+      letter-spacing: -0.15px !important;
+    }
+
+    .as-timeline-count-badge {
+      font-size: 10px !important;
+      font-weight: 500 !important;
+      padding: 1.5px 6px !important;
+      border-radius: 4px !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-timeline-count-badge {
+      background: #f4f4f5 !important;
+      color: #71717a !important;
+      border: 1px solid #e4e4e7 !important;
+    }
+    #agentic-sidebar-root.dark .as-timeline-count-badge {
+      background: #27272a !important;
+      color: #a1a1aa !important;
+      border: 1px solid #3f3f46 !important;
+    }
+
+    .as-timeline-subtitle {
+      font-size: 11px !important;
+      color: #71717a !important;
+      line-height: 1.4 !important;
+    }
+    #agentic-sidebar-root.dark .as-timeline-subtitle {
+      color: #a1a1aa !important;
+    }
+
+    /* Stream and Timeline Items */
+    .as-timeline-stream {
+      display: flex !important;
+      flex-direction: column !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+    }
+
+    .as-timeline-item {
+      display: flex !important;
+      align-items: stretch !important;
+      gap: 11px !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+      position: relative !important;
+      animation: asFadeUp 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+
+    /* Node & Connecting Line Column */
+    .as-timeline-node-col {
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      flex-shrink: 0 !important;
+      width: 20px !important;
+      position: relative !important;
+    }
+
+    .as-timeline-node {
+      width: 19px !important;
+      height: 19px !important;
+      border-radius: 50% !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      flex-shrink: 0 !important;
+      z-index: 2 !important;
+      margin-top: 1px !important;
+      transition: all 0.2s ease !important;
+    }
+
+    /* Completed node style (matching checkmark node in reference) */
+    #agentic-sidebar-root:not(.dark) .as-timeline-node {
+      background: #f4f4f5 !important;
+      border: 1.5px solid #d4d4d8 !important;
+      color: #18181b !important;
+    }
+    #agentic-sidebar-root.dark .as-timeline-node {
+      background: #27272a !important;
+      border: 1.5px solid #3f3f46 !important;
+      color: #fafafa !important;
+    }
+
+    /* Specific accent nodes matching reference */
+    .as-timeline-completed .as-timeline-node {
+      background: #16a34a !important;
+      border: 1.5px solid #16a34a !important;
+      color: #ffffff !important;
+    }
+    .as-timeline-navigate .as-timeline-node,
+    .as-timeline-search .as-timeline-node {
+      background: #2563eb !important;
+      border: 1.5px solid #2563eb !important;
+      color: #ffffff !important;
+    }
+    .as-timeline-click .as-timeline-node,
+    .as-timeline-type .as-timeline-node {
+      background: #ea580c !important;
+      border: 1.5px solid #ea580c !important;
+      color: #ffffff !important;
+    }
+    .as-timeline-camera .as-timeline-node {
+      background: #7c3aed !important;
+      border: 1.5px solid #7c3aed !important;
+      color: #ffffff !important;
+    }
+    .as-timeline-scroll .as-timeline-node {
+      background: #0284c7 !important;
+      border: 1.5px solid #0284c7 !important;
+      color: #ffffff !important;
+    }
+
+    .as-timeline-node svg {
+      width: 11px !important;
+      height: 11px !important;
+    }
+
+    /* Vertical connecting spine line */
+    .as-timeline-line {
+      width: 1.5px !important;
+      flex: 1 1 auto !important;
+      min-height: 12px !important;
+      margin-top: 3px !important;
+      margin-bottom: -1px !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-timeline-line {
+      background: #e4e4e7 !important;
+    }
+    #agentic-sidebar-root.dark .as-timeline-line {
+      background: #27272a !important;
+    }
+    /* Hide connecting line after the last timeline item */
+    .as-timeline-item:last-child .as-timeline-line {
+      display: none !important;
+    }
+
+    /* Content Column */
+    .as-timeline-content-col {
+      display: flex !important;
+      flex-direction: column !important;
+      flex: 1 1 auto !important;
+      min-width: 0 !important;
+      padding-bottom: 13px !important;
+    }
+    .as-timeline-item:last-child .as-timeline-content-col {
+      padding-bottom: 2px !important;
+    }
+
+    .as-timeline-item-header {
+      display: flex !important;
+      align-items: baseline !important;
+      justify-content: space-between !important;
+      gap: 8px !important;
+      width: 100% !important;
+    }
+
+    .as-timeline-item-title {
+      font-size: 12px !important;
+      font-weight: 550 !important;
+      color: inherit !important;
+      line-height: 1.4 !important;
+      word-break: break-word !important;
+    }
+
+    .as-timeline-item-time {
+      font-size: 10px !important;
+      color: #71717a !important;
+      flex-shrink: 0 !important;
+      white-space: nowrap !important;
+    }
+    #agentic-sidebar-root.dark .as-timeline-item-time {
+      color: #a1a1aa !important;
+    }
+
+    /* Indented Callout Card (Matching Oliver Brown card in reference) */
+    .as-timeline-card {
+      margin-top: 6px !important;
+      margin-bottom: 2px !important;
+      padding: 9px 12px !important;
+      border-radius: 7px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 5px !important;
+      box-sizing: border-box !important;
+      width: 100% !important;
+      transition: all 0.15s ease !important;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02) !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-timeline-card {
+      background: #fafafa !important;
+      border: 1px solid #e4e4e7 !important;
+    }
+    #agentic-sidebar-root.dark .as-timeline-card {
+      background: #121215 !important;
+      border: 1px solid #27272a !important;
+    }
+
+    .as-timeline-card-header {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+    }
+
+    .as-timeline-card-author {
+      display: flex !important;
+      align-items: center !important;
+      gap: 7px !important;
+    }
+
+    .as-timeline-card-avatar {
+      width: 17px !important;
+      height: 17px !important;
+      border-radius: 50% !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      flex-shrink: 0 !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-timeline-card-avatar {
+      background: #e4e4e7 !important;
+      color: #09090b !important;
+    }
+    #agentic-sidebar-root.dark .as-timeline-card-avatar {
+      background: #27272a !important;
+      color: #fafafa !important;
+    }
+    .as-timeline-card-avatar svg {
+      width: 10px !important;
+      height: 10px !important;
+    }
+
+    .as-timeline-card-name {
+      font-size: 11px !important;
+      font-weight: 600 !important;
+      color: inherit !important;
+      letter-spacing: -0.1px !important;
+    }
+
+    /* Small Pill Badge like TL in reference */
+    .as-timeline-card-badge {
+      font-size: 8.5px !important;
+      font-weight: 700 !important;
+      padding: 1px 5px !important;
+      border-radius: 3px !important;
+      letter-spacing: 0.3px !important;
+      text-transform: uppercase !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-timeline-card-badge {
+      background: #f4f4f5 !important;
+      color: #52525b !important;
+      border: 1px solid #e4e4e7 !important;
+    }
+    #agentic-sidebar-root.dark .as-timeline-card-badge {
+      background: #27272a !important;
+      color: #a1a1aa !important;
+      border: 1px solid #3f3f46 !important;
+    }
+
+    .as-timeline-card-body {
+      font-size: 11px !important;
+      line-height: 1.45 !important;
+      color: inherit !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 3.5px !important;
+    }
+
+    .as-timeline-card-row {
+      display: flex !important;
+      align-items: flex-start !important;
+      gap: 6px !important;
+      word-break: break-all !important;
+    }
+
+    .as-timeline-card-label {
+      font-size: 10px !important;
+      font-weight: 600 !important;
+      color: #71717a !important;
+      flex-shrink: 0 !important;
+    }
+    #agentic-sidebar-root.dark .as-timeline-card-label {
+      color: #a1a1aa !important;
+    }
+
+    .as-timeline-card-value {
+      font-size: 11px !important;
+      color: inherit !important;
+    }
+
+    .as-timeline-card-link {
+      color: #2563eb !important;
+      text-decoration: underline !important;
+      text-underline-offset: 2px !important;
+      font-size: 11px !important;
+    }
+    #agentic-sidebar-root.dark .as-timeline-card-link {
+      color: #60a5fa !important;
+    }
+
+    .as-timeline-card-code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+      font-size: 10.5px !important;
+      padding: 1px 4px !important;
+      border-radius: 4px !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-timeline-card-code {
+      background: #f4f4f5 !important;
+      color: #18181b !important;
+      border: 1px solid #e4e4e7 !important;
+    }
+    #agentic-sidebar-root.dark .as-timeline-card-code {
+      background: #27272a !important;
+      color: #fafafa !important;
+      border: 1px solid #3f3f46 !important;
+    }
+
+    /* Timeline Footer Action Button (Matching reference component) */
+    .as-timeline-footer {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: flex-start !important;
+      padding-top: 6px !important;
+      margin-top: 2px !important;
+    }
+
+    .as-timeline-footer-btn {
+      all: initial !important;
+      box-sizing: border-box !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 6px !important;
+      padding: 5px 10px !important;
+      border-radius: 6px !important;
+      font-size: 11px !important;
+      font-weight: 500 !important;
+      font-family: inherit !important;
+      cursor: pointer !important;
+      transition: all 0.15s ease !important;
+      user-select: none !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-timeline-footer-btn {
+      background: #ffffff !important;
+      border: 1px solid #e4e4e7 !important;
+      color: #18181b !important;
+    }
+    #agentic-sidebar-root:not(.dark) .as-timeline-footer-btn:hover {
+      background: #f4f4f5 !important;
+    }
+    #agentic-sidebar-root.dark .as-timeline-footer-btn {
+      background: #18181b !important;
+      border: 1px solid #27272a !important;
+      color: #fafafa !important;
+    }
+    #agentic-sidebar-root.dark .as-timeline-footer-btn:hover {
+      background: #27272a !important;
+    }
+    .as-timeline-footer-btn svg {
+      width: 12px !important;
+      height: 12px !important;
+      color: inherit !important;
+    }
+
+    /* Fallback step card (kept clean and neutral) */
     .as-card-step {
       align-self: stretch;
-      background: hsl(var(--card));
-      border: 1px solid hsl(var(--border));
-      border-radius: calc(var(--radius) - 2px);
-      padding: 10px 12px;
+      border-radius: 7px;
+      padding: 9px 12px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
-      font-size: 12px;
+      gap: 5px;
+      font-size: 11.5px;
       line-height: 1.45;
-      animation: asFadeUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+      animation: asFadeUp 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    #agentic-sidebar-root:not(.dark) .as-card-step {
+      background: #ffffff;
+      border: 1px solid #e4e4e7;
+    }
+    #agentic-sidebar-root.dark .as-card-step {
+      background: #18181b;
+      border: 1px solid #27272a;
     }
 
     @keyframes asFadeUp {
@@ -1254,17 +1667,26 @@ export function getSidebarStyles(EXPANDED_WIDTH = 420, RAIL_WIDTH = 46) {
       gap: 6px;
     }
 
-    /* shadcn Badge Primitive */
+    /* shadcn Badge Primitive - Flat Zinc */
     .as-badge {
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      padding: 2px 7px;
-      border-radius: 9999px;
-      font-size: 10px;
+      padding: 1.5px 6px;
+      border-radius: 4px;
+      font-size: 9.5px;
       font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
+      letter-spacing: 0.2px;
+    }
+    #agentic-sidebar-root:not(.dark) .as-badge {
+      background: #f4f4f5;
+      color: #52525b;
+      border: 1px solid #e4e4e7;
+    }
+    #agentic-sidebar-root.dark .as-badge {
+      background: #27272a;
+      color: #a1a1aa;
+      border: 1px solid #3f3f46;
     }
 
     .as-badge-plan {
@@ -1273,9 +1695,14 @@ export function getSidebarStyles(EXPANDED_WIDTH = 420, RAIL_WIDTH = 46) {
       border: 1px solid rgba(255, 255, 255, 0.12);
     }
     .as-badge-browser {
-      background: rgba(250, 204, 21, 0.14);
-      color: #facc15;
-      border: 1px solid rgba(250, 204, 21, 0.25);
+      background: #f4f4f5 !important;
+      color: #18181b !important;
+      border: 1px solid #e4e4e7 !important;
+    }
+    #agentic-sidebar-root.dark .as-badge-browser {
+      background: #27272a !important;
+      color: #fafafa !important;
+      border: 1px solid #3f3f46 !important;
     }
     .as-badge-critique {
       background: rgba(255, 255, 255, 0.08);
@@ -1283,13 +1710,16 @@ export function getSidebarStyles(EXPANDED_WIDTH = 420, RAIL_WIDTH = 46) {
       border: 1px solid rgba(255, 255, 255, 0.12);
     }
     .as-badge-done {
-      background: rgba(250, 204, 21, 0.14);
-      color: #facc15;
-      border: 1px solid rgba(250, 204, 21, 0.25);
+      background: rgba(34, 197, 94, 0.12) !important;
+      color: #16a34a !important;
+      border: 1px solid rgba(34, 197, 94, 0.25) !important;
+    }
+    #agentic-sidebar-root.dark .as-badge-done {
+      color: #4ade80 !important;
     }
 
     .as-card-body {
-      color: hsl(var(--foreground));
+      color: inherit;
       white-space: pre-wrap;
       word-break: break-word;
     }

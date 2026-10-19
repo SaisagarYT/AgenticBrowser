@@ -15,7 +15,11 @@ export function getInputManagerCode() {
     hideSkeleton();
     if (typeof finishActiveTypewriter === "function") finishActiveTypewriter();
     currentStreamingCard = null;
-    const cards = contentEl.querySelectorAll(".as-bubble-user, .as-card-step, .as-ai-response-container, .as-inline-plan-card, .as-skeleton-container");
+    activeTimelineContainer = null;
+    activeTimelineStream = null;
+    activeTimelineCountBadge = null;
+    activeTimelineItemCount = 0;
+    const cards = contentEl.querySelectorAll(".as-bubble-user, .as-card-step, .as-action-timeline-container, .as-ai-response-container, .as-inline-plan-card, .as-skeleton-container, .as-artifact-card");
     cards.forEach((c) => c.remove());
     if (heroView) heroView.style.display = "flex";
     if (statusLabel) statusLabel.textContent = "Ready. Type a prompt below to automate.";
