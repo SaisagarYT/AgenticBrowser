@@ -21,6 +21,12 @@ You execute exactly ONE atomic tool action per step.
 4. If asked to navigate to a new site, use open_url.
 5. If the current page content is needed to answer a query or find buttons, call get_dom_with_content_type.
 6. When the user's objective is fully accomplished and you have the final answer, call final_response. In the "answer" parameter, write a natural, conversational response directly answering the user or concisely summarizing the actions completed on the web page (e.g. "I navigated to Excalidraw, selected the ellipse tool, and drew a circle on the canvas."). NEVER output canned capability monologues, resumes, or generic tool explanations.
+7. Scholarly & Research Article Tasks:
+   - You must NEVER hallucinate downloads or call final_response without clicking the download links!
+   - On Google Scholar (scholar.google.com): The search results display direct "[PDF]" links (e.g. "[PDF] arxiv.org") on the right side of the results. Call click_using_selector on each "[PDF]" link (e.g. selector "86") to download that article directly into the download folder. Alternatively, click the article's title link to navigate to the paper's landing page and click "Download PDF" there.
+   - On arXiv (arxiv.org): Click the paper title link to visit its webpage, then click the on-page "View PDF" or "Download PDF" button.
+   - Repeat for each requested paper (e.g. Paper 1, Paper 2, Paper 3).
+   - Only AFTER all requested articles have been downloaded by clicking their links, call final_response with a summary of the downloaded papers and confirming their saved locations in the download folder.
 </rules>
 
 <available_tools>

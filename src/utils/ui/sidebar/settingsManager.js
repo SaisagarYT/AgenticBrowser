@@ -40,8 +40,8 @@ export function getSettingsManagerCode() {
   const nimStatusText = sidebar.querySelector("#as-nim-status-text");
 
   // Settings DOM references
+  const providersHubViewEl = sidebar.querySelector("#as-providers-hub-view");
   const providersBentoGridEl = sidebar.querySelector("#as-providers-bento-grid");
-  const providerDetailCardEl = sidebar.querySelector("#as-provider-detail-card");
   const configuredModelsListEl = sidebar.querySelector("#as-configured-models-list");
   const tabActiveCountEl = sidebar.querySelector("#as-tab-active-count");
   const settingsTabs = sidebar.querySelectorAll(".as-settings-tab");
@@ -50,6 +50,7 @@ export function getSettingsManagerCode() {
     models: sidebar.querySelector("#as-tab-page-models"),
     automation: sidebar.querySelector("#as-tab-page-automation"),
   };
+  let expandedProviderId = null;
 
   // Preset Providers Specification with main theme icons and metadata
   const PRESET_PROVIDERS = [
@@ -232,71 +233,109 @@ export function getSettingsManagerCode() {
   }
 
   // --------------------------------------------------------------------------
-  // Bento Grid & Provider Detail Rendering
+  // Accordion Provider List Rendering
   // --------------------------------------------------------------------------
   function renderSettingsHub() {
     updateTabBadge();
-    renderProvidersBento();
-    renderProviderDetail(selectedProviderId);
+    renderProvidersAccordion();
   }
 
-  function renderProvidersBento() {
+  function renderProvidersAccordion() {
     if (!providersBentoGridEl) return;
     providersBentoGridEl.innerHTML = "";
 
     PRESET_PROVIDERS.forEach((preset) => {
       const p = providersData.find((item) => item.id === preset.id) || preset;
-      const isSelected = p.id === selectedProviderId;
+      const isExpanded = p.id === expandedProviderId;
       const activeCount = registeredModels.filter((m) => m.provider === p.id).length;
-      const isConnected = Boolean(p.isConfigured || activeCount > 0 || p.hasKey || (p.id === "antigravity" && window.__ANTIGRAVITY_AVAILABLE__ !== false));
+      const isAntigravity = p.id === "antigravity";
+      const isConfigured = Boolean(p.isConfigured || activeCount > 0 || p.hasKey || (isAntigravity && window.__ANTIGRAVITY_AVAILABLE__ !== false));
 
-      const card = document.createElement("button");
-      card.type = "button";
-      card.className = \`as-bento-card \${isSelected ? "selected" : ""}\`;
-      card.setAttribute("data-provider", p.id);
+      const itemEl = document.createElement("div");
+      itemEl.className = \`as-provider-accordion-item \${isConfigured ? "configured" : ""} \${isExpanded ? "open" : ""}\`;
+      itemEl.setAttribute("data-provider", p.id);
 
       const iconSvg = ICONS[p.id] || ICONS.sliders || "";
 
-      card.innerHTML = \`
-        <div class="as-bento-top">
+      let statusBadgeHtml = "";
+      if (isAntigravity) {
+        statusBadgeHtml = \`<span class="as-bento-status-pill connected"><span class="as-bento-status-dot"></span><span>Ready (Local)</span></span>\`;
+      } else if (activeCount > 0) {
+        statusBadgeHtml = \`<span class="as-bento-status-pill connected"><span class="as-bento-status-dot"></span><span>\${activeCount} Active</span></span>\`;
+      } else if (isConfigured) {
+        statusBadgeHtml = \`<span class="as-bento-status-pill ready"><span>Configured</span></span>\`;
+      } else {
+        statusBadgeHtml = \`<span class="as-bento-status-pill unconfigured"><span>Setup</span></span>\`;
+      }
+
+      // Header row (Clickable Accordion Trigger)
+      const headerEl = document.createElement("div");
+      headerEl.className = "as-accordion-header";
+      headerEl.setAttribute("role", "button");
+      headerEl.setAttribute("aria-expanded", String(isExpanded));
+      headerEl.innerHTML = \`
+        <div class="as-bento-left">
           <div class="as-bento-icon-wrapper">\${iconSvg}</div>
-          <span class="as-bento-status-pill \${isConnected ? "connected" : ""}">
-            <span class="as-bento-status-dot"></span>
-            <span>\${isConnected ? "Connected" : "Offline"}</span>
-          </span>
+          <div class="as-bento-body">
+            <div class="as-bento-title-row">
+              <span class="as-bento-title">\${escapeHtml(p.name)}</span>
+            </div>
+            <div class="as-bento-desc">\${escapeHtml(p.description)}</div>
+          </div>
         </div>
-        <div class="as-bento-body">
-          <div class="as-bento-title">\${escapeHtml(p.name)}</div>
-          <div class="as-bento-desc">\${escapeHtml(p.description)}</div>
-        </div>
-        <div class="as-bento-footer">
-          \${
-            activeCount > 0
-              ? \`<span class="as-bento-active-badge">\${ICONS.check} \${activeCount} active</span>\`
-              : \`<span>Not configured</span>\`
-          }
+        <div class="as-bento-right">
+          \${statusBadgeHtml}
+          <span class="as-bento-chevron">\${ICONS.chevronRight}</span>
         </div>
       \`;
 
-      card.addEventListener("click", () => {
-        selectedProviderId = p.id;
-        renderProvidersBento();
-        renderProviderDetail(p.id);
+      // Collapse wrapper for liquid-smooth CSS grid height expansion & collapse
+      const collapseEl = document.createElement("div");
+      collapseEl.className = "as-accordion-collapse";
+
+      const drawerEl = document.createElement("div");
+      drawerEl.className = "as-accordion-drawer";
+      collapseEl.appendChild(drawerEl);
+
+      populateAccordionDrawer(drawerEl, p, preset, itemEl);
+
+      headerEl.addEventListener("click", () => {
+        const wasOpen = itemEl.classList.contains("open");
+
+        // Close any other open accordion items smoothly
+        providersBentoGridEl.querySelectorAll(".as-provider-accordion-item.open").forEach((el) => {
+          if (el !== itemEl) {
+            el.classList.remove("open");
+            el.querySelector(".as-accordion-header")?.setAttribute("aria-expanded", "false");
+          }
+        });
+
+        if (wasOpen) {
+          itemEl.classList.remove("open");
+          headerEl.setAttribute("aria-expanded", "false");
+          expandedProviderId = null;
+        } else {
+          itemEl.classList.add("open");
+          headerEl.setAttribute("aria-expanded", "true");
+          expandedProviderId = p.id;
+          setTimeout(() => {
+            itemEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          }, 80);
+        }
       });
 
-      providersBentoGridEl.appendChild(card);
+      itemEl.appendChild(headerEl);
+      itemEl.appendChild(collapseEl);
+      providersBentoGridEl.appendChild(itemEl);
     });
   }
 
-  function renderProviderDetail(providerId) {
-    if (!providerDetailCardEl) return;
-    const preset = PRESET_PROVIDERS.find((item) => item.id === providerId) || PRESET_PROVIDERS[0];
-    const p = providersData.find((item) => item.id === providerId) || preset;
+  const renderProvidersBento = renderProvidersAccordion;
 
-    const iconSvg = ICONS[p.id] || ICONS.sliders || "";
+  function populateAccordionDrawer(drawerEl, p, preset, itemEl) {
+    if (!drawerEl) return;
     const testResult = testResults[p.id] || null;
     const activeProviderModels = registeredModels.filter((m) => m.provider === p.id);
-    const isConnected = Boolean(p.isConfigured || activeProviderModels.length > 0 || p.hasKey || (p.id === "antigravity" && window.__ANTIGRAVITY_AVAILABLE__ !== false));
 
     // Combine preset models with any discovered models
     const combinedModels = [...(preset.models || [])];
@@ -308,28 +347,7 @@ export function getSettingsManagerCode() {
       });
     }
 
-    let pingBadgeHtml = \`<span class="as-detail-ping-badge">Not Tested</span>\`;
-    if (testResult) {
-      if (testResult.success) {
-        pingBadgeHtml = \`<span class="as-detail-ping-badge success">\${ICONS.zap} \${testResult.latencyMs}ms</span>\`;
-      } else {
-        pingBadgeHtml = \`<span class="as-detail-ping-badge error">\${ICONS.alertTriangle} Failed</span>\`;
-      }
-    }
-
-    providerDetailCardEl.innerHTML = \`
-      <!-- Provider Header -->
-      <div class="as-detail-top-row">
-        <div class="as-detail-provider-heading">
-          <div class="as-detail-icon-box">\${iconSvg}</div>
-          <div class="as-detail-titles">
-            <div class="as-detail-title-text">\${escapeHtml(p.name)}</div>
-            <div class="as-detail-sub-text">\${escapeHtml(p.description)}</div>
-          </div>
-        </div>
-        <div id="as-ping-badge-container">\${pingBadgeHtml}</div>
-      </div>
-
+    drawerEl.innerHTML = \`
       <!-- Specific Setup Section -->
       \${
         p.id === "antigravity"
@@ -344,7 +362,7 @@ export function getSettingsManagerCode() {
               </div>
             </div>
             <div class="as-key-input-row" style="margin-top: 4px;">
-              <button class="as-btn-test-ping" id="as-btn-test-connection" type="button">
+              <button class="as-btn-test-ping as-btn-test-connection" type="button">
                 \${ICONS.zap}
                 <span>Verify CLI Connection</span>
               </button>
@@ -354,15 +372,15 @@ export function getSettingsManagerCode() {
           ? \`
             <div class="as-settings-field">
               <div class="as-field-label-row">
-                <label class="as-settings-label" for="as-detail-base-url">Ollama Base URL</label>
+                <label class="as-settings-label">Ollama Base URL</label>
                 <a class="as-link-get-key" href="https://ollama.com" target="_blank" rel="noopener">
                   <span>Docs</span>
                   \${ICONS.externalLink}
                 </a>
               </div>
               <div class="as-key-input-row">
-                <input class="as-settings-input" id="as-detail-base-url" type="text" value="\${escapeHtml(p.customBaseUrl || "http://localhost:11434/v1")}" placeholder="http://localhost:11434/v1" />
-                <button class="as-btn-test-ping" id="as-btn-test-connection" type="button">
+                <input class="as-settings-input as-detail-base-url" type="text" value="\${escapeHtml(p.customBaseUrl || 'http://localhost:11434/v1')}" placeholder="http://localhost:11434/v1" />
+                <button class="as-btn-test-ping as-btn-test-connection" type="button">
                   \${ICONS.refresh}
                   <span>Scan Models</span>
                 </button>
@@ -372,7 +390,7 @@ export function getSettingsManagerCode() {
           : \`
             <div class="as-settings-field">
               <div class="as-field-label-row">
-                <label class="as-settings-label" for="as-detail-api-key">API Key</label>
+                <label class="as-settings-label">API Key</label>
                 \${
                   preset.consoleUrl
                     ? \`<a class="as-link-get-key" href="\${preset.consoleUrl}" target="_blank" rel="noopener">
@@ -385,15 +403,14 @@ export function getSettingsManagerCode() {
               <div class="as-key-input-row">
                 <div class="as-input-password-wrapper">
                   <input
-                    class="as-settings-input"
-                    id="as-detail-api-key"
+                    class="as-settings-input as-detail-api-key"
                     type="password"
-                    placeholder="\${p.hasKey ? "•••••••• (Key Configured)" : "Enter API key"}"
-                    value="\${p.hasKey ? "••••••••" : ""}"
+                    placeholder="\${p.hasKey ? '•••••••• (Key Configured)' : 'Enter API key'}"
+                    value="\${p.hasKey ? '••••••••' : ''}"
                   />
-                  <button type="button" class="as-btn-toggle-eye" id="as-btn-toggle-detail-key">\${ICONS.eye}</button>
+                  <button type="button" class="as-btn-toggle-eye as-btn-toggle-detail-key">\${ICONS.eye}</button>
                 </div>
-                <button class="as-btn-test-ping" id="as-btn-test-connection" type="button">
+                <button class="as-btn-test-ping as-btn-test-connection" type="button">
                   \${ICONS.zap}
                   <span>Test Connection</span>
                 </button>
@@ -402,19 +419,21 @@ export function getSettingsManagerCode() {
 
             <!-- Optional Custom Base URL Accordion -->
             <div class="as-settings-field">
-              <button class="as-accordion-toggle" id="as-btn-toggle-base-url" type="button">
+              <button class="as-accordion-toggle as-btn-toggle-base-url" type="button">
                 <span>Advanced: Custom Endpoint URL</span>
                 \${ICONS.chevronDown}
               </button>
-              <div id="as-wrapper-base-url" style="display: none; margin-top: 4px;">
-                <input class="as-settings-input" id="as-detail-base-url" type="text" value="\${escapeHtml(p.customBaseUrl || "")}" placeholder="Default provider endpoint" />
+              <div class="as-wrapper-base-url" style="display: none; margin-top: 4px;">
+                <input class="as-settings-input as-detail-base-url" type="text" value="\${escapeHtml(p.customBaseUrl || '')}" placeholder="Default provider endpoint" />
               </div>
             </div>
           \`
       }
 
       <!-- Dynamic Test Result Message Container -->
-      <div id="as-test-status-container" style="display: none;"></div>
+      <div class="as-test-status-container as-test-status-msg \${testResult?.success ? "success" : "error"}" style="display: \${testResult ? "flex" : "none"};">
+        \${testResult ? (testResult.success ? \`\${ICONS.check} <span>Connection successful (\${testResult.latencyMs}ms latency). Ready for browser automation.</span>\` : \`\${ICONS.alertTriangle} <span>\${escapeHtml(testResult.error || "Connection test failed")}</span>\`) : ""}
+      </div>
 
       <!-- Models Selection Section -->
       <div class="as-models-selection-section">
@@ -422,7 +441,7 @@ export function getSettingsManagerCode() {
           <div class="as-models-selection-title">Select Active Models for Browser Automation</div>
         </div>
 
-        <div class="as-models-list-group" id="as-detail-models-list">
+        <div class="as-models-list-group">
           \${
             combinedModels.length === 0
               ? \`<div class="as-empty-models-notice" style="padding: 10px;">No preset models. Add a custom model below or test connection to discover.</div>\`
@@ -455,29 +474,33 @@ export function getSettingsManagerCode() {
         </div>
       </div>
 
-      <!-- Save & Apply Button -->
-      <button class="as-btn-brand-primary" id="as-btn-save-provider" type="button">
-        \${ICONS.check}
-        <span>Save &amp; Activate \${escapeHtml(p.name)}</span>
-      </button>
+      <!-- Actions: Save & Activate -->
+      <div class="as-detail-footer-actions" style="margin-top: 4px;">
+        <button class="as-btn-brand-primary as-btn-save-provider" type="button" style="width: 100%;">
+          \${ICONS.check}
+          <span>Save &amp; Activate \${escapeHtml(p.name)}</span>
+        </button>
+      </div>
     \`;
 
     // Wire Eye Toggle
-    const btnToggleKey = providerDetailCardEl.querySelector("#as-btn-toggle-detail-key");
-    const keyInput = providerDetailCardEl.querySelector("#as-detail-api-key");
+    const btnToggleKey = drawerEl.querySelector(".as-btn-toggle-detail-key");
+    const keyInput = drawerEl.querySelector(".as-detail-api-key");
     if (btnToggleKey && keyInput) {
-      btnToggleKey.addEventListener("click", () => {
+      btnToggleKey.addEventListener("click", (e) => {
+        e.stopPropagation();
         const isPass = keyInput.type === "password";
         keyInput.type = isPass ? "text" : "password";
         btnToggleKey.innerHTML = isPass ? ICONS.eyeOff : ICONS.eye;
       });
     }
 
-    // Wire Base URL accordion
-    const btnToggleBaseUrl = providerDetailCardEl.querySelector("#as-btn-toggle-base-url");
-    const wrapperBaseUrl = providerDetailCardEl.querySelector("#as-wrapper-base-url");
+    // Wire Base URL toggle
+    const btnToggleBaseUrl = drawerEl.querySelector(".as-btn-toggle-base-url");
+    const wrapperBaseUrl = drawerEl.querySelector(".as-wrapper-base-url");
     if (btnToggleBaseUrl && wrapperBaseUrl) {
-      btnToggleBaseUrl.addEventListener("click", () => {
+      btnToggleBaseUrl.addEventListener("click", (e) => {
+        e.stopPropagation();
         const isOpen = wrapperBaseUrl.style.display !== "none";
         wrapperBaseUrl.style.display = isOpen ? "none" : "block";
         btnToggleBaseUrl.innerHTML = \`<span>Advanced: Custom Endpoint URL</span>\${isOpen ? ICONS.chevronDown : ICONS.chevronUp}\`;
@@ -485,13 +508,13 @@ export function getSettingsManagerCode() {
     }
 
     // Wire Test Connection Button
-    const btnTest = providerDetailCardEl.querySelector("#as-btn-test-connection");
-    const statusContainer = providerDetailCardEl.querySelector("#as-test-status-container");
-    const pingBadgeContainer = providerDetailCardEl.querySelector("#as-ping-badge-container");
-    const baseUrlInput = providerDetailCardEl.querySelector("#as-detail-base-url");
+    const btnTest = drawerEl.querySelector(".as-btn-test-connection");
+    const statusContainer = drawerEl.querySelector(".as-test-status-container");
+    const baseUrlInput = drawerEl.querySelector(".as-detail-base-url");
 
     if (btnTest) {
-      btnTest.addEventListener("click", async () => {
+      btnTest.addEventListener("click", async (e) => {
+        e.stopPropagation();
         const key = keyInput ? keyInput.value.trim() : null;
         const baseUrl = baseUrlInput ? baseUrlInput.value.trim() : null;
 
@@ -503,31 +526,37 @@ export function getSettingsManagerCode() {
           if (typeof window.test_provider === "function") {
             res = await window.test_provider(p.id, key, baseUrl);
           } else {
-            // Simulated local check fallback
             res = { success: true, latencyMs: 120, availableModels: preset.models };
           }
 
           testResults[p.id] = res;
 
           if (res.success) {
-            pingBadgeContainer.innerHTML = \`<span class="as-detail-ping-badge success">\${ICONS.zap} \${res.latencyMs}ms</span>\`;
             statusContainer.style.display = "flex";
-            statusContainer.className = "as-test-status-msg success";
+            statusContainer.className = "as-test-status-container as-test-status-msg success";
             statusContainer.innerHTML = \`\${ICONS.check} <span>Connection successful (\${res.latencyMs}ms latency). Ready for browser automation.</span>\`;
 
-            // If new models were discovered (e.g. from Ollama or account models), re-render models list
+            // Update item header status pill immediately
+            if (itemEl) {
+              const headerStatusPill = itemEl.querySelector(".as-bento-status-pill");
+              if (headerStatusPill) {
+                headerStatusPill.className = "as-bento-status-pill connected";
+                headerStatusPill.innerHTML = \`<span class="as-bento-status-dot"></span><span>\${res.latencyMs}ms</span>\`;
+              }
+            }
+
+            // If new models were discovered (e.g. from Ollama or account models), re-populate drawer
             if (Array.isArray(res.availableModels) && res.availableModels.length > 0) {
-              renderProviderDetail(p.id);
+              populateAccordionDrawer(drawerEl, p, preset, itemEl);
             }
           } else {
-            pingBadgeContainer.innerHTML = \`<span class="as-detail-ping-badge error">\${ICONS.alertTriangle} Failed</span>\`;
             statusContainer.style.display = "flex";
-            statusContainer.className = "as-test-status-msg error";
+            statusContainer.className = "as-test-status-container as-test-status-msg error";
             statusContainer.innerHTML = \`\${ICONS.alertTriangle} <span>\${escapeHtml(res.error || "Connection test failed")}</span>\`;
           }
         } catch (err) {
           statusContainer.style.display = "flex";
-          statusContainer.className = "as-test-status-msg error";
+          statusContainer.className = "as-test-status-container as-test-status-msg error";
           statusContainer.innerHTML = \`\${ICONS.alertTriangle} <span>Test failed: \${escapeHtml(err.message)}</span>\`;
         } finally {
           btnTest.innerHTML = p.id === "antigravity"
@@ -541,13 +570,14 @@ export function getSettingsManagerCode() {
     }
 
     // Wire Save & Activate Provider Button
-    const btnSave = providerDetailCardEl.querySelector("#as-btn-save-provider");
+    const btnSave = drawerEl.querySelector(".as-btn-save-provider");
     if (btnSave) {
-      btnSave.addEventListener("click", async () => {
+      btnSave.addEventListener("click", async (e) => {
+        e.stopPropagation();
         const key = keyInput ? keyInput.value.trim() : null;
         const baseUrl = baseUrlInput ? baseUrlInput.value.trim() : null;
 
-        const checkedInputs = providerDetailCardEl.querySelectorAll(".as-model-checkbox-input:checked");
+        const checkedInputs = drawerEl.querySelectorAll(".as-model-checkbox-input:checked");
         const selectedModels = Array.from(checkedInputs).map((input) => ({
           id: input.getAttribute("data-model-id"),
           name: input.getAttribute("data-model-name"),
@@ -591,8 +621,7 @@ export function getSettingsManagerCode() {
             if (baseUrl) provEntry.customBaseUrl = baseUrl;
           }
 
-          renderProvidersBento();
-          renderProviderDetail(p.id);
+          renderProvidersAccordion();
           renderModelList();
           updateTabBadge();
           setStatus("idle", \`Saved \${p.name} configuration with \${selectedModels.length} active models\`);
@@ -747,10 +776,114 @@ export function getSettingsManagerCode() {
         floatingSomToggle.setAttribute("aria-checked", String(isActive));
       }
       if (railSomToggle) {
-        railSomToggle.style.color = isActive ? "#f59e0b" : "#71717a";
+        railSomToggle.style.color = isActive ? "#facc15" : "#71717a";
       }
       window.__SOM_ACTIVE__ = isActive;
       setStatus("idle", \`Visual marks \${isActive ? "enabled" : "disabled"}\`);
+    });
+  }
+
+  // Downloads & Storage Preferences
+  const downloadsDirInput = sidebar.querySelector("#as-setting-downloads-dir");
+  const saveDownloadsBtn = sidebar.querySelector("#as-btn-save-downloads-dir");
+  const presetSystemDlBtn = sidebar.querySelector("#as-btn-preset-system-dl");
+  const presetProjectDlBtn = sidebar.querySelector("#as-btn-preset-project-dl");
+  const presetArticlesDlBtn = sidebar.querySelector("#as-btn-preset-articles-dl");
+  const downloadStatusHint = sidebar.querySelector("#as-download-status-hint");
+
+  let appSettingsCache = null;
+
+  async function loadAppSettings() {
+    try {
+      if (typeof window.get_app_settings === "function") {
+        appSettingsCache = await window.get_app_settings();
+        if (appSettingsCache && downloadsDirInput) {
+          downloadsDirInput.value = appSettingsCache.downloadsDir || "";
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to load app settings:", err);
+    }
+  }
+
+  loadAppSettings();
+
+  function showDownloadHint(msg, isSuccess = true) {
+    if (!downloadStatusHint) return;
+    downloadStatusHint.textContent = msg;
+    downloadStatusHint.style.color = isSuccess ? "#10b981" : "#ef4444";
+    downloadStatusHint.style.display = "block";
+    setTimeout(() => {
+      downloadStatusHint.style.display = "none";
+    }, 4500);
+  }
+
+  if (saveDownloadsBtn && downloadsDirInput) {
+    saveDownloadsBtn.addEventListener("click", async () => {
+      const val = (downloadsDirInput.value || "").trim();
+      if (!val) {
+        showDownloadHint("Please enter a valid folder path", false);
+        return;
+      }
+      try {
+        saveDownloadsBtn.disabled = true;
+        saveDownloadsBtn.textContent = "Saving...";
+        if (typeof window.save_app_settings === "function") {
+          const res = await window.save_app_settings({ downloadsDir: val });
+          appSettingsCache = res;
+          showDownloadHint(\`Saved! Downloads will go directly to: \${val}\`, true);
+          setStatus("idle", \`Download folder set to: \${val}\`);
+        }
+      } catch (err) {
+        showDownloadHint(\`Error saving: \${err.message}\`, false);
+      } finally {
+        saveDownloadsBtn.disabled = false;
+        saveDownloadsBtn.textContent = "Save";
+      }
+    });
+  }
+
+  if (presetSystemDlBtn && downloadsDirInput) {
+    presetSystemDlBtn.addEventListener("click", async () => {
+      try {
+        if (typeof window.reset_downloads_dir === "function") {
+          const res = await window.reset_downloads_dir();
+          appSettingsCache = res;
+          downloadsDirInput.value = res.downloadsDir || "";
+          showDownloadHint(\`Reset to System Downloads folder: \${res.downloadsDir}\`, true);
+          setStatus("idle", \`Download folder set to: \${res.downloadsDir}\`);
+        } else if (appSettingsCache && appSettingsCache.defaultDownloadsDir) {
+          downloadsDirInput.value = appSettingsCache.defaultDownloadsDir;
+        }
+      } catch (err) {
+        showDownloadHint(\`Error: \${err.message}\`, false);
+      }
+    });
+  }
+
+  if (presetProjectDlBtn && downloadsDirInput) {
+    presetProjectDlBtn.addEventListener("click", async () => {
+      const target = (appSettingsCache && appSettingsCache.projectDownloadsDir) ? appSettingsCache.projectDownloadsDir : "./downloads";
+      downloadsDirInput.value = target;
+      if (typeof window.save_app_settings === "function") {
+        const res = await window.save_app_settings({ downloadsDir: target });
+        appSettingsCache = res;
+        showDownloadHint(\`Saved! Downloads will go to project folder: \${target}\`, true);
+        setStatus("idle", \`Download folder set to: \${target}\`);
+      }
+    });
+  }
+
+  if (presetArticlesDlBtn && downloadsDirInput) {
+    presetArticlesDlBtn.addEventListener("click", async () => {
+      const target = (appSettingsCache && appSettingsCache.articlesDownloadsDir) ? appSettingsCache.articlesDownloadsDir : "./downloads/articles";
+      downloadsDirInput.value = target;
+      if (typeof window.save_app_settings === "function") {
+        const res = await window.save_app_settings({ downloadsDir: target });
+        appSettingsCache = res;
+        showDownloadHint(\`Saved! Downloads will go to: \${target}\`, true);
+        setStatus("idle", \`Download folder set to: \${target}\`);
+      }
     });
   }
 

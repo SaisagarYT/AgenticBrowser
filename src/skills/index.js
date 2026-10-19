@@ -40,7 +40,7 @@ export const TOOL_DESCRIPTIONS = [
   },
   {
     name: "click_using_selector",
-    description: "Click an interactive element using its mmid attribute (e.g. '5' or '[mmid=\"5\"]') or CSS selector.",
+    description: "Click an interactive element (button, link, or [pdf] download button) using its mmid attribute (e.g. '5' or '[mmid=\"5\"]') or CSS selector. If clicking a PDF/download link, automatically captures the browser download into the downloads library.",
     parameters: { selector: "string" },
   },
   {

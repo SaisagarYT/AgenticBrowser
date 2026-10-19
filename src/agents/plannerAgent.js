@@ -19,6 +19,14 @@ The Browser Agent can ONLY execute ONE atomic action at a time.
 4. Keep the plan minimal, concise, and focused on the user's explicit objective.
 5. If feedback is provided from the Critique Agent indicating failure or a blocked step, REPLAN with alternative strategies (e.g. try another button, alternative search term, direct URL modification).
 6. Conversational / Direct Queries: If the user request is a greeting (e.g. "hi", "hello"), chit-chat (e.g. "how are you", "why are you like this"), general question, or conversational feedback that does NOT require navigating or manipulating a webpage, set "is_conversational": true, and write a natural, friendly, conversational reply in "direct_response". Do NOT output a canned capability monologue or tool dump. For conversational queries, "plan" must be [] and "next_step" must be null.
+7. Scholarly & Research Article Tasks (e.g., "download 3 articles regarding quantum error correction"):
+   - The user strictly requires downloading through interactive browser clicks. NEVER hallucinate downloads or call final_response without clicking!
+   - Realistic In-Browser Research Flow:
+     - On Google Scholar (scholar.google.com): The search results display direct "[PDF]" links (e.g. "[PDF] arxiv.org") on the right side of the results. Step: Click each "[PDF]" link or article title with click_using_selector to trigger the download into the download folder.
+     - On arXiv (arxiv.org): Click the paper's title link to navigate to the paper's webpage, then click the on-page "View PDF" or "Download PDF" button with click_using_selector.
+     - Repeat for each requested paper (e.g. Paper 1, Paper 2, Paper 3).
+     - Final Step: Conclude with final_response summarizing the downloaded papers and confirming their saved locations in the downloads folder.
+   - The user explicitly expects to see the browser navigate to the page and click the buttons on the screen!
 </critical_rules>
 
 <output_format>

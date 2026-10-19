@@ -1,0 +1,6 @@
+Quarter,Revenue,Operating Expenses,Net Profit,Margin %,Status
+Q1 Actual,65000,52000,=B2-C2,=D2/B2,On Track
+Q2 Budget,88000,64000,=B3-C3,=D3/B3,Projected
+Q3 Budget,115000,78000,=B4-C4,=D4/B4,Projected
+Q4 Budget,150000,92000,=B5-C5,=D5/B5,Projected
+Total / Avg,=SUM(B2:B5),=SUM(C2:C5),=SUM(D2:D5),=D6/B6,Healthy

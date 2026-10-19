@@ -55,7 +55,8 @@ class AntigravityDaemon {
       });
 
       this.proc = proc;
-      this.isReady = false;
+      this.isReady = true;
+      resolve(this.activeConversationId);
 
       const rl = readline.createInterface({ input: proc.stdout, crlfDelay: Infinity });
 
@@ -65,10 +66,8 @@ class AntigravityDaemon {
         try {
           const data = JSON.parse(trimmed);
           if (data.event === "init") {
-            this.isReady = true;
             this.activeConversationId = data.conversation_id || this.activeConversationId;
             logger.info(`[AntigravityDaemon] Persistent daemon initialized. Session: ${this.activeConversationId}`);
-            resolve(this.activeConversationId);
           } else if (data.event === "step_update") {
             const u = data.step_update || {};
             if (u.text_delta) {

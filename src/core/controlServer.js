@@ -103,9 +103,10 @@ export async function startControlServer(preferredPort = DEFAULT_PORT) {
 
             logger.info(`[ControlServer] Executing tool: ${skillName} with ${JSON.stringify(params)}`);
 
-            // Notify overlay in-page
+            // Notify overlay in-page (unless marked silent)
+            const isSilent = Boolean(data.silent || params.silent);
             const page = await browserManager.getPage().catch(() => null);
-            if (page && !page.isClosed()) {
+            if (page && !page.isClosed() && !isSilent) {
               const actionLabel = `Tool: ${skillName} ${JSON.stringify(params)}`;
               await uiManager.addSystemMessage(page, actionLabel, "browser").catch(() => {});
             }

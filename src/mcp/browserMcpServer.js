@@ -149,6 +149,8 @@ const TOOLS = [
   },
 ];
 
+let completedDownloadsCount = 0;
+
 async function handleToolCall(name, args) {
   let skill = name.replace(/^browser_/, "");
   let skillParams = { ...args };
@@ -164,6 +166,20 @@ async function handleToolCall(name, args) {
   if (skill === "press_key") skill = "press_key_combination";
   if (skill === "take_screenshot") skill = "take_screenshot";
 
+  if (skill === "final_response") {
+    const answer = args.answer || "";
+    // If agent claims it downloaded papers but never actually clicked any download link
+    if (/\bdownload(ed)?\b.*\b(articles?|papers?|pdf)\b/i.test(answer) && completedDownloadsCount === 0) {
+      return {
+        content: [{
+          type: "text",
+          text: "ERROR: You claimed to have downloaded articles, but you have NOT clicked any download or [PDF] link! No files were downloaded to disk. You must call browser_get_dom to find the [PDF] or article download buttons (e.g. '[PDF] arxiv.org' on Google Scholar or 'View PDF' on arXiv) and click them with browser_click({ selector: '<mmid>' }). Do NOT finalize until browser_click has actually executed."
+        }],
+        isError: true,
+      };
+    }
+  }
+
   const res = await callControlServer("/execute", "POST", {
     tool: skill,
     parameters: skillParams,
@@ -174,6 +190,10 @@ async function handleToolCall(name, args) {
       content: [{ type: "text", text: `Error: ${res.error}` }],
       isError: true,
     };
+  }
+
+  if (res.result && (res.result.downloaded || res.result.filePath)) {
+    completedDownloadsCount++;
   }
 
   const outputText = typeof res.result === "object" ? JSON.stringify(res.result, null, 2) : String(res.result || "Action executed successfully.");

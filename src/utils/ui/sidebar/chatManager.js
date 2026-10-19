@@ -532,10 +532,97 @@ export function getChatManagerCode() {
   }
 
   // --------------------------------------------------------------------------
+  // Artifact & Scholarly Paper Download Card Component
+  // --------------------------------------------------------------------------
+  function appendArtifactCard(artData) {
+    hideSkeleton();
+    if (heroView) heroView.style.display = "none";
+
+    const title = artData.title || "Scholarly Article";
+    const authors = artData.authors || "";
+    const source = artData.source || "Google Scholar";
+    const fileSize = artData.fileSize || "PDF";
+    const filePath = artData.filePath || "";
+
+    const card = document.createElement("div");
+    card.className = "as-card-artifact";
+
+    card.innerHTML = \`
+      <div class="as-artifact-top">
+        <div class="as-artifact-badge">
+          \${ICONS.bookOpen || ICONS.fileText} <span>Academic Paper</span>
+        </div>
+        <span class="as-artifact-size">\${escapeHtml(fileSize)}</span>
+      </div>
+      <div class="as-artifact-title">\${escapeHtml(title)}</div>
+      \${authors ? \`<div class="as-artifact-authors">\${escapeHtml(authors)}</div>\` : ""}
+      <div class="as-artifact-meta">
+        <span class="as-artifact-source-tag">\${ICONS.globe || ICONS.search} \${escapeHtml(source)}</span>
+      </div>
+      <div class="as-artifact-actions">
+        <button class="as-artifact-btn as-artifact-open-btn" title="Open PDF">
+          \${ICONS.externalLink} Open PDF
+        </button>
+        <button class="as-artifact-btn as-artifact-reveal-btn" title="Show in Folder">
+          \${ICONS.folder} Show in Folder
+        </button>
+      </div>
+    \`;
+
+    const openBtn = card.querySelector(".as-artifact-open-btn");
+    const revealBtn = card.querySelector(".as-artifact-reveal-btn");
+
+    if (openBtn) {
+      openBtn.addEventListener("click", () => {
+        if (filePath && typeof window.open_downloaded_file === "function") {
+          window.open_downloaded_file(filePath).catch(() => {});
+        } else {
+          window.agenticSidebar?.setStatus("Unable to open local file directly.");
+        }
+      });
+    }
+
+    if (revealBtn) {
+      revealBtn.addEventListener("click", () => {
+        if (filePath && typeof window.reveal_in_folder === "function") {
+          window.reveal_in_folder(filePath).catch(() => {});
+        } else {
+          window.agenticSidebar?.setStatus("Unable to reveal file in folder.");
+        }
+      });
+    }
+
+    contentEl.appendChild(card);
+    contentEl.scrollTop = contentEl.scrollHeight;
+
+    // Record action log if plan exists
+    if (planItems.length > 0) {
+      const activeItem = planItems.find((item) => item.status === "in-progress") || planItems.filter((item) => item.status === "completed").pop();
+      if (activeItem) {
+        if (!activeItem.logs) activeItem.logs = [];
+        activeItem.logs.push(\`📄 Downloaded: "\${title}" (\${fileSize})\`);
+        renderInlinePlanCard();
+      }
+    }
+  }
+
+  // --------------------------------------------------------------------------
   // Step & System Event Message Router
   // --------------------------------------------------------------------------
   function appendStepCard(text, type = "step") {
     if (heroView) heroView.style.display = "none";
+
+    // 0. Route scholarly / file artifact downloads directly to artifact card
+    if (type === "artifact" || type === "download") {
+      let aData = text;
+      if (typeof text === "string" && (text.startsWith("{") || text.includes('"title"'))) {
+        try { aData = JSON.parse(text); } catch { }
+      }
+      if (typeof aData === "object" && aData !== null) {
+        appendArtifactCard(aData);
+        return;
+      }
+    }
 
     // 1. Route plan updates directly to the inline plan component
     if (type === "plan") {

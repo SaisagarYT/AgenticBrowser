@@ -3,6 +3,7 @@
 import dotenv from "dotenv";
 import path from "node:path";
 import fs from "node:fs";
+import { appSettings } from "./core/settingsManager.js";
 
 dotenv.config();
 
@@ -55,5 +56,15 @@ export const config = {
     root: ROOT_DIR,
     data: DATA_DIR,
     screenshots: SCREENSHOTS_DIR,
+    get downloads() {
+      return appSettings.getDownloadsDir();
+    },
+    get articles() {
+      return appSettings.getDownloadsDir();
+    },
+  },
+
+  getDownloadsDir() {
+    return appSettings.getDownloadsDir();
   },
 };

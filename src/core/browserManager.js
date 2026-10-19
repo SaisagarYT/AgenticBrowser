@@ -35,6 +35,8 @@ class BrowserManager {
       ],
     };
 
+    const downloadDir = config.getDownloadsDir();
+
     if (config.browser.storageDir) {
       if (!fs.existsSync(config.browser.storageDir)) {
         fs.mkdirSync(config.browser.storageDir, { recursive: true });
@@ -45,6 +47,8 @@ class BrowserManager {
         viewport: null,
         bypassCSP: true,
         ignoreHTTPSErrors: true,
+        acceptDownloads: true,
+        downloadsPath: downloadDir,
         userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
       });
 
@@ -56,10 +60,35 @@ class BrowserManager {
         viewport: null,
         bypassCSP: true,
         ignoreHTTPSErrors: true,
+        acceptDownloads: true,
+        downloadsPath: downloadDir,
         userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
       });
       this.page = await this.context.newPage();
     }
+
+    // Set Chromium download behavior to save directly with real filenames
+    try {
+      const client = await this.context.newCDPSession(this.page);
+      await client.send("Browser.setDownloadBehavior", {
+        behavior: "allowAndName",
+        downloadPath: downloadDir,
+        events: true,
+      });
+    } catch (cdpErr) {
+      logger.debug(`CDP setDownloadBehavior notice: ${cdpErr.message}`);
+    }
+
+    this.context.on("page", async (newPage) => {
+      try {
+        const client = await this.context.newCDPSession(newPage);
+        await client.send("Browser.setDownloadBehavior", {
+          behavior: "allowAndName",
+          downloadPath: config.getDownloadsDir(),
+          events: true,
+        });
+      } catch {}
+    });
 
     // Start local browser control server for MCP & external agents (agy)
     try {
@@ -171,11 +200,149 @@ class BrowserManager {
         const { SessionRepository } = await import("../db/repositories/sessionRepository.js");
         return { success: SessionRepository.clearAll() };
       });
+
+      // Expose OS-level file opening and folder revealing for downloaded scholarly articles
+      await this.context.exposeFunction("open_downloaded_file", async (filePath) => {
+        try {
+          if (!filePath || !fs.existsSync(filePath)) {
+            logger.warn(`[BrowserManager] File does not exist to open: ${filePath}`);
+            return { success: false, error: "File not found on disk" };
+          }
+          const { exec } = await import("node:child_process");
+          if (process.platform === "win32") {
+            exec(`start "" "${filePath}"`);
+          } else if (process.platform === "darwin") {
+            exec(`open "${filePath}"`);
+          } else {
+            exec(`xdg-open "${filePath}"`);
+          }
+          return { success: true };
+        } catch (err) {
+          logger.error(`[BrowserManager] Failed to open file: ${err.message}`);
+          return { success: false, error: err.message };
+        }
+      });
+
+      await this.context.exposeFunction("reveal_in_folder", async (filePath) => {
+        try {
+          if (!filePath || !fs.existsSync(filePath)) {
+            logger.warn(`[BrowserManager] File does not exist to reveal: ${filePath}`);
+            return { success: false, error: "File not found on disk" };
+          }
+          const { exec } = await import("node:child_process");
+          if (process.platform === "win32") {
+            exec(`explorer.exe /select,"${filePath}"`);
+          } else if (process.platform === "darwin") {
+            exec(`open -R "${filePath}"`);
+          } else {
+            exec(`xdg-open "${path.dirname(filePath)}"`);
+          }
+          return { success: true };
+        } catch (err) {
+          logger.error(`[BrowserManager] Failed to reveal folder: ${err.message}`);
+          return { success: false, error: err.message };
+        }
+      });
+
+      await this.context.exposeFunction("get_app_settings", async () => {
+        const { appSettings } = await import("./settingsManager.js");
+        return appSettings.getSettings();
+      });
+
+      await this.context.exposeFunction("save_app_settings", async (newSettings) => {
+        const { appSettings } = await import("./settingsManager.js");
+        const updated = appSettings.saveSettings(newSettings);
+        try {
+          if (this.page && !this.page.isClosed()) {
+            const client = await this.context.newCDPSession(this.page);
+            await client.send("Browser.setDownloadBehavior", {
+              behavior: "allowAndName",
+              downloadPath: updated.downloadsDir,
+              events: true,
+            });
+          }
+        } catch {}
+        return updated;
+      });
+
+      await this.context.exposeFunction("reset_downloads_dir", async () => {
+        const { appSettings } = await import("./settingsManager.js");
+        const updated = appSettings.resetDownloadsDir();
+        try {
+          if (this.page && !this.page.isClosed()) {
+            const client = await this.context.newCDPSession(this.page);
+            await client.send("Browser.setDownloadBehavior", {
+              behavior: "allowAndName",
+              downloadPath: updated.downloadsDir,
+              events: true,
+            });
+          }
+        } catch {}
+        return updated;
+      });
+
+      await this.context.exposeFunction("get_downloaded_artifacts", async () => {
+        try {
+          const dlDir = config.getDownloadsDir();
+          const legacyDir = path.resolve(process.cwd(), "downloads", "articles");
+          const dirsToCheck = [dlDir];
+          if (fs.existsSync(legacyDir) && legacyDir !== dlDir) {
+            dirsToCheck.push(legacyDir);
+          }
+
+          const artifacts = [];
+          const seenFiles = new Set();
+
+          for (const dir of dirsToCheck) {
+            if (!fs.existsSync(dir)) continue;
+            const files = fs.readdirSync(dir);
+            const jsonFiles = files.filter((f) => f.endsWith(".json"));
+
+            for (const jf of jsonFiles) {
+              try {
+                const fullJson = path.join(dir, jf);
+                const content = JSON.parse(fs.readFileSync(fullJson, "utf8"));
+                if (content.filePath && !seenFiles.has(content.filePath)) {
+                  seenFiles.add(content.filePath);
+                  artifacts.push(content);
+                }
+              } catch {}
+            }
+
+            // Also check for standalone PDF files without sidecars
+            const pdfFiles = files.filter((f) => f.endsWith(".pdf"));
+            for (const pf of pdfFiles) {
+              const fullPdf = path.join(dir, pf);
+              if (!seenFiles.has(fullPdf)) {
+                seenFiles.add(fullPdf);
+                let fileSizeMb = "0.0";
+                try {
+                  const stats = fs.statSync(fullPdf);
+                  fileSizeMb = (stats.size / (1024 * 1024)).toFixed(2);
+                } catch {}
+                artifacts.push({
+                  title: pf.replace(/\.pdf$/i, "").replace(/[_-]/g, " "),
+                  filename: pf,
+                  filePath: fullPdf,
+                  fileSize: `${fileSizeMb} MB`,
+                  downloadedAt: new Date(fs.statSync(fullPdf).mtime).toISOString(),
+                  source: "Browser Download",
+                });
+              }
+            }
+          }
+
+          return artifacts.sort((a, b) => new Date(b.downloadedAt) - new Date(a.downloadedAt));
+        } catch (err) {
+          logger.warn(`[BrowserManager] Failed to list artifacts: ${err.message}`);
+          return [];
+        }
+      });
     } catch {
       // Ignore if already exposed
     }
 
-    // Comprehensive lifecycle listeners: inject overlay on domcontentloaded, load, and frame navigation
+    // Comprehensive lifecycle listeners: inject overlay on domcontentloaded, load, frame navigation, and downloads
     const attachPageOverlayListeners = (targetPage) => {
       targetPage.setDefaultTimeout(30000);
       targetPage.setDefaultNavigationTimeout(45000);
@@ -197,6 +364,45 @@ class BrowserManager {
           try {
             await uiManager.injectOverlay(targetPage);
           } catch { }
+        }
+      });
+
+      // Capture native Playwright browser downloads (e.g. clicking direct PDF links)
+      targetPage.on("download", async (download) => {
+        try {
+          const suggestedFilename = download.suggestedFilename() || `article_${Date.now()}.pdf`;
+          const dlDir = config.getDownloadsDir();
+          if (!fs.existsSync(dlDir)) {
+            fs.mkdirSync(dlDir, { recursive: true });
+          }
+          const savePath = path.join(dlDir, suggestedFilename);
+          await download.saveAs(savePath);
+          logger.info(`[BrowserManager] Playwright caught download saved to: ${savePath}`);
+
+          let fileSizeMb = "0.0";
+          try {
+            const stats = fs.statSync(savePath);
+            fileSizeMb = (stats.size / (1024 * 1024)).toFixed(2);
+          } catch {}
+
+          const artifact = {
+            title: suggestedFilename.replace(/\.[^/.]+$/, "").replace(/[_-]/g, " "),
+            authors: "Academic Source",
+            filename: suggestedFilename,
+            filePath: savePath,
+            fileSize: `${fileSizeMb} MB`,
+            downloadedAt: new Date().toISOString(),
+            source: targetPage.url(),
+          };
+
+          const sidecarPath = path.join(dlDir, `${suggestedFilename.replace(/\.[^/.]+$/, "")}.json`);
+          try {
+            fs.writeFileSync(sidecarPath, JSON.stringify(artifact, null, 2), "utf8");
+          } catch {}
+
+          await uiManager.addSystemMessage(targetPage, JSON.stringify(artifact), "artifact");
+        } catch (err) {
+          logger.error(`[BrowserManager] Error capturing download: ${err.message}`);
         }
       });
     };

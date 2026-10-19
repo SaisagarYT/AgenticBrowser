@@ -107,9 +107,7 @@ export function getSidebarHtml(ICONS, VOXLE_CUBE_SVG) {
       </div>
 
       <div class="as-header-right">
-        <button class="as-icon-btn" id="as-header-new-chat" title="New Chat">${ICONS.edit}</button>
         <button class="as-icon-btn" id="as-btn-settings" title="Model &amp; Provider Settings">${ICONS.settings}</button>
-        <button class="as-icon-btn" id="as-btn-theme" title="Toggle Theme">${ICONS.moon}</button>
         <button class="as-icon-btn" id="as-btn-clear" title="Clear Chat" style="display: none;">${ICONS.trash}</button>
         <button class="as-icon-btn" id="as-btn-collapse" title="Close (Ctrl+B)">${ICONS.panelClose}</button>
       </div>
@@ -225,21 +223,22 @@ export function getSidebarHtml(ICONS, VOXLE_CUBE_SVG) {
 
       <!-- Settings Scrollable Content Area -->
       <div class="as-settings-scroll-area">
-        <!-- TAB 1: AI Providers & Setup -->
+        <!-- TAB 1: AI Providers & Setup (shadcn Accordion) -->
         <div class="as-settings-tab-page active" id="as-tab-page-providers">
-          <!-- Bento Grid of Providers -->
-          <div class="as-section-header">
-            <div class="as-section-title">AI Provider Hub</div>
-            <div class="as-section-sub">Select a provider to configure credentials, test live connection latency, and select models.</div>
-          </div>
+          <div class="as-providers-hub-view" id="as-providers-hub-view">
+            <!-- Provider Directory Header -->
+            <div class="as-section-header">
+              <div class="as-section-title-row">
+                <span class="as-section-title">Available AI Providers</span>
+                <span class="as-provider-count-pill" id="as-provider-count-pill">10 providers</span>
+              </div>
+              <div class="as-section-sub">Click on any provider to expand its configuration, manage API keys, test connection latency, and select active models.</div>
+            </div>
 
-          <div class="as-providers-bento-grid" id="as-providers-bento-grid">
-            <!-- Populated dynamically via renderProvidersBento() in settingsManager.js -->
-          </div>
-
-          <!-- Active Selected Provider Configuration Card -->
-          <div class="as-provider-detail-card" id="as-provider-detail-card">
-            <!-- Populated dynamically via selectProvider() in settingsManager.js -->
+            <!-- Accordion Provider List -->
+            <div class="as-providers-bento-grid" id="as-providers-bento-grid">
+              <!-- Populated dynamically via renderProvidersAccordion() in settingsManager.js -->
+            </div>
           </div>
         </div>
 
@@ -339,6 +338,37 @@ export function getSidebarHtml(ICONS, VOXLE_CUBE_SVG) {
                 <option value="30000" selected>30 seconds (Default)</option>
                 <option value="60000">60 seconds</option>
               </select>
+            </div>
+          </div>
+
+          <!-- Downloads & Storage Card -->
+          <div class="as-settings-card" id="as-settings-downloads-card">
+            <div class="as-settings-card-header">
+              <div class="as-settings-card-title">${ICONS.download} Downloads &amp; Storage</div>
+              <div class="as-settings-card-sub">Choose where research articles, PDFs, and downloaded files are directly saved.</div>
+            </div>
+
+            <div class="as-setting-row" style="align-items: flex-start; flex-direction: column; gap: 8px;">
+              <div class="as-setting-info" style="width: 100%;">
+                <div class="as-setting-label">Download Directory</div>
+                <div class="as-setting-desc">Files downloaded during browser automation will be placed directly in this folder.</div>
+              </div>
+              <div class="as-download-input-row" style="width: 100%; display: flex; gap: 6px; align-items: center;">
+                <input class="as-settings-input" id="as-setting-downloads-dir" type="text" placeholder="e.g. C:\\Users\\...\\Downloads" spellcheck="false" style="flex: 1; font-family: monospace; font-size: 11px;" />
+                <button class="as-btn-primary as-btn-sm" id="as-btn-save-downloads-dir" type="button" style="white-space: nowrap; height: 32px; padding: 0 12px;">Save</button>
+              </div>
+              <div class="as-download-presets" style="display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap;">
+                <button class="as-settings-tag-pill" id="as-btn-preset-system-dl" type="button" title="Set to OS Downloads folder">
+                  📁 System Downloads
+                </button>
+                <button class="as-settings-tag-pill" id="as-btn-preset-project-dl" type="button" title="Set to ./downloads in workspace">
+                  📦 Project ./downloads
+                </button>
+                <button class="as-settings-tag-pill" id="as-btn-preset-articles-dl" type="button" title="Set to ./downloads/articles in workspace">
+                  📑 ./downloads/articles
+                </button>
+              </div>
+              <div class="as-download-status-hint" id="as-download-status-hint" style="font-size: 11px; color: #10b981; display: none; margin-top: 4px;"></div>
             </div>
           </div>
 

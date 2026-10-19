@@ -438,12 +438,12 @@ export function getClientManagerCode() {
     const isDark = sidebar.classList.toggle("dark");
     rail.classList.toggle("dark", isDark);
     const icon = isDark ? ICONS.sun : ICONS.moon;
-    themeBtn.innerHTML = icon;
-    railThemeBtn.innerHTML = icon;
+    if (themeBtn) themeBtn.innerHTML = icon;
+    if (railThemeBtn) railThemeBtn.innerHTML = icon;
   }
 
-  themeBtn.addEventListener("click", toggleTheme);
-  railThemeBtn.addEventListener("click", toggleTheme);
+  themeBtn?.addEventListener("click", toggleTheme);
+  railThemeBtn?.addEventListener("click", toggleTheme);
 
   // --------------------------------------------------------------------------
   // Visual Marks (Set-of-Marks Overlay - Phase 5)

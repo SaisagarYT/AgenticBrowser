@@ -387,12 +387,40 @@ export class Orchestrator extends EventEmitter {
 
     this._emit(taskId, "planner_thinking", { stepIndex: 1 });
 
+    let activeUrl = "about:blank";
+    try {
+      if (activePage && !activePage.isClosed()) {
+        activeUrl = activePage.url();
+      }
+    } catch {}
+
+    let promptToSend = command;
+    const isDownloadTask = /\b(download|get|save|fetch)\b.*\b(articles?|papers?|pdf|documents?)\b/i.test(command) ||
+      /\b(articles?|papers?|pdf)\b.*\b(download|get|save|fetch)\b/i.test(command);
+
+    if (isDownloadTask) {
+      promptToSend = `[Active Browser URL: ${activeUrl}]
+User Instruction: "${command}"
+
+CRITICAL MANDATORY INSTRUCTIONS:
+1. You are controlling the user's live Chromium browser window via the agentic-browser MCP tools.
+2. The user is actively watching the browser. You MUST physically click the download buttons or [PDF] links on the webpage!
+3. If on Google Scholar or search results:
+   - Call browser_get_dom to view the interactive elements and their mmid numbers.
+   - For each requested article, identify the on-page "[PDF]" link or article title link (e.g. "[PDF] arxiv.org" on Google Scholar) and call browser_click({ selector: "<mmid>" }).
+   - Calling browser_click on a PDF link automatically captures and downloads the file into the user's download folder.
+4. STRICT PROHIBITION: You must NEVER call browser_final_response before you have actually executed browser_click on the download elements! Hallucinating that files were downloaded without calling browser_click is strictly prohibited.
+5. Only call browser_final_response AFTER you have clicked and downloaded the requested number of papers.`.trim();
+    } else if (activeUrl && activeUrl !== "about:blank") {
+      promptToSend = `[Active Browser URL: ${activeUrl}]\nUser Instruction: "${command}"`;
+    }
+
     return new Promise((resolve, reject) => {
       let fullTokens = "";
       let stepCount = 1;
 
       AntigravityCliClient.streamTask({
-        prompt: command,
+        prompt: promptToSend,
         cwd: process.cwd(),
         onToken: async (delta, accumulated) => {
           fullTokens = accumulated;
