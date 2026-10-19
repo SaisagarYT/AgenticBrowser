@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "agentic-browser": {
+      "command": "node",
+      "args": ["src/mcp/browserMcpServer.js"]
+    }
+  }
+}

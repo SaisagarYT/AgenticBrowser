@@ -61,6 +61,14 @@ class BrowserManager {
       this.page = await this.context.newPage();
     }
 
+    // Start local browser control server for MCP & external agents (agy)
+    try {
+      const { startControlServer } = await import("./controlServer.js");
+      await startControlServer();
+    } catch (err) {
+      logger.warn(`[BrowserManager] Control server start notice: ${err.message}`);
+    }
+
     // Auto-inject sidebar on every document context before any page scripts run
     const { uiManager } = await import("../utils/uiManager.js");
     const sidebarScript = uiManager.getSidebarScript();
@@ -235,6 +243,8 @@ class BrowserManager {
       if (this.browser) {
         await this.browser.close();
       }
+      const { stopControlServer } = await import("./controlServer.js");
+      stopControlServer();
     } catch (err) {
       logger.warn(`Error during browser teardown: ${err.message}`);
     } finally {

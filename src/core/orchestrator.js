@@ -369,20 +369,31 @@ export class Orchestrator extends EventEmitter {
         },
         onThought: async (thoughtText) => {
           this._emit(taskId, "agent_thought", { text: thoughtText });
-          if (activePage && !activePage.isClosed()) {
-            await uiManager.addSystemMessage(activePage, String(thoughtText), "thought").catch(() => {});
+          const currPage = await browserManager.getPage().catch(() => activePage);
+          if (currPage && !currPage.isClosed()) {
+            await uiManager.addSystemMessage(currPage, String(thoughtText), "thought").catch(() => {});
           }
         },
         onToolCall: async (toolUpdate) => {
           stepCount++;
-          const toolDesc = `Tool: ${toolUpdate.step_type || "action"}`;
+          let toolDesc = "Executing browser action...";
+          if (Array.isArray(toolUpdate.tool_calls) && toolUpdate.tool_calls.length > 0) {
+            const tc = toolUpdate.tool_calls[0];
+            const cleanName = (tc.name || "action").replace(/^browser_/, "");
+            const cleanArgs = tc.args ? JSON.stringify(tc.args) : "";
+            toolDesc = `⚡ ${cleanName} ${cleanArgs}`.trim();
+          } else if (toolUpdate.step_type) {
+            toolDesc = `⚡ Action: ${toolUpdate.step_type}`;
+          }
+
           this._emit(taskId, "action_completed", {
             stepIndex: stepCount,
             toolName: "antigravity_tool",
             result: toolUpdate,
           });
-          if (activePage && !activePage.isClosed()) {
-            await uiManager.addSystemMessage(activePage, toolDesc, "browser").catch(() => {});
+          const currPage = await browserManager.getPage().catch(() => activePage);
+          if (currPage && !currPage.isClosed()) {
+            await uiManager.addSystemMessage(currPage, toolDesc, "browser").catch(() => {});
           }
         },
         onDone: async (result) => {

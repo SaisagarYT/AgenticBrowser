@@ -291,6 +291,7 @@ export function getChatManagerCode() {
 
     // 1. Route plan updates directly to the inline plan component
     if (type === "plan") {
+      hideSkeleton();
       updatePlan(text);
       currentTaskThoughts.push({ type: "plan", stage: "planner", text: typeof text === "string" ? text : JSON.stringify(text), time: Date.now() });
       return; // NO extra card in chat!
@@ -305,6 +306,10 @@ export function getChatManagerCode() {
       const tText = typeof tData === "object" ? (tData.text || "") : String(tData || "");
       const stage = typeof tData === "object" ? (tData.stage || "planner") : "planner";
       const cleanThought = stripStartSymbols(tText);
+
+      if (cleanThought && statusLabel) {
+        setStatus("processing", cleanThought.slice(0, 50) + "...");
+      }
 
       let activeItem = planItems.find((item) => item.status === "in-progress");
       if (activeItem) {
@@ -345,9 +350,24 @@ export function getChatManagerCode() {
 
     // 4. When an executed browser task arrives, record it in the step's interior dropdown
     if (type === "browser") {
-      recordStepAction(text);
+      hideSkeleton();
+      if (planItems.length > 0) {
+        recordStepAction(text);
+      } else {
+        const card = document.createElement("div");
+        card.className = "as-card-step";
+        const cleanText = stripStartSymbols(text);
+        card.innerHTML = \`
+          <div class="as-card-header">
+            <span class="as-badge as-badge-browser">\${ICONS.bot} <span>Action</span></span>
+          </div>
+          <div class="as-card-body">\${escapeHtml(cleanText)}</div>
+        \`;
+        contentEl.appendChild(card);
+        contentEl.scrollTop = contentEl.scrollHeight;
+      }
       currentTaskThoughts.push({ type: "action", stage: "browser", text: stripStartSymbols(text), time: Date.now() });
-      return; // NO extra card in chat!
+      return; // Handled
     }
 
     // 5. When a critique arrives, record note in step's interior dropdown
