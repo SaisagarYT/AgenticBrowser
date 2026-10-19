@@ -2,7 +2,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { cleanTextForSpeech } from "./speechFilter.js";
+import { cleanTextForSpeech, generateSpokenSummary } from "./speechFilter.js";
 import { logger } from "../../utils/logger.js";
 
 const SETTINGS_FILE = path.resolve(process.cwd(), "data", "voice_settings.json");
@@ -67,7 +67,9 @@ export class VoiceService {
       logger.info("[VoiceService] Initializing Kokoro TTS (onnx-community/Kokoro-82M-v1.0-ONNX, q8)...");
       this.isLoading = true;
       try {
-        const { KokoroTTS } = await import("kokoro-js");
+        const { createRequire } = await import("node:module");
+        const nodeRequire = createRequire(import.meta.url);
+        const { KokoroTTS } = nodeRequire("kokoro-js");
         this.ttsInstance = await KokoroTTS.from_pretrained("onnx-community/Kokoro-82M-v1.0-ONNX", {
           dtype: "q8",
           device: "cpu",
@@ -87,8 +89,12 @@ export class VoiceService {
   }
 
   async synthesize(rawText, options = {}) {
-    const cleanText = cleanTextForSpeech(rawText);
-    if (!cleanText) {
+    const shouldDistill = options.distill !== false;
+    const textToSpeak = shouldDistill
+      ? generateSpokenSummary(rawText, options.userPrompt)
+      : cleanTextForSpeech(rawText);
+
+    if (!textToSpeak) {
       return { success: false, error: "Empty or invalid text to speak." };
     }
 
@@ -98,9 +104,9 @@ export class VoiceService {
     const startTime = Date.now();
     try {
       const tts = await this.ensureModelLoaded();
-      logger.info(`[VoiceService] Synthesizing speech with voice "${voice}" (speed: ${speed}): "${cleanText.slice(0, 60)}..."`);
+      logger.info(`[VoiceService] Synthesizing speech with voice "${voice}" (speed: ${speed}): "${textToSpeak.slice(0, 70)}..."`);
 
-      const audio = await tts.generate(cleanText, {
+      const audio = await tts.generate(textToSpeak, {
         voice,
         speed,
       });
@@ -116,7 +122,8 @@ export class VoiceService {
       return {
         success: true,
         audioUrl,
-        cleanText,
+        cleanText: textToSpeak,
+        spokenText: textToSpeak,
         voice,
         durationMs: elapsed,
       };

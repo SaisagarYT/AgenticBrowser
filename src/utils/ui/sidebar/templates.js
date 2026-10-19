@@ -47,12 +47,12 @@ export function getRailHtml(ICONS) {
       <div class="as-rail-tooltip">Visual Marks (Alt+M)</div>
     </div>
 
-    <!-- Toggle Kira Voice -->
+    <!-- Toggle Kira Voice / Continuous Mic -->
     <div class="as-rail-item">
-      <button class="as-rail-btn" id="as-rail-voice-toggle" aria-label="Toggle Kira Voice" style="color: #facc15;">
-        ${ICONS.volume2}
+      <button class="as-rail-btn" id="as-rail-voice-toggle" aria-label="Toggle Kira Voice Mic" title="Kira Voice: Continuous Mic (Alt+V)">
+        ${ICONS.micOff}
       </button>
-      <div class="as-rail-tooltip">Kira Voice (Alt+V)</div>
+      <div class="as-rail-tooltip">Kira Voice Mic (Alt+V)</div>
     </div>
 
     <!-- Model & Provider Settings -->
@@ -185,17 +185,17 @@ export function getSidebarHtml(ICONS, VOXLE_CUBE_SVG) {
                 </span>
               </button>
 
-              <!-- Kira Voice Toggle Switch (Same design as eye toggle, right beside it) -->
+              <!-- Kira Voice Microphone Switch (Same toggle design as visual marks eye switch, right beside it) -->
               <button
-                class="as-som-switch as-voice-switch active"
+                class="as-som-switch as-voice-switch"
                 id="as-btn-voice-toggle"
                 type="button"
                 role="switch"
-                aria-checked="true"
-                title="Kira Voice: Active (Alt+V)"
+                aria-checked="false"
+                title="Kira Voice: Continuous Mic (Alt+V)"
               >
                 <span class="as-som-switch-thumb">
-                  <span class="as-som-switch-icon">${ICONS.volume2}</span>
+                  <span class="as-som-switch-icon">${ICONS.micOff}</span>
                 </span>
               </button>
             </div>

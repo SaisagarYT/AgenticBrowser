@@ -311,13 +311,28 @@ export function getChatManagerCode() {
     const bodyEl = container.querySelector(".as-ai-message-body");
     const toolbarEl = container.querySelector(".as-ai-toolbar");
 
-    attachToolbarListeners(container, text);
+    function renderVoicePill(container, spokenText) {
+      if (!container || !spokenText) return;
+      const bodyEl = container.querySelector(".as-ai-message-body");
+      if (!bodyEl) return;
+      let pillEl = container.querySelector(".as-voice-spoken-pill");
+      if (!pillEl) {
+        pillEl = document.createElement("div");
+        pillEl.className = "as-voice-spoken-pill";
+        bodyEl.parentNode.insertBefore(pillEl, bodyEl);
+      }
+      pillEl.innerHTML = '<span class="as-voice-spoken-pill-icon">' + ICONS.waveform + '</span><span class="as-voice-spoken-pill-text">"' + escapeHtml(spokenText) + '"</span>';
+    }
+
+    attachToolbarListeners(container, text, renderVoicePill);
 
     if (!isInstant && bodyEl) {
       try {
         typewriteMarkdown(bodyEl, text, toolbarEl, () => {
-          if (window.kiraVoice && window.kiraVoice.getSettings().autoSpeak) {
-            window.kiraVoice.speak(text, container.querySelector(".as-btn-speak"));
+          if (window.kiraVoice && window.kiraVoice.isVoiceActive && window.kiraVoice.isVoiceActive()) {
+            window.kiraVoice.speak(text, container.querySelector(".as-btn-speak"), (spokenText) => {
+              renderVoicePill(container, spokenText);
+            });
           }
         });
       } catch (err) {
@@ -327,18 +342,22 @@ export function getChatManagerCode() {
           toolbarEl.style.opacity = "1";
           toolbarEl.style.pointerEvents = "auto";
         }
-        if (window.kiraVoice && window.kiraVoice.getSettings().autoSpeak) {
-          window.kiraVoice.speak(text, container.querySelector(".as-btn-speak"));
+        if (window.kiraVoice && window.kiraVoice.isVoiceActive && window.kiraVoice.isVoiceActive()) {
+          window.kiraVoice.speak(text, container.querySelector(".as-btn-speak"), (spokenText) => {
+            renderVoicePill(container, spokenText);
+          });
         }
       }
     } else if (isInstant) {
-      if (window.kiraVoice && window.kiraVoice.getSettings().autoSpeak) {
-        window.kiraVoice.speak(text, container.querySelector(".as-btn-speak"));
+      if (window.kiraVoice && window.kiraVoice.isVoiceActive && window.kiraVoice.isVoiceActive()) {
+        window.kiraVoice.speak(text, container.querySelector(".as-btn-speak"), (spokenText) => {
+          renderVoicePill(container, spokenText);
+        });
       }
     }
   }
 
-  function attachToolbarListeners(container, rawText) {
+  function attachToolbarListeners(container, rawText, renderVoicePill = null) {
     const cleanPlainText = stripStartSymbols(rawText || "");
 
     // 1. Thought Process accordion toggle
@@ -361,7 +380,11 @@ export function getChatManagerCode() {
       speakBtn._bound = true;
       speakBtn.addEventListener("click", () => {
         if (window.kiraVoice) {
-          window.kiraVoice.speak(rawText, speakBtn);
+          window.kiraVoice.speak(rawText, speakBtn, (spokenText) => {
+            if (typeof renderVoicePill === "function") {
+              renderVoicePill(container, spokenText);
+            }
+          });
         }
       });
     }

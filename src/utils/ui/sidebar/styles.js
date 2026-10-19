@@ -2193,6 +2193,53 @@ export function getSidebarStyles(EXPANDED_WIDTH = 420, RAIL_WIDTH = 46) {
       background: rgba(0, 0, 0, 0.04);
     }
 
+    /* Kira Voice Spoken Line Pill (Short, Human Spoken Response indicator) */
+    .as-voice-spoken-pill {
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 6px !important;
+      padding: 4px 10px !important;
+      margin-bottom: 8px !important;
+      border-radius: 9999px !important;
+      background: rgba(250, 204, 21, 0.08) !important;
+      border: 1px solid rgba(250, 204, 21, 0.22) !important;
+      color: #facc15 !important;
+      font-size: 11.5px !important;
+      font-weight: 450 !important;
+      line-height: 1.35 !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+      word-break: break-word !important;
+    }
+
+    #agentic-sidebar-root:not(.dark) .as-voice-spoken-pill {
+      background: rgba(234, 179, 8, 0.1) !important;
+      border-color: rgba(234, 179, 8, 0.3) !important;
+      color: #b45309 !important;
+    }
+
+    .as-voice-spoken-pill-icon {
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      flex-shrink: 0 !important;
+      width: 14px !important;
+      height: 14px !important;
+    }
+
+    .as-voice-spoken-pill-icon svg {
+      width: 13px !important;
+      height: 13px !important;
+    }
+
+    .as-voice-spoken-pill-text {
+      font-style: italic !important;
+    }
+
+    .as-som-switch.as-voice-switch.active {
+      box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.25) !important;
+    }
+
     /* ------------------------------------------------------------------------
        Scholarly Article & Artifact Cards
        ------------------------------------------------------------------------ */
