@@ -17,6 +17,8 @@ export function getVoiceManagerCode() {
   let isSpeaking = false;
   let isPausedForExecution = false;
   let restartTimeout = null;
+  let speechTimeoutTimer = null;
+  let executionWatchdogTimer = null;
   let speechRecognizer = null;
   let activeAudioPlayer = null;
   let activeSpeakingBtn = null;
@@ -101,12 +103,22 @@ export function getVoiceManagerCode() {
       }
 
       if (!micMediaStream && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        micMediaStream = await navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => null);
+        micMediaStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        }).catch((err) => {
+          console.warn("[Kira Voice] getUserMedia notice:", err);
+          return null;
+        });
+
         if (micMediaStream && audioContext) {
           const source = audioContext.createMediaStreamSource(micMediaStream);
           analyserNode = audioContext.createAnalyser();
-          analyserNode.fftSize = 64;
-          analyserNode.smoothingTimeConstant = 0.8;
+          analyserNode.fftSize = 256;
+          analyserNode.smoothingTimeConstant = 0.3; // Snappy live acoustic tracking
           source.connect(analyserNode);
         }
       }
@@ -125,10 +137,22 @@ export function getVoiceManagerCode() {
       const height = waveCanvas.height;
       waveCtx.clearRect(0, 0, width, height);
 
+      let timeData = null;
       let freqData = null;
+      let rms = 0;
+
       if (analyserNode) {
+        timeData = new Uint8Array(analyserNode.fftSize);
         freqData = new Uint8Array(analyserNode.frequencyBinCount);
+        analyserNode.getByteTimeDomainData(timeData);
         analyserNode.getByteFrequencyData(freqData);
+
+        let sumSquares = 0;
+        for (let k = 0; k < timeData.length; k++) {
+          const norm = (timeData[k] - 128) / 128;
+          sumSquares += norm * norm;
+        }
+        rms = Math.sqrt(sumSquares / timeData.length);
       }
 
       const numBars = 9;
@@ -139,39 +163,40 @@ export function getVoiceManagerCode() {
       const centerY = height / 2;
       const now = Date.now();
 
+      // Check if user is actively speaking based on physical acoustic power
+      const isUserSpeaking = rms > 0.016;
+
       for (let i = 0; i < numBars; i++) {
-        let targetHeight = 4; // idle baseline
+        let targetHeight = 3.5; // Calm baseline
 
         if (isSpeaking) {
-          // Subtle rhythmic animation during Kira speech
-          const offset = i * 0.7;
-          targetHeight = 5 + 10 * Math.abs(Math.sin(now * 0.009 + offset));
-        } else if (freqData && freqData.length > 0) {
-          // Real live mic acoustic volume
-          const binIndex = Math.min(Math.floor((i / numBars) * (freqData.length * 0.6)), freqData.length - 1);
-          const rawVal = freqData[binIndex] || 0;
-          if (rawVal > 15) {
-            targetHeight = Math.min(22, 4 + (rawVal / 255) * 18);
-          } else {
-            // Gentle organic idle wave breathing
-            targetHeight = 3.5 + 2.5 * Math.abs(Math.sin(now * 0.004 + i * 0.5));
-          }
+          // Dynamic rhythm reflecting Kira companion speech cadence
+          const offset = i * 0.65;
+          const pulse = Math.abs(Math.sin(now * 0.008 + offset)) * Math.cos(now * 0.004 + offset * 0.5);
+          const centerFactor = 1 - Math.abs(i - 4) / 5.5;
+          targetHeight = 4 + Math.abs(pulse) * centerFactor * 16;
+        } else if (isUserSpeaking) {
+          // Real live microphone speech reaction (vocal formant spectrum 180Hz - 1700Hz)
+          const binVal = (freqData ? freqData[i + 1] : 0) / 255;
+          const centerFactor = 1 - Math.abs(i - 4) / 5.5;
+          const energy = Math.min(1.0, Math.max(0, (rms - 0.014) * 4.5));
+          targetHeight = 3.5 + (energy * 0.7 + binVal * 0.3) * centerFactor * 20;
         } else {
-          // Fallback smooth sinusoidal breathing
-          targetHeight = 3.5 + 2.5 * Math.abs(Math.sin(now * 0.004 + i * 0.5));
+          // Silent resting baseline: steady 3.5px with gentle organic micro-breathe
+          targetHeight = 3.5 + 0.35 * Math.sin(now * 0.0025 + i * 0.6);
         }
 
-        // Smooth lerp transition
-        smoothedHeights[i] += (targetHeight - smoothedHeights[i]) * 0.28;
-        const h = Math.max(3, smoothedHeights[i]);
+        targetHeight = Math.max(3, Math.min(22, targetHeight));
+        // Responsive lerp: fast attack, smooth decay
+        smoothedHeights[i] += (targetHeight - smoothedHeights[i]) * 0.36;
+        const h = smoothedHeights[i];
 
-        // Clean, consistent, professional red color
+        // Clean, consistent crimson red (#ef4444)
         waveCtx.fillStyle = "#ef4444";
         const x = startX + i * (barWidth + barGap);
         const y = centerY - h / 2;
         const radius = barWidth / 2;
 
-        // Draw rounded bar
         waveCtx.beginPath();
         if (typeof waveCtx.roundRect === "function") {
           waveCtx.roundRect(x, y, barWidth, h, radius);
@@ -364,6 +389,12 @@ export function getVoiceManagerCode() {
     updateToggleUI(isVoiceModeActive, true);
     updateFloatStatus("Kira Speaking...");
 
+    if (speechTimeoutTimer) clearTimeout(speechTimeoutTimer);
+    speechTimeoutTimer = setTimeout(() => {
+      console.warn("[Kira Voice] Speech synthesis or playback timeout fallback.");
+      stopSpeaking();
+    }, 12000);
+
     try {
       if (typeof window.kira_synthesize_speech !== "function") {
         console.warn("window.kira_synthesize_speech is not exposed.");
@@ -382,6 +413,11 @@ export function getVoiceManagerCode() {
         speed: voiceSettings.speed || 1.0,
         distill: true,
       });
+
+      if (speechTimeoutTimer) {
+        clearTimeout(speechTimeoutTimer);
+        speechTimeoutTimer = null;
+      }
 
       if (!res || !res.success || !res.audioUrl) {
         console.warn("Speech synthesis returned no audio:", res?.error);
@@ -415,6 +451,14 @@ export function getVoiceManagerCode() {
 
   function stopSpeaking() {
     isSpeaking = false;
+    if (speechTimeoutTimer) {
+      clearTimeout(speechTimeoutTimer);
+      speechTimeoutTimer = null;
+    }
+    if (executionWatchdogTimer) {
+      clearTimeout(executionWatchdogTimer);
+      executionWatchdogTimer = null;
+    }
     if (activeAudioPlayer) {
       try {
         activeAudioPlayer.pause();
@@ -443,6 +487,20 @@ export function getVoiceManagerCode() {
       if (statusLabel && statusLabel.textContent === "Kira is speaking...") {
         statusLabel.textContent = "Ready. Type a prompt below to automate.";
       }
+    }
+  }
+
+  function resumeListening() {
+    if (!isVoiceModeActive || isSpeaking) return;
+    if (executionWatchdogTimer) {
+      clearTimeout(executionWatchdogTimer);
+      executionWatchdogTimer = null;
+    }
+    isPausedForExecution = false;
+    updateFloatStatus("Listening...");
+    startContinuousListening();
+    if (statusLabel && (statusLabel.textContent.includes("Processing") || statusLabel.textContent.includes("Thinking"))) {
+      statusLabel.textContent = "Kira Voice: Listening... (speak anytime)";
     }
   }
 
@@ -518,7 +576,7 @@ export function getVoiceManagerCode() {
         // Auto-submit after 1.8 seconds of natural conversational pause
         if (silenceTimer) clearTimeout(silenceTimer);
         silenceTimer = setTimeout(() => {
-          if (isVoiceModeActive && isListening && textareaEl.value.trim().length > 0) {
+          if (isVoiceModeActive && textareaEl.value.trim().length > 0) {
             isPausedForExecution = true;
             try {
               rec.stop();
@@ -529,6 +587,15 @@ export function getVoiceManagerCode() {
             }
             triggerSubmit();
             baseTextBeforeSpeech = "";
+
+            // Safety watchdog: Automatically re-arm listening if execution takes > 20s
+            if (executionWatchdogTimer) clearTimeout(executionWatchdogTimer);
+            executionWatchdogTimer = setTimeout(() => {
+              if (isVoiceModeActive && isPausedForExecution && !isSpeaking) {
+                console.log("[Kira Voice] Watchdog: auto-rearming listening after timeout");
+                resumeListening();
+              }
+            }, 20000);
           }
         }, 1800);
       }
@@ -567,19 +634,21 @@ export function getVoiceManagerCode() {
   }
 
   function startContinuousListening() {
-    if (!speechRecognizer) {
-      speechRecognizer = setupSpeechRecognition();
-    }
-    if (!speechRecognizer) {
-      if (statusLabel) {
-        statusLabel.textContent = "Speech recognition unavailable in this window.";
-      }
-      return;
-    }
-
+    if (isListening) return;
     try {
+      if (!speechRecognizer) {
+        speechRecognizer = setupSpeechRecognition();
+      }
       speechRecognizer.start();
-    } catch {}
+    } catch {
+      // Re-initialize cleanly if recognizer was in stale state
+      try {
+        speechRecognizer = setupSpeechRecognition();
+        speechRecognizer.start();
+      } catch (err) {
+        console.warn("[Kira Voice] speechRecognizer start notice:", err);
+      }
+    }
   }
 
   function stopContinuousListening() {
@@ -638,13 +707,14 @@ export function getVoiceManagerCode() {
   window.kiraVoice = {
     speak: speakText,
     stop: stopSpeaking,
-    isSpeaking: () => !!(activeAudioPlayer && !activeAudioPlayer.paused),
+    isSpeaking: () => isSpeaking || !!(activeAudioPlayer && !activeAudioPlayer.paused),
     isVoiceActive: () => isVoiceModeActive,
     getSettings: () => voiceSettings,
     setSettings: (s) => { voiceSettings = { ...voiceSettings, ...s }; },
     setActive: setVoiceActive,
     startListening: startContinuousListening,
     stopListening: stopContinuousListening,
+    resumeListening: resumeListening,
   };
   `;
 }

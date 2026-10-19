@@ -276,6 +276,13 @@ export function getInputManagerCode() {
         statusSpinner.style.display = "none";
       }
     }
+    if (state === "idle" && window.kiraVoice && window.kiraVoice.isVoiceActive && window.kiraVoice.isVoiceActive()) {
+      setTimeout(() => {
+        if (window.kiraVoice && window.kiraVoice.isVoiceActive() && !window.kiraVoice.isSpeaking()) {
+          window.kiraVoice.resumeListening?.();
+        }
+      }, 1000);
+    }
   }
   `;
 }

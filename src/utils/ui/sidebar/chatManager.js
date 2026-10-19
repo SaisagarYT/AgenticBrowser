@@ -191,6 +191,19 @@ export function getChatManagerCode() {
   // --------------------------------------------------------------------------
   // AI Response Card & Action Toolbar
   // --------------------------------------------------------------------------
+  function renderVoicePill(container, spokenText) {
+    if (!container || !spokenText) return;
+    const bodyEl = container.querySelector(".as-ai-message-body");
+    if (!bodyEl) return;
+    let pillEl = container.querySelector(".as-voice-spoken-pill");
+    if (!pillEl) {
+      pillEl = document.createElement("div");
+      pillEl.className = "as-voice-spoken-pill";
+      bodyEl.parentNode.insertBefore(pillEl, bodyEl);
+    }
+    pillEl.innerHTML = '<span class="as-voice-spoken-pill-icon">' + ICONS.waveform + '</span><span class="as-voice-spoken-pill-text">"' + escapeHtml(spokenText) + '"</span>';
+  }
+
   function appendAiResponseCard(text, isInstant = false) {
     if (heroView) heroView.style.display = "none";
     activeTimelineContainer = null;
@@ -310,19 +323,6 @@ export function getChatManagerCode() {
 
     const bodyEl = container.querySelector(".as-ai-message-body");
     const toolbarEl = container.querySelector(".as-ai-toolbar");
-
-    function renderVoicePill(container, spokenText) {
-      if (!container || !spokenText) return;
-      const bodyEl = container.querySelector(".as-ai-message-body");
-      if (!bodyEl) return;
-      let pillEl = container.querySelector(".as-voice-spoken-pill");
-      if (!pillEl) {
-        pillEl = document.createElement("div");
-        pillEl.className = "as-voice-spoken-pill";
-        bodyEl.parentNode.insertBefore(pillEl, bodyEl);
-      }
-      pillEl.innerHTML = '<span class="as-voice-spoken-pill-icon">' + ICONS.waveform + '</span><span class="as-voice-spoken-pill-text">"' + escapeHtml(spokenText) + '"</span>';
-    }
 
     attachToolbarListeners(container, text, renderVoicePill);
 
@@ -584,8 +584,15 @@ export function getChatManagerCode() {
         card.toolbarEl.style.opacity = "1";
         card.toolbarEl.style.pointerEvents = "auto";
       }
-      attachToolbarListeners(card.container, finalText);
+      attachToolbarListeners(card.container, finalText, renderVoicePill);
       contentEl.scrollTop = contentEl.scrollHeight;
+
+      if (window.kiraVoice && window.kiraVoice.isVoiceActive && window.kiraVoice.isVoiceActive()) {
+        const speakBtn = card.container.querySelector(".as-btn-speak");
+        window.kiraVoice.speak(finalText, speakBtn, (spokenText) => {
+          renderVoicePill(card.container, spokenText);
+        });
+      }
       return true;
     }
     return false;
