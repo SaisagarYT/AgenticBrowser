@@ -268,11 +268,32 @@ export function getVoiceManagerCode() {
   }
 
   let interimCommitTimer = null;
+  let lastCommittedVoiceText = "";
+  let lastCommittedVoiceTime = 0;
+  let isVoiceTaskInFlight = false;
 
   function commitVoiceText(resultText) {
-    if (!resultText || isPausedForExecution || isSpeaking) return;
+    if (!resultText) return;
     const cleanText = resultText.trim();
     if (!cleanText || cleanText.length < 2) return;
+
+    const now = Date.now();
+    // 1. Strict deduplication cooldown: prevent the exact same command from submitting within 6 seconds
+    if (cleanText.toLowerCase() === lastCommittedVoiceText.toLowerCase() && (now - lastCommittedVoiceTime) < 6000) {
+      console.log("[Kira Voice] Blocked duplicate voice command within 6s cooldown:", cleanText);
+      return;
+    }
+
+    // 2. Prevent concurrent duplicate submissions while task is active or Kira is speaking
+    if (isVoiceTaskInFlight || isPausedForExecution || isSpeaking) {
+      console.log("[Kira Voice] Blocked duplicate trigger while voice task is in flight or speaking:", cleanText);
+      return;
+    }
+
+    lastCommittedVoiceText = cleanText;
+    lastCommittedVoiceTime = now;
+    isVoiceTaskInFlight = true;
+    isPausedForExecution = true;
 
     if (interimCommitTimer) {
       clearTimeout(interimCommitTimer);
@@ -280,8 +301,15 @@ export function getVoiceManagerCode() {
     }
     activeInterimText = "";
 
+    // Abort speech recognizer so pending/buffered speech events in Chromium are discarded
+    if (speechRecognizer) {
+      try {
+        speechRecognizer.abort();
+      } catch {}
+      speechRecognizer = null;
+    }
+
     console.log("[Kira Voice] Realtime voice command committed:", cleanText);
-    isPausedForExecution = true;
     updateFloatStatus("Thinking...");
     textareaEl.value = cleanText;
     autoResizeTextarea();
@@ -321,7 +349,7 @@ export function getVoiceManagerCode() {
       };
 
       rec.onresult = (event) => {
-        if (!isVoiceModeActive || isPausedForExecution) return;
+        if (!isVoiceModeActive || isPausedForExecution || isVoiceTaskInFlight) return;
 
         // Barge-in: If Kira is speaking and user begins talking, stop Kira immediately!
         if (isSpeaking) {
@@ -352,7 +380,7 @@ export function getVoiceManagerCode() {
           // Debounce / silence commit: if user stops speaking for 750ms, auto-commit the spoken phrase!
           if (interimCommitTimer) clearTimeout(interimCommitTimer);
           interimCommitTimer = setTimeout(() => {
-            if (activeInterimText && !isPausedForExecution && !isSpeaking) {
+            if (activeInterimText && !isPausedForExecution && !isVoiceTaskInFlight && !isSpeaking) {
               const textToCommit = activeInterimText;
               activeInterimText = "";
               commitVoiceText(textToCommit);
@@ -391,21 +419,13 @@ export function getVoiceManagerCode() {
           clearTimeout(interimCommitTimer);
           interimCommitTimer = null;
         }
-        // If there was uncommitted interim speech when recognition stopped, commit it now!
-        if (activeInterimText && !isPausedForExecution && !isSpeaking) {
-          const textToCommit = activeInterimText;
-          activeInterimText = "";
-          commitVoiceText(textToCommit);
-        }
 
         // Keep continuously listening if voice mode is still active
-        if (isVoiceModeActive && !isSpeaking && !isPausedForExecution) {
+        if (isVoiceModeActive && !isSpeaking && !isPausedForExecution && !isVoiceTaskInFlight) {
           if (recognitionRestartTimer) clearTimeout(recognitionRestartTimer);
           recognitionRestartTimer = setTimeout(() => {
-            if (isVoiceModeActive && !isSpeaking && !isPausedForExecution && speechRecognizer) {
-              try {
-                speechRecognizer.start();
-              } catch {}
+            if (isVoiceModeActive && !isSpeaking && !isPausedForExecution && !isVoiceTaskInFlight) {
+              startContinuousListening();
             }
           }, 250);
         }
@@ -898,6 +918,7 @@ export function getVoiceManagerCode() {
 
   function stopSpeaking() {
     isSpeaking = false;
+    isVoiceTaskInFlight = false;
     if ("speechSynthesis" in window) {
       try {
         window.speechSynthesis.cancel();
@@ -948,6 +969,7 @@ export function getVoiceManagerCode() {
       clearTimeout(executionWatchdogTimer);
       executionWatchdogTimer = null;
     }
+    isVoiceTaskInFlight = false;
     isPausedForExecution = false;
     updateFloatStatus("Listening...");
     startContinuousListening();
@@ -986,10 +1008,14 @@ export function getVoiceManagerCode() {
     // 1. Start live audio wave visualizer (microphone Web Audio)
     startWaveVisualizer();
 
-    // 2. Start native streaming speech recognition
-    if (!speechRecognizer) {
-      speechRecognizer = initSpeechRecognizer();
+    // 2. Start fresh native streaming speech recognition
+    if (speechRecognizer) {
+      try {
+        speechRecognizer.abort();
+      } catch {}
+      speechRecognizer = null;
     }
+    speechRecognizer = initSpeechRecognizer();
     if (speechRecognizer) {
       try {
         speechRecognizer.lang = voiceSettings.recognitionLang || "en-IN";
@@ -1002,6 +1028,8 @@ export function getVoiceManagerCode() {
 
   function stopContinuousListening() {
     isListening = false;
+    isVoiceTaskInFlight = false;
+    isPausedForExecution = false;
     pcmChunks = [];
     isRecordingSpeech = false;
     isTranscribing = false;
@@ -1013,7 +1041,7 @@ export function getVoiceManagerCode() {
 
     if (speechRecognizer) {
       try {
-        speechRecognizer.stop();
+        speechRecognizer.abort();
       } catch {}
       speechRecognizer = null;
     }
