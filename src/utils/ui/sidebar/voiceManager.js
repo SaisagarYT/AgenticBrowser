@@ -24,6 +24,9 @@ export function getVoiceManagerCode() {
   let activeSpeakingBtn = null;
   let activeInterimText = "";
   let recognitionRestartTimer = null;
+  let activeSpeechUtterance = null;
+  let speakingStartTime = 0;
+  let speechKeepAliveInterval = null;
   let voiceSettings = {
     activeVoice: "af_heart",
     speed: 1.0,
@@ -323,9 +326,18 @@ export function getVoiceManagerCode() {
       rec.onresult = (event) => {
         if (!isVoiceModeActive || isPausedForExecution) return;
 
-        // Barge-in: If Kira is speaking and user begins talking, stop Kira immediately!
+        // Barge-in: If Kira is speaking, ignore speaker acoustic echo (first 1.5s)
+        // and only stop if user speaks a clear, distinct multi-word command
         if (isSpeaking) {
-          stopSpeaking();
+          if (Date.now() - speakingStartTime < 1500) {
+            return;
+          }
+          const heardWords = (event.results[event.results.length - 1]?.[0]?.transcript || "").trim().split(/\s+/).filter(Boolean);
+          if (heardWords.length >= 2) {
+            stopSpeaking();
+          } else {
+            return;
+          }
         }
 
         let interim = "";
@@ -762,11 +774,12 @@ export function getVoiceManagerCode() {
     stopSpeaking();
     isSpeaking = true;
 
-    // Pause speech recognition while speaking to prevent microphone echo
+    // Completely abort and silence microphone during speech output to prevent acoustic feedback
     if (speechRecognizer) {
       try {
-        speechRecognizer.stop();
+        speechRecognizer.abort();
       } catch {}
+      speechRecognizer = null;
     }
 
     if (triggerBtn) {
@@ -781,21 +794,24 @@ export function getVoiceManagerCode() {
     // FAST MODE: Instant Natural Speech via Browser Web Speech API (<50ms turnaround)
     if (voiceSettings.ttsEngine === "browser" && "speechSynthesis" in window) {
       try {
-        window.speechSynthesis.cancel();
-
-        // Strip markdown formatting, URLs, code blocks, and symbols
+        // Strip markdown formatting, URLs, code blocks, bullet points, numbers, and symbols
         let cleanText = text
           .split(String.fromCharCode(96, 96, 96)).filter((_, idx) => idx % 2 === 0).join(" ")
           .replace(/\\[([^\\]]+)\\]\\([^)]+\\)/g, "$1")
           .replace(/[*_#~]/g, "")
           .replace(new RegExp(String.fromCharCode(96), "g"), "")
           .replace(/https?:\\/\\/\\S+/g, "")
+          .replace(/^[\\s•\\-\\*\\d\\.\\)\\:]+/gm, "")
+          .replace(/\\n+/g, " ")
           .trim();
 
-        // Keep to 1-2 short, conversational sentences for natural ChatGPT-style brevity
-        const sentences = cleanText.split(/(?<=[.?!])\s+/);
-        if (sentences.length > 2) {
-          cleanText = sentences.slice(0, 2).join(" ");
+        // Conversational length: keep up to 3 natural sentences or ~280 characters
+        const sentences = cleanText.split(/(?<=[.?!])\\s+/);
+        if (sentences.length > 3) {
+          cleanText = sentences.slice(0, 3).join(" ");
+        }
+        if (cleanText.length > 300) {
+          cleanText = cleanText.slice(0, 290).trim() + "...";
         }
         if (!cleanText) cleanText = "All set. Task complete.";
 
@@ -808,6 +824,10 @@ export function getVoiceManagerCode() {
         }
 
         const utter = new SpeechSynthesisUtterance(cleanText);
+        activeSpeechUtterance = utter; // Prevent V8 garbage collection bug in Chromium
+        window.__kiraActiveUtterance = utter;
+        speakingStartTime = Date.now();
+
         utter.rate = voiceSettings.speed || 1.0;
         utter.lang = voiceSettings.recognitionLang || "en-IN";
 
@@ -821,15 +841,52 @@ export function getVoiceManagerCode() {
           if (matching) utter.voice = matching;
         }
 
+        // Keep-alive timer to prevent Chromium from pausing or freezing speech output mid-utterance
+        if (speechKeepAliveInterval) clearInterval(speechKeepAliveInterval);
+        speechKeepAliveInterval = setInterval(() => {
+          if (!isSpeaking) {
+            clearInterval(speechKeepAliveInterval);
+            speechKeepAliveInterval = null;
+          } else if (window.speechSynthesis.paused) {
+            window.speechSynthesis.resume();
+          }
+        }, 300);
+
         utter.onend = () => {
-          stopSpeaking();
-        };
-        utter.onerror = (err) => {
-          console.warn("[Kira Voice] SpeechSynthesis playback notice:", err);
+          if (speechKeepAliveInterval) {
+            clearInterval(speechKeepAliveInterval);
+            speechKeepAliveInterval = null;
+          }
+          activeSpeechUtterance = null;
+          window.__kiraActiveUtterance = null;
           stopSpeaking();
         };
 
-        window.speechSynthesis.speak(utter);
+        utter.onerror = (err) => {
+          if (speechKeepAliveInterval) {
+            clearInterval(speechKeepAliveInterval);
+            speechKeepAliveInterval = null;
+          }
+          activeSpeechUtterance = null;
+          window.__kiraActiveUtterance = null;
+          if (err.error !== "interrupted" && err.error !== "canceled") {
+            console.warn("[Kira Voice] SpeechSynthesis playback notice:", err);
+          }
+          stopSpeaking();
+        };
+
+        // Cancel previous speech if actively speaking, then speak with a micro-tick
+        if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+          window.speechSynthesis.cancel();
+        }
+        setTimeout(() => {
+          if (isSpeaking) {
+            if (window.speechSynthesis.paused) {
+              window.speechSynthesis.resume();
+            }
+            window.speechSynthesis.speak(utter);
+          }
+        }, 40);
         return;
       } catch (browserSynthErr) {
         console.warn("[Kira Voice] Browser speech synthesis fallback:", browserSynthErr);
@@ -898,6 +955,12 @@ export function getVoiceManagerCode() {
 
   function stopSpeaking() {
     isSpeaking = false;
+    if (speechKeepAliveInterval) {
+      clearInterval(speechKeepAliveInterval);
+      speechKeepAliveInterval = null;
+    }
+    activeSpeechUtterance = null;
+    window.__kiraActiveUtterance = null;
     if ("speechSynthesis" in window) {
       try {
         window.speechSynthesis.cancel();
@@ -926,11 +989,16 @@ export function getVoiceManagerCode() {
 
     updateToggleUI(isVoiceModeActive, false);
 
-    // If continuous voice mode is active, immediately re-arm silent listening!
+    // If continuous voice mode is active, re-arm listening after acoustic echo decay
     if (isVoiceModeActive) {
       isPausedForExecution = false;
       updateFloatStatus("Listening...");
-      startContinuousListening();
+      if (recognitionRestartTimer) clearTimeout(recognitionRestartTimer);
+      recognitionRestartTimer = setTimeout(() => {
+        if (isVoiceModeActive && !isSpeaking) {
+          startContinuousListening();
+        }
+      }, 350);
       if (statusLabel) {
         statusLabel.textContent = "Kira Voice: Listening... (speak anytime)";
       }
