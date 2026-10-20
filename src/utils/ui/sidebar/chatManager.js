@@ -248,6 +248,11 @@ export function getChatManagerCode() {
           }
           attachToolbarListeners(lastAiCard, text);
           contentEl.scrollTop = contentEl.scrollHeight;
+          hideSkeleton();
+          if (typeof setStatus === "function") setStatus("idle", "Task completed. Ready for next prompt.");
+          if (typeof unlockInputs === "function") unlockInputs();
+          else if (typeof window.__agenticUnlockInputs === "function") window.__agenticUnlockInputs();
+          if (window.kiraVoice && !window.kiraVoice.isSpeaking()) window.kiraVoice.resumeListening?.();
           return;
         }
       }
@@ -364,6 +369,12 @@ export function getChatManagerCode() {
         }
       }
     }
+
+    hideSkeleton();
+    if (typeof setStatus === "function") setStatus("idle", "Task completed. Ready for next prompt.");
+    if (typeof unlockInputs === "function") unlockInputs();
+    else if (typeof window.__agenticUnlockInputs === "function") window.__agenticUnlockInputs();
+    if (window.kiraVoice && !window.kiraVoice.isSpeaking()) window.kiraVoice.resumeListening?.();
   }
 
   function attachToolbarListeners(container, rawText, renderVoicePill = null) {
@@ -602,6 +613,13 @@ export function getChatManagerCode() {
           renderVoicePill(card.container, spokenText);
         });
       }
+
+      hideSkeleton();
+      if (typeof setStatus === "function") setStatus("idle", "Task completed. Ready for next prompt.");
+      if (typeof unlockInputs === "function") unlockInputs();
+      else if (typeof window.__agenticUnlockInputs === "function") window.__agenticUnlockInputs();
+      if (window.kiraVoice && !window.kiraVoice.isSpeaking()) window.kiraVoice.resumeListening?.();
+
       return true;
     }
     return false;

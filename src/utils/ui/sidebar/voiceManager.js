@@ -311,11 +311,13 @@ export function getVoiceManagerCode() {
     if (!cleanText || cleanText.length < 2) return;
 
     // Check if this is an explicit interrupt command ("stop", "wait", "kira stop", etc.)
-    const isPureInterrupt = /^(hey\s+kira\s+|kira\s+)?(wait|stop|hold\s*(on|up)|pause|quiet|cancel|listen|shut\s*up|silence|halt|shh+)(\s+(please|now|kira|wait|stop))?[.!]?$/i.test(cleanText);
+    const isPureInterrupt = /^(hey\s+kira\s+|kira\s+)?(wait|stop|hold\s*(on|up)|pause|quiet|cancel|shut\s*up|silence|halt)(\s+(please|now|kira|wait|stop))?[.!]?$/i.test(cleanText);
     if (isPureInterrupt) {
       console.log("[Kira Voice] Recognized pure voice interrupt command:", cleanText);
       stopSpeaking();
       isPausedForExecution = false;
+      if (typeof unlockInputs === "function") unlockInputs();
+      else if (typeof window.__agenticUnlockInputs === "function") window.__agenticUnlockInputs();
       updateFloatStatus("Stopped");
       if (statusLabel) {
         statusLabel.textContent = "Kira Voice: Stopped.";
@@ -325,8 +327,8 @@ export function getVoiceManagerCode() {
       return;
     }
 
-    // Suppress submission if user recently issued a stop/wait interrupt within 1.5 seconds
-    if (Date.now() - lastStopInterruptTime < 1500) {
+    // Suppress submission if user recently issued a stop/wait interrupt within 1.2 seconds
+    if (Date.now() - lastStopInterruptTime < 1200) {
       return;
     }
 
@@ -353,7 +355,7 @@ export function getVoiceManagerCode() {
       if (isVoiceModeActive && isPausedForExecution && !isSpeaking) {
         resumeListening();
       }
-    }, 20000);
+    }, 12000);
   }
 
   function initSpeechRecognizer() {
@@ -400,22 +402,10 @@ export function getVoiceManagerCode() {
         const heardPhrase = (final || interim).trim();
         if (!heardPhrase) return;
 
-        const isExplicitStop = /\b(wait|stop|hold\s*(on|up)|pause|quiet|cancel|listen|shut\s*up|silence|halt|shh+)\b/i.test(heardPhrase);
+        const isExplicitStop = /\b(wait|stop|hold\s*(on|up)|pause|quiet|cancel|shut\s*up|silence|halt)\b/i.test(heardPhrase);
 
         // Case 1: Kira is speaking - immediate barge-in interruption!
         if (isSpeaking) {
-          // Acoustic echo suppression: check if heard audio is just Kira's own voice coming from speakers
-          const heardWords = heardPhrase.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim().split(/\s+/).filter(Boolean);
-          const activeSpeechWords = (activeSpeechUtteranceText || "").toLowerCase().replace(/[^a-z0-9\s]/g, "").trim().split(/\s+/).filter(Boolean);
-
-          let matchingWords = 0;
-          for (const w of heardWords) {
-            if (activeSpeechWords.includes(w)) {
-              matchingWords++;
-            }
-          }
-          const isSpeakerEcho = heardWords.length > 0 && (matchingWords / heardWords.length) >= 0.5;
-
           if (isExplicitStop) {
             console.log("[Kira Voice] User voice explicitly stopped Kira speech:", heardPhrase);
             stopSpeaking();
@@ -427,19 +417,8 @@ export function getVoiceManagerCode() {
             lastStopInterruptTime = Date.now();
             return;
           }
-
-          if (isSpeakerEcho) {
-            // Speaker echo detected from output audio, ignore to prevent self-interruption
-            return;
-          }
-
-          // User spoke something else while Kira was speaking (e.g. brand new command)
-          if (heardWords.length >= 2) {
-            console.log("[Kira Voice] User speech interrupted Kira speech with new command:", heardPhrase);
-            stopSpeaking();
-          } else {
-            return;
-          }
+          // Do not interrupt on other words while speaking to avoid speaker acoustic feedback
+          return;
         }
 
         // Case 2: Task is executing or thinking (isPausedForExecution is true, but not speaking)
@@ -450,6 +429,8 @@ export function getVoiceManagerCode() {
             stopSpeaking();
             hideSkeleton();
             if (typeof finishActiveTypewriter === "function") finishActiveTypewriter();
+            if (typeof unlockInputs === "function") unlockInputs();
+            else if (typeof window.__agenticUnlockInputs === "function") window.__agenticUnlockInputs();
             updateFloatStatus("Stopped");
             if (statusLabel) {
               statusLabel.textContent = "Kira Voice: Execution paused/stopped.";
@@ -508,6 +489,9 @@ export function getVoiceManagerCode() {
 
       rec.onend = () => {
         isListening = false;
+        if (speechRecognizer === rec) {
+          speechRecognizer = null;
+        }
         if (interimCommitTimer) {
           clearTimeout(interimCommitTimer);
           interimCommitTimer = null;
@@ -519,21 +503,14 @@ export function getVoiceManagerCode() {
           commitVoiceText(textToCommit);
         }
 
-        // Keep continuously listening if voice mode is still active (even while speaking, for barge-in!)
-        if (isVoiceModeActive) {
+        // Keep continuously listening if voice mode is still active
+        if (isVoiceModeActive && !isSpeaking) {
           if (recognitionRestartTimer) clearTimeout(recognitionRestartTimer);
           recognitionRestartTimer = setTimeout(() => {
-            if (isVoiceModeActive) {
-              if (!speechRecognizer) {
-                speechRecognizer = initSpeechRecognizer();
-              }
-              if (speechRecognizer) {
-                try {
-                  speechRecognizer.start();
-                } catch {}
-              }
+            if (isVoiceModeActive && !isSpeaking) {
+              startContinuousListening();
             }
-          }, 200);
+          }, 250);
         }
       };
 
@@ -1177,9 +1154,11 @@ export function getVoiceManagerCode() {
     startWaveVisualizer();
 
     // 2. Start native streaming speech recognition
-    if (!speechRecognizer) {
-      speechRecognizer = initSpeechRecognizer();
+    if (speechRecognizer) {
+      try { speechRecognizer.stop(); } catch {}
+      speechRecognizer = null;
     }
+    speechRecognizer = initSpeechRecognizer();
     if (speechRecognizer) {
       try {
         speechRecognizer.lang = voiceSettings.recognitionLang || "en-IN";

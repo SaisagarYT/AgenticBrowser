@@ -151,6 +151,22 @@ export function getInputManagerCode() {
   let lastSubmittedCommandTime = 0;
   let submissionWatchdogTimer = null;
 
+  function unlockInputs() {
+    isTaskSubmitting = false;
+    if (submissionWatchdogTimer) {
+      clearTimeout(submissionWatchdogTimer);
+      submissionWatchdogTimer = null;
+    }
+    if (sendBtn) {
+      sendBtn.disabled = false;
+      sendBtn.style.opacity = "";
+      sendBtn.style.pointerEvents = "";
+    }
+    if (statusSpinner) {
+      statusSpinner.style.display = "none";
+    }
+  }
+
   function triggerSubmit() {
     const text = textareaEl.value.trim();
     if (!text && attachedFiles.length === 0) return;
@@ -158,15 +174,15 @@ export function getInputManagerCode() {
     const now = Date.now();
     const cleanCmd = text.trim();
 
-    // 1. Strict deduplication cooldown: prevent the exact same command from submitting within 5 seconds
-    if (cleanCmd && cleanCmd.toLowerCase() === lastSubmittedCommandText.toLowerCase() && (now - lastSubmittedCommandTime) < 5000) {
-      console.warn("[InputManager] Blocked duplicate prompt submission within 5s window:", cleanCmd);
+    // Prevent concurrent duplicate submissions while a task is in flight
+    if (isTaskSubmitting) {
+      console.warn("[InputManager] Blocked concurrent submission while task is in flight:", cleanCmd);
       return;
     }
 
-    // 2. Prevent concurrent duplicate submissions while task is already actively processing
-    if (isTaskSubmitting) {
-      console.warn("[InputManager] Blocked concurrent submission while task is in flight:", cleanCmd);
+    // Deduplication cooldown: prevent accidental rapid double-clicks within 1200ms
+    if (cleanCmd && cleanCmd.toLowerCase() === lastSubmittedCommandText.toLowerCase() && (now - lastSubmittedCommandTime) < 1200) {
+      console.warn("[InputManager] Blocked rapid double-click within 1.2s window:", cleanCmd);
       return;
     }
 
@@ -328,24 +344,17 @@ export function getInputManagerCode() {
       }
     }
     if (state === "idle") {
-      isTaskSubmitting = false;
-      if (submissionWatchdogTimer) {
-        clearTimeout(submissionWatchdogTimer);
-        submissionWatchdogTimer = null;
-      }
-      if (sendBtn) {
-        sendBtn.disabled = false;
-        sendBtn.style.opacity = "";
-        sendBtn.style.pointerEvents = "";
-      }
+      unlockInputs();
     }
     if (state === "idle" && window.kiraVoice && window.kiraVoice.isVoiceActive && window.kiraVoice.isVoiceActive()) {
       setTimeout(() => {
         if (window.kiraVoice && window.kiraVoice.isVoiceActive() && !window.kiraVoice.isSpeaking()) {
           window.kiraVoice.resumeListening?.();
         }
-      }, 1000);
+      }, 500);
     }
   }
+
+  window.__agenticUnlockInputs = unlockInputs;
   `;
 }
