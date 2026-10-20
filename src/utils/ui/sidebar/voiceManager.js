@@ -267,10 +267,18 @@ export function getVoiceManagerCode() {
     renderWaveLoop();
   }
 
+  let interimCommitTimer = null;
+
   function commitVoiceText(resultText) {
     if (!resultText || isPausedForExecution || isSpeaking) return;
     const cleanText = resultText.trim();
     if (!cleanText || cleanText.length < 2) return;
+
+    if (interimCommitTimer) {
+      clearTimeout(interimCommitTimer);
+      interimCommitTimer = null;
+    }
+    activeInterimText = "";
 
     console.log("[Kira Voice] Realtime voice command committed:", cleanText);
     isPausedForExecution = true;
@@ -340,9 +348,23 @@ export function getVoiceManagerCode() {
           if (statusLabel) {
             statusLabel.textContent = "Hearing: " + activeInterimText;
           }
+
+          // Debounce / silence commit: if user stops speaking for 750ms, auto-commit the spoken phrase!
+          if (interimCommitTimer) clearTimeout(interimCommitTimer);
+          interimCommitTimer = setTimeout(() => {
+            if (activeInterimText && !isPausedForExecution && !isSpeaking) {
+              const textToCommit = activeInterimText;
+              activeInterimText = "";
+              commitVoiceText(textToCommit);
+            }
+          }, 750);
         }
 
         if (final) {
+          if (interimCommitTimer) {
+            clearTimeout(interimCommitTimer);
+            interimCommitTimer = null;
+          }
           const finalText = final.trim();
           console.log("[Kira Voice] Streaming speech final phrase:", finalText);
           activeInterimText = "";
@@ -365,6 +387,17 @@ export function getVoiceManagerCode() {
 
       rec.onend = () => {
         isListening = false;
+        if (interimCommitTimer) {
+          clearTimeout(interimCommitTimer);
+          interimCommitTimer = null;
+        }
+        // If there was uncommitted interim speech when recognition stopped, commit it now!
+        if (activeInterimText && !isPausedForExecution && !isSpeaking) {
+          const textToCommit = activeInterimText;
+          activeInterimText = "";
+          commitVoiceText(textToCommit);
+        }
+
         // Keep continuously listening if voice mode is still active
         if (isVoiceModeActive && !isSpeaking && !isPausedForExecution) {
           if (recognitionRestartTimer) clearTimeout(recognitionRestartTimer);
@@ -374,7 +407,7 @@ export function getVoiceManagerCode() {
                 speechRecognizer.start();
               } catch {}
             }
-          }, 300);
+          }, 250);
         }
       };
 
