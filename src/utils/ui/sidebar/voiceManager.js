@@ -37,8 +37,10 @@ export function getVoiceManagerCode() {
   let waveCanvas = null;
   let waveCtx = null;
   let audioContext = null;
+  let audioSourceNode = null;
   let analyserNode = null;
   let audioCaptureNode = null;
+  let audioDestinationNode = null;
   let micMediaStream = null;
   let waveAnimFrameId = null;
   let smoothedHeights = [4, 4, 4, 4, 4, 4, 4, 4, 4];
@@ -103,7 +105,7 @@ export function getVoiceManagerCode() {
 
     // Setup Web Audio Analyser & Real-time Speech Capture
     try {
-      if (!audioContext) {
+      if (!audioContext || audioContext.state === "closed") {
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
         if (AudioCtx) {
           audioContext = new AudioCtx();
@@ -113,11 +115,11 @@ export function getVoiceManagerCode() {
         await audioContext.resume();
       }
 
-      if (!micMediaStream && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      if (!micMediaStream || !micMediaStream.active) {
         micMediaStream = await navigator.mediaDevices.getUserMedia({
           audio: {
             echoCancellation: true,
-            noiseSuppression: true,
+            noiseSuppression: false,
             autoGainControl: true,
           },
         }).catch((err) => {
@@ -128,98 +130,117 @@ export function getVoiceManagerCode() {
           }
           return null;
         });
+      }
 
-        if (micMediaStream && audioContext) {
-          const source = audioContext.createMediaStreamSource(micMediaStream);
-          analyserNode = audioContext.createAnalyser();
-          analyserNode.fftSize = 256;
-          analyserNode.smoothingTimeConstant = 0.3; // Snappy live acoustic tracking
-          source.connect(analyserNode);
-
-          // Connect speech audio recording processor (16kHz for local Whisper ASR)
-          if (!audioCaptureNode) {
-            const inputSampleRate = audioContext.sampleRate;
-            const ratio = inputSampleRate / 16000;
-            audioCaptureNode = audioContext.createScriptProcessor(4096, 1, 1);
-
-            const muteGain = audioContext.createGain();
-            muteGain.gain.value = 0;
-            audioCaptureNode.connect(muteGain);
-            muteGain.connect(audioContext.destination);
-
-            // Retain on window to prevent V8 garbage collection
-            window._kiraAudioCtx = audioContext;
-            window._kiraCaptureNode = audioCaptureNode;
-            window._kiraMuteGain = muteGain;
-
-            audioCaptureNode.onaudioprocess = (e) => {
-              if (!isVoiceModeActive || isSpeaking || isPausedForExecution || isTranscribing) {
-                return;
-              }
-
-              const channelData = e.inputBuffer.getChannelData(0);
-              let sumSquares = 0;
-              for (let k = 0; k < channelData.length; k++) {
-                sumSquares += channelData[k] * channelData[k];
-              }
-              const frameRms = Math.sqrt(sumSquares / channelData.length);
-
-              // Downsample frame to 16kHz Float32 PCM
-              const targetSamples = Math.round(channelData.length / ratio);
-              const downsampled = new Float32Array(targetSamples);
-              for (let k = 0; k < targetSamples; k++) {
-                const origIdx = k * ratio;
-                const lower = Math.floor(origIdx);
-                const upper = Math.min(lower + 1, channelData.length - 1);
-                const weight = origIdx - lower;
-                downsampled[k] = channelData[lower] * (1 - weight) + channelData[upper] * weight;
-              }
-
-              // Keep rolling pre-roll ring buffer (~350ms of audio)
-              preRollBuffer.push(downsampled);
-              if (preRollBuffer.length > 5) {
-                preRollBuffer.shift();
-              }
-
-              // Dynamic Voice Activity Detection (VAD)
-              // Adapts to quiet microphones and room noise floor
-              const speechThreshold = Math.max(0.005, noiseFloor * 2.2);
-
-              if (frameRms > speechThreshold) {
-                if (!isRecordingSpeech) {
-                  isRecordingSpeech = true;
-                  updateFloatStatus("Hearing you...");
-                  if (statusLabel) {
-                    statusLabel.textContent = "Kira Voice: Hearing you...";
-                  }
-                  // Prepend pre-roll buffer so initial consonants ("h", "th", etc.) are never lost
-                  for (let p = 0; p < preRollBuffer.length; p++) {
-                    pcmChunks.push(preRollBuffer[p]);
-                  }
-                }
-                lastSpeechTime = Date.now();
-              } else {
-                // Adapt resting ambient noise floor during silence
-                noiseFloor = noiseFloor * 0.96 + frameRms * 0.04;
-              }
-
-              if (isRecordingSpeech) {
-                pcmChunks.push(downsampled);
-
-                // Commit when user pauses for 850ms after speaking OR max utterance reaches 15s
-                const elapsedSinceSpeech = Date.now() - lastSpeechTime;
-                const totalEstimatedSamples = pcmChunks.length * targetSamples;
-                if ((elapsedSinceSpeech > 850 && totalEstimatedSamples >= 4800) || totalEstimatedSamples > 240000) {
-                  isRecordingSpeech = false;
-                  updateFloatStatus("Transcribing...");
-                  commitVoiceRecording();
-                }
-              }
-            };
-
-            source.connect(audioCaptureNode);
-          }
+      if (micMediaStream && audioContext) {
+        // Disconnect any stale audio nodes
+        if (audioSourceNode) {
+          try { audioSourceNode.disconnect(); } catch {}
+          audioSourceNode = null;
         }
+        if (analyserNode) {
+          try { analyserNode.disconnect(); } catch {}
+          analyserNode = null;
+        }
+        if (audioCaptureNode) {
+          try { audioCaptureNode.disconnect(); } catch {}
+          audioCaptureNode = null;
+        }
+        if (audioDestinationNode) {
+          try { audioDestinationNode.disconnect(); } catch {}
+          audioDestinationNode = null;
+        }
+
+        // Create persistent media stream source
+        audioSourceNode = audioContext.createMediaStreamSource(micMediaStream);
+
+        analyserNode = audioContext.createAnalyser();
+        analyserNode.fftSize = 256;
+        analyserNode.smoothingTimeConstant = 0.3; // Snappy live acoustic tracking
+        audioSourceNode.connect(analyserNode);
+
+        // Connect speech audio recording processor (16kHz for local Whisper ASR)
+        const inputSampleRate = audioContext.sampleRate;
+        const ratio = inputSampleRate / 16000;
+        audioCaptureNode = audioContext.createScriptProcessor(4096, 1, 1);
+
+        // Connect to MediaStreamDestination (prevents Chromium power-saving zero-gain muting)
+        audioDestinationNode = audioContext.createMediaStreamDestination();
+        audioSourceNode.connect(audioCaptureNode);
+        audioCaptureNode.connect(audioDestinationNode);
+
+        // Retain references on window to permanently prevent V8 garbage collection
+        window._kiraAudioCtx = audioContext;
+        window._kiraAudioSource = audioSourceNode;
+        window._kiraCaptureNode = audioCaptureNode;
+        window._kiraAnalyser = analyserNode;
+        window._kiraAudioDest = audioDestinationNode;
+        window._kiraMediaStream = micMediaStream;
+
+        audioCaptureNode.onaudioprocess = (e) => {
+          if (!isVoiceModeActive || isSpeaking || isPausedForExecution || isTranscribing) {
+            return;
+          }
+
+          const channelData = e.inputBuffer.getChannelData(0);
+          let sumSquares = 0;
+          for (let k = 0; k < channelData.length; k++) {
+            sumSquares += channelData[k] * channelData[k];
+          }
+          const frameRms = Math.sqrt(sumSquares / channelData.length);
+
+          // Downsample frame to 16kHz Float32 PCM
+          const targetSamples = Math.round(channelData.length / ratio);
+          const downsampled = new Float32Array(targetSamples);
+          for (let k = 0; k < targetSamples; k++) {
+            const origIdx = k * ratio;
+            const lower = Math.floor(origIdx);
+            const upper = Math.min(lower + 1, channelData.length - 1);
+            const weight = origIdx - lower;
+            downsampled[k] = channelData[lower] * (1 - weight) + channelData[upper] * weight;
+          }
+
+          // Keep rolling pre-roll ring buffer (~350ms of audio)
+          preRollBuffer.push(downsampled);
+          if (preRollBuffer.length > 5) {
+            preRollBuffer.shift();
+          }
+
+          // Dynamic Voice Activity Detection (VAD)
+          // Adapts to quiet microphones and room noise floor
+          const speechThreshold = Math.max(0.0035, noiseFloor * 1.8);
+
+          if (frameRms > speechThreshold) {
+            if (!isRecordingSpeech) {
+              isRecordingSpeech = true;
+              updateFloatStatus("Hearing you...");
+              if (statusLabel) {
+                statusLabel.textContent = "Kira Voice: Hearing you...";
+              }
+              // Prepend pre-roll buffer so initial consonants ("h", "th", etc.) are never lost
+              for (let p = 0; p < preRollBuffer.length; p++) {
+                pcmChunks.push(preRollBuffer[p]);
+              }
+            }
+            lastSpeechTime = Date.now();
+          } else {
+            // Adapt resting ambient noise floor during silence
+            noiseFloor = noiseFloor * 0.97 + frameRms * 0.03;
+          }
+
+          if (isRecordingSpeech) {
+            pcmChunks.push(downsampled);
+
+            // Commit when user pauses for 750ms after speaking OR max utterance reaches 15s
+            const elapsedSinceSpeech = Date.now() - lastSpeechTime;
+            const totalEstimatedSamples = pcmChunks.length * targetSamples;
+            if ((elapsedSinceSpeech > 750 && totalEstimatedSamples >= 3200) || totalEstimatedSamples > 240000) {
+              isRecordingSpeech = false;
+              updateFloatStatus("Transcribing...");
+              commitVoiceRecording();
+            }
+          }
+        };
       }
     } catch (e) {
       console.warn("Could not attach audio analyser:", e);
@@ -238,8 +259,8 @@ export function getVoiceManagerCode() {
       totalLen += pcmChunks[i].length;
     }
 
-    // Require at least 0.3s of audio (4800 samples at 16kHz)
-    if (totalLen < 4800) {
+    // Require at least 0.2s of audio (3200 samples at 16kHz)
+    if (totalLen < 3200) {
       pcmChunks = [];
       updateFloatStatus("Listening...");
       return;
@@ -398,10 +419,20 @@ export function getVoiceManagerCode() {
       floatWidgetEl.style.display = "none";
     }
     if (audioCaptureNode) {
-      try {
-        audioCaptureNode.disconnect();
-      } catch {}
+      try { audioCaptureNode.disconnect(); } catch {}
       audioCaptureNode = null;
+    }
+    if (audioSourceNode) {
+      try { audioSourceNode.disconnect(); } catch {}
+      audioSourceNode = null;
+    }
+    if (analyserNode) {
+      try { analyserNode.disconnect(); } catch {}
+      analyserNode = null;
+    }
+    if (audioDestinationNode) {
+      try { audioDestinationNode.disconnect(); } catch {}
+      audioDestinationNode = null;
     }
     pcmChunks = [];
     preRollBuffer = [];
@@ -409,7 +440,7 @@ export function getVoiceManagerCode() {
     isTranscribing = false;
     if (micMediaStream) {
       try {
-        micMediaStream.getTracks().forEach(t => t.stop());
+        micMediaStream.getTracks().forEach((t) => t.stop());
       } catch {}
       micMediaStream = null;
     }
@@ -419,10 +450,12 @@ export function getVoiceManagerCode() {
       } catch {}
       audioContext = null;
     }
-    analyserNode = null;
     window._kiraCaptureNode = null;
-    window._kiraMuteGain = null;
+    window._kiraAudioSource = null;
+    window._kiraAnalyser = null;
+    window._kiraAudioDest = null;
     window._kiraAudioCtx = null;
+    window._kiraMediaStream = null;
   }
 
   // --------------------------------------------------------------------------

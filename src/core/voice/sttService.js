@@ -69,8 +69,8 @@ class STTService {
       const rawBuffer = Buffer.from(base64Audio, "base64");
       // Align to exact multiple of 4 bytes (Float32 size)
       const validByteLength = rawBuffer.byteLength - (rawBuffer.byteLength % 4);
-      if (validByteLength < 19200) {
-        // Require at least 0.3s of audio (4800 samples * 4 bytes = 19200 bytes at 16kHz)
+      if (validByteLength < 3200) {
+        // Require at least 0.2s of audio (800 samples * 4 bytes = 3200 bytes at 16kHz)
         return { success: true, text: "" };
       }
 
