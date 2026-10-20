@@ -89,6 +89,13 @@ export function getVoiceManagerCode() {
         closeBtn.addEventListener("click", () => setVoiceActive(false));
       }
 
+      floatWidgetEl.addEventListener("click", (e) => {
+        if (e.target.closest("#as-float-btn-close")) return;
+        if (isSpeaking) {
+          stopSpeaking();
+        }
+      });
+
       waveCanvas = floatWidgetEl.querySelector("#as-float-wave-canvas");
       if (waveCanvas) {
         waveCtx = waveCanvas.getContext("2d");
