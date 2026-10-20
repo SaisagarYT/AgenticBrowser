@@ -23,9 +23,24 @@ export class Orchestrator extends EventEmitter {
   constructor(options = {}) {
     super();
     this.maxSteps = options.maxSteps || config.browser.maxSteps;
+    this._recentTaskCommand = "";
+    this._recentTaskTime = 0;
   }
 
   async runTask(command, existingTaskId = null, options = {}) {
+    const cleanCmd = (command || "").trim();
+    const now = Date.now();
+    if (cleanCmd && cleanCmd.toLowerCase() === this._recentTaskCommand.toLowerCase() && (now - this._recentTaskTime) < 4000) {
+      logger.warn(`[Orchestrator] Dropped duplicate concurrent task command within 4s window: "${cleanCmd}"`);
+      return {
+        status: "COMPLETED",
+        command: cleanCmd,
+        duplicateSuppressed: true,
+      };
+    }
+    this._recentTaskCommand = cleanCmd;
+    this._recentTaskTime = now;
+
     const taskId = existingTaskId || randomUUID();
     const taskModel = options.model || null;
     let sessionId = options.sessionId || null;

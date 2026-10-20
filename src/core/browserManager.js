@@ -121,6 +121,9 @@ class BrowserManager {
 
     // Expose process_task for the in-page chat overlay
     try {
+      let lastOverlayCommand = "";
+      let lastOverlayCommandTime = 0;
+
       await this.context.exposeFunction("process_task", async (commandOrPayload, maybeModel, maybeSessionId) => {
         let command = commandOrPayload;
         let selectedModel = maybeModel || null;
@@ -131,6 +134,17 @@ class BrowserManager {
           selectedModel = commandOrPayload.model || selectedModel;
           sessionId = commandOrPayload.sessionId || sessionId;
         }
+
+        const cleanCmd = (command || "").trim();
+        const now = Date.now();
+        // Strict deduplication: ignore rapid duplicate dispatches of the identical prompt within 4.5s
+        if (cleanCmd && cleanCmd.toLowerCase() === lastOverlayCommand.toLowerCase() && (now - lastOverlayCommandTime) < 4500) {
+          logger.warn(`[BrowserManager] Dropped duplicate process_task dispatch within 4.5s window: "${cleanCmd}"`);
+          return;
+        }
+
+        lastOverlayCommand = cleanCmd;
+        lastOverlayCommandTime = now;
 
         logger.info(`Received command from in-page chat overlay: "${command}" [Model: ${selectedModel || "default"}, Session: ${sessionId || "new"}]`);
         const { orchestrator } = await import("./orchestrator.js");
