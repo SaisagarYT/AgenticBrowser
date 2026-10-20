@@ -326,15 +326,16 @@ export function getChatManagerCode() {
 
     attachToolbarListeners(container, text, renderVoicePill);
 
+    // Trigger voice output IMMEDIATELY upon message arrival (eliminates 6-8s typewriter delay)
+    if (window.kiraVoice && window.kiraVoice.isVoiceActive && window.kiraVoice.isVoiceActive()) {
+      window.kiraVoice.speak(text, container.querySelector(".as-btn-speak"), (spokenText) => {
+        renderVoicePill(container, spokenText);
+      });
+    }
+
     if (!isInstant && bodyEl) {
       try {
-        typewriteMarkdown(bodyEl, text, toolbarEl, () => {
-          if (window.kiraVoice && window.kiraVoice.isVoiceActive && window.kiraVoice.isVoiceActive()) {
-            window.kiraVoice.speak(text, container.querySelector(".as-btn-speak"), (spokenText) => {
-              renderVoicePill(container, spokenText);
-            });
-          }
-        });
+        typewriteMarkdown(bodyEl, text, toolbarEl, () => {});
       } catch (err) {
         console.error("Typewriter error fallback:", err);
         bodyEl.innerHTML = formatAiMarkdown(text);
@@ -342,17 +343,6 @@ export function getChatManagerCode() {
           toolbarEl.style.opacity = "1";
           toolbarEl.style.pointerEvents = "auto";
         }
-        if (window.kiraVoice && window.kiraVoice.isVoiceActive && window.kiraVoice.isVoiceActive()) {
-          window.kiraVoice.speak(text, container.querySelector(".as-btn-speak"), (spokenText) => {
-            renderVoicePill(container, spokenText);
-          });
-        }
-      }
-    } else if (isInstant) {
-      if (window.kiraVoice && window.kiraVoice.isVoiceActive && window.kiraVoice.isVoiceActive()) {
-        window.kiraVoice.speak(text, container.querySelector(".as-btn-speak"), (spokenText) => {
-          renderVoicePill(container, spokenText);
-        });
       }
     }
   }

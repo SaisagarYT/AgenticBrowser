@@ -27,21 +27,24 @@ export class VoiceService {
   }
 
   loadSettings() {
+    const defaults = {
+      activeVoice: "af_heart",
+      speed: 1.0,
+      autoSpeak: true,
+      voiceInputEnabled: true,
+      recognitionLang: "en-IN",
+      ttsEngine: "browser",
+    };
     try {
       if (fs.existsSync(SETTINGS_FILE)) {
         const raw = fs.readFileSync(SETTINGS_FILE, "utf8");
-        return JSON.parse(raw);
+        return { ...defaults, ...JSON.parse(raw) };
       }
     } catch (err) {
       logger.warn(`[VoiceService] Failed to load voice settings: ${err.message}`);
     }
 
-    return {
-      activeVoice: "af_heart",
-      speed: 1.0,
-      autoSpeak: true,
-      voiceInputEnabled: true,
-    };
+    return defaults;
   }
 
   saveSettings(newSettings) {

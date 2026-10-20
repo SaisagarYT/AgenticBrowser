@@ -22,10 +22,14 @@ export function getVoiceManagerCode() {
   let speechRecognizer = null;
   let activeAudioPlayer = null;
   let activeSpeakingBtn = null;
+  let activeInterimText = "";
+  let recognitionRestartTimer = null;
   let voiceSettings = {
     activeVoice: "af_heart",
     speed: 1.0,
     autoSpeak: false,
+    recognitionLang: "en-IN",
+    ttsEngine: "browser",
   };
 
   // Voice Toggle Switch Elements (voiceToggleBtn and railVoiceToggleBtn are declared in controller scope)
@@ -263,7 +267,131 @@ export function getVoiceManagerCode() {
     renderWaveLoop();
   }
 
+  function commitVoiceText(resultText) {
+    if (!resultText || isPausedForExecution || isSpeaking) return;
+    const cleanText = resultText.trim();
+    if (!cleanText || cleanText.length < 2) return;
+
+    console.log("[Kira Voice] Realtime voice command committed:", cleanText);
+    isPausedForExecution = true;
+    updateFloatStatus("Thinking...");
+    textareaEl.value = cleanText;
+    autoResizeTextarea();
+    if (statusLabel) {
+      statusLabel.textContent = "Processing: " + (cleanText.length > 30 ? cleanText.slice(0, 30) + "..." : cleanText);
+    }
+    triggerSubmit();
+
+    if (executionWatchdogTimer) clearTimeout(executionWatchdogTimer);
+    executionWatchdogTimer = setTimeout(() => {
+      if (isVoiceModeActive && isPausedForExecution && !isSpeaking) {
+        resumeListening();
+      }
+    }, 20000);
+  }
+
+  function initSpeechRecognizer() {
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRec) {
+      console.warn("[Kira Voice] SpeechRecognition API not supported in this browser window, using audio capture fallback.");
+      return null;
+    }
+
+    try {
+      const rec = new SpeechRec();
+      rec.continuous = true;
+      rec.interimResults = true;
+      rec.maxAlternatives = 1;
+      rec.lang = voiceSettings.recognitionLang || "en-IN";
+
+      rec.onstart = () => {
+        isListening = true;
+        updateFloatStatus("Listening...");
+        if (statusLabel) {
+          statusLabel.textContent = "Kira Voice: Listening... (speak anytime)";
+        }
+      };
+
+      rec.onresult = (event) => {
+        if (!isVoiceModeActive || isPausedForExecution) return;
+
+        // Barge-in: If Kira is speaking and user begins talking, stop Kira immediately!
+        if (isSpeaking) {
+          stopSpeaking();
+        }
+
+        let interim = "";
+        let final = "";
+
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          const item = event.results[i];
+          const transcript = item[0]?.transcript || "";
+          if (item.isFinal) {
+            final += transcript;
+          } else {
+            interim += transcript;
+          }
+        }
+
+        if (interim) {
+          activeInterimText = interim.trim();
+          const displayTxt = activeInterimText.length > 25 ? activeInterimText.slice(0, 22) + "..." : activeInterimText;
+          updateFloatStatus("Hearing: " + displayTxt);
+          if (statusLabel) {
+            statusLabel.textContent = "Hearing: " + activeInterimText;
+          }
+        }
+
+        if (final) {
+          const finalText = final.trim();
+          console.log("[Kira Voice] Streaming speech final phrase:", finalText);
+          activeInterimText = "";
+          commitVoiceText(finalText);
+        }
+      };
+
+      rec.onerror = (event) => {
+        if (event.error === "no-speech") {
+          return;
+        }
+        console.warn("[Kira Voice] Speech recognition notice:", event.error);
+        if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+          updateFloatStatus("Mic blocked");
+          if (statusLabel) {
+            statusLabel.textContent = "Kira Voice: Microphone access blocked.";
+          }
+        }
+      };
+
+      rec.onend = () => {
+        isListening = false;
+        // Keep continuously listening if voice mode is still active
+        if (isVoiceModeActive && !isSpeaking && !isPausedForExecution) {
+          if (recognitionRestartTimer) clearTimeout(recognitionRestartTimer);
+          recognitionRestartTimer = setTimeout(() => {
+            if (isVoiceModeActive && !isSpeaking && !isPausedForExecution && speechRecognizer) {
+              try {
+                speechRecognizer.start();
+              } catch {}
+            }
+          }, 300);
+        }
+      };
+
+      return rec;
+    } catch (err) {
+      console.warn("[Kira Voice] Failed to initialize SpeechRecognition:", err);
+      return null;
+    }
+  }
+
   async function commitVoiceRecording() {
+    // If native streaming speechRecognizer is active, let it handle transcription
+    if (speechRecognizer) {
+      pcmChunks = [];
+      return;
+    }
+
     if (pcmChunks.length === 0 || isTranscribing || isPausedForExecution || isSpeaking) return;
 
     let totalLen = 0;
@@ -271,7 +399,6 @@ export function getVoiceManagerCode() {
       totalLen += pcmChunks[i].length;
     }
 
-    // Require at least 0.2s of audio (3200 samples at 16kHz)
     if (totalLen < 3200) {
       pcmChunks = [];
       updateFloatStatus("Listening...");
@@ -310,22 +437,7 @@ export function getVoiceManagerCode() {
       }
 
       if (resultText && resultText.length > 0) {
-        console.log("[Kira Voice] Whisper transcribed:", resultText);
-        isPausedForExecution = true;
-        updateFloatStatus("Thinking...");
-        textareaEl.value = resultText;
-        autoResizeTextarea();
-        if (statusLabel) {
-          statusLabel.textContent = "Processing: " + resultText.slice(0, 30) + "...";
-        }
-        triggerSubmit();
-
-        if (executionWatchdogTimer) clearTimeout(executionWatchdogTimer);
-        executionWatchdogTimer = setTimeout(() => {
-          if (isVoiceModeActive && isPausedForExecution && !isSpeaking) {
-            resumeListening();
-          }
-        }, 20000);
+        commitVoiceText(resultText);
       } else {
         updateFloatStatus("Listening...");
         if (statusLabel) {
@@ -333,7 +445,7 @@ export function getVoiceManagerCode() {
         }
       }
     } catch (err) {
-      console.error("[Kira Voice] Speech transcription error:", err);
+      console.error("[Kira Voice] Speech transcription fallback error:", err);
       updateFloatStatus("Listening...");
     } finally {
       isTranscribing = false;
@@ -559,6 +671,8 @@ export function getVoiceManagerCode() {
     const voiceSelect = sidebar.querySelector("#as-voice-select");
     const speedSlider = sidebar.querySelector("#as-voice-speed-slider");
     const speedVal = sidebar.querySelector("#as-voice-speed-val");
+    const langSelect = sidebar.querySelector("#as-voice-lang-select");
+    const engineSelect = sidebar.querySelector("#as-voice-engine-select");
 
     if (voiceSelect && voiceSettings.activeVoice) {
       voiceSelect.value = voiceSettings.activeVoice;
@@ -568,6 +682,12 @@ export function getVoiceManagerCode() {
     }
     if (speedVal) {
       speedVal.textContent = (voiceSettings.speed || 1.0).toFixed(2) + "x";
+    }
+    if (langSelect && voiceSettings.recognitionLang) {
+      langSelect.value = voiceSettings.recognitionLang;
+    }
+    if (engineSelect && voiceSettings.ttsEngine) {
+      engineSelect.value = voiceSettings.ttsEngine;
     }
   }
 
@@ -601,7 +721,7 @@ export function getVoiceManagerCode() {
     if (!text || typeof text !== "string") return;
 
     // Toggle stop if clicking the same speaking button
-    if (activeAudioPlayer && !activeAudioPlayer.paused && activeSpeakingBtn === triggerBtn && triggerBtn) {
+    if (activeSpeakingBtn === triggerBtn && triggerBtn && isSpeaking) {
       stopSpeaking();
       return;
     }
@@ -624,6 +744,64 @@ export function getVoiceManagerCode() {
 
     updateToggleUI(isVoiceModeActive, true);
     updateFloatStatus("Kira Speaking...");
+
+    // FAST MODE: Instant Natural Speech via Browser Web Speech API (<50ms turnaround)
+    if (voiceSettings.ttsEngine === "browser" && "speechSynthesis" in window) {
+      try {
+        window.speechSynthesis.cancel();
+
+        // Strip markdown formatting, URLs, code blocks, and symbols
+        let cleanText = text
+          .split(String.fromCharCode(96, 96, 96)).filter((_, idx) => idx % 2 === 0).join(" ")
+          .replace(/\\[([^\\]]+)\\]\\([^)]+\\)/g, "$1")
+          .replace(/[*_#~]/g, "")
+          .replace(new RegExp(String.fromCharCode(96), "g"), "")
+          .replace(/https?:\\/\\/\\S+/g, "")
+          .trim();
+
+        // Keep to 1-2 short, conversational sentences for natural ChatGPT-style brevity
+        const sentences = cleanText.split(/(?<=[.?!])\s+/);
+        if (sentences.length > 2) {
+          cleanText = sentences.slice(0, 2).join(" ");
+        }
+        if (!cleanText) cleanText = "All set. Task complete.";
+
+        if (statusLabel && !activeSpeakingBtn) {
+          statusLabel.textContent = "Kira is speaking...";
+        }
+
+        if (typeof onSpokenCallback === "function") {
+          onSpokenCallback(cleanText);
+        }
+
+        const utter = new SpeechSynthesisUtterance(cleanText);
+        utter.rate = voiceSettings.speed || 1.0;
+        utter.lang = voiceSettings.recognitionLang || "en-IN";
+
+        // Select best natural voice available in browser
+        const voices = window.speechSynthesis.getVoices();
+        if (voices && voices.length > 0) {
+          const matching = voices.find(v => v.lang === utter.lang) ||
+                         voices.find(v => v.lang.startsWith(utter.lang.slice(0, 2))) ||
+                         voices.find(v => v.name.includes("Natural") || v.name.includes("Google") || v.name.includes("Online")) ||
+                         voices[0];
+          if (matching) utter.voice = matching;
+        }
+
+        utter.onend = () => {
+          stopSpeaking();
+        };
+        utter.onerror = (err) => {
+          console.warn("[Kira Voice] SpeechSynthesis playback notice:", err);
+          stopSpeaking();
+        };
+
+        window.speechSynthesis.speak(utter);
+        return;
+      } catch (browserSynthErr) {
+        console.warn("[Kira Voice] Browser speech synthesis fallback:", browserSynthErr);
+      }
+    }
 
     if (speechTimeoutTimer) clearTimeout(speechTimeoutTimer);
     speechTimeoutTimer = setTimeout(() => {
@@ -687,6 +865,11 @@ export function getVoiceManagerCode() {
 
   function stopSpeaking() {
     isSpeaking = false;
+    if ("speechSynthesis" in window) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch {}
+    }
     if (speechTimeoutTimer) {
       clearTimeout(speechTimeoutTimer);
       speechTimeoutTimer = null;
@@ -745,23 +928,43 @@ export function getVoiceManagerCode() {
     if (activeAudioPlayer && !activeAudioPlayer.paused) {
       stopSpeaking();
     }
-  });
-
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && activeAudioPlayer && !activeAudioPlayer.paused) {
+    if ("speechSynthesis" in window && window.speechSynthesis.speaking) {
       stopSpeaking();
     }
   });
 
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      if ((activeAudioPlayer && !activeAudioPlayer.paused) || ("speechSynthesis" in window && window.speechSynthesis.speaking)) {
+        stopSpeaking();
+      }
+    }
+  });
+
   // --------------------------------------------------------------------------
-  // 2. Speech-to-Text (Continuous Listening Loop via Local Whisper)
+  // 2. Speech-to-Text (Continuous Realtime Streaming Listening)
   // --------------------------------------------------------------------------
   function startContinuousListening() {
     isListening = true;
     pcmChunks = [];
     isRecordingSpeech = false;
     isTranscribing = false;
+
+    // 1. Start live audio wave visualizer (microphone Web Audio)
     startWaveVisualizer();
+
+    // 2. Start native streaming speech recognition
+    if (!speechRecognizer) {
+      speechRecognizer = initSpeechRecognizer();
+    }
+    if (speechRecognizer) {
+      try {
+        speechRecognizer.lang = voiceSettings.recognitionLang || "en-IN";
+        speechRecognizer.start();
+      } catch (err) {
+        console.debug("[Kira Voice] Recognizer start notice:", err);
+      }
+    }
   }
 
   function stopContinuousListening() {
@@ -769,6 +972,19 @@ export function getVoiceManagerCode() {
     pcmChunks = [];
     isRecordingSpeech = false;
     isTranscribing = false;
+
+    if (recognitionRestartTimer) {
+      clearTimeout(recognitionRestartTimer);
+      recognitionRestartTimer = null;
+    }
+
+    if (speechRecognizer) {
+      try {
+        speechRecognizer.stop();
+      } catch {}
+      speechRecognizer = null;
+    }
+
     stopWaveVisualizer();
   }
 
@@ -779,6 +995,29 @@ export function getVoiceManagerCode() {
   if (voiceSelect) {
     voiceSelect.addEventListener("change", (e) => {
       voiceSettings.activeVoice = e.target.value;
+      if (typeof window.kira_save_voice_settings === "function") {
+        window.kira_save_voice_settings(voiceSettings);
+      }
+    });
+  }
+
+  const langSelect = sidebar.querySelector("#as-voice-lang-select");
+  if (langSelect) {
+    langSelect.addEventListener("change", (e) => {
+      voiceSettings.recognitionLang = e.target.value;
+      if (speechRecognizer) {
+        speechRecognizer.lang = voiceSettings.recognitionLang;
+      }
+      if (typeof window.kira_save_voice_settings === "function") {
+        window.kira_save_voice_settings(voiceSettings);
+      }
+    });
+  }
+
+  const engineSelect = sidebar.querySelector("#as-voice-engine-select");
+  if (engineSelect) {
+    engineSelect.addEventListener("change", (e) => {
+      voiceSettings.ttsEngine = e.target.value;
       if (typeof window.kira_save_voice_settings === "function") {
         window.kira_save_voice_settings(voiceSettings);
       }

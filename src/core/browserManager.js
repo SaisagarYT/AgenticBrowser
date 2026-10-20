@@ -37,35 +37,43 @@ class BrowserManager {
 
     const downloadDir = config.getDownloadsDir();
 
+    const contextOptions = {
+      ...launchOptions,
+      viewport: null,
+      bypassCSP: true,
+      ignoreHTTPSErrors: true,
+      acceptDownloads: true,
+      downloadsPath: downloadDir,
+      permissions: ["microphone"],
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    };
+
     if (config.browser.storageDir) {
       if (!fs.existsSync(config.browser.storageDir)) {
         fs.mkdirSync(config.browser.storageDir, { recursive: true });
       }
 
-      this.context = await chromium.launchPersistentContext(config.browser.storageDir, {
-        ...launchOptions,
-        viewport: null,
-        bypassCSP: true,
-        ignoreHTTPSErrors: true,
-        acceptDownloads: true,
-        downloadsPath: downloadDir,
-        permissions: ["microphone"],
-        userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-      });
+      try {
+        // Prefer official Google Chrome for native streaming Google Speech Recognition
+        this.context = await chromium.launchPersistentContext(config.browser.storageDir, {
+          ...contextOptions,
+          channel: "chrome",
+        });
+        logger.info("[BrowserManager] Launched Google Chrome channel with native Google Speech Recognition.");
+      } catch (chromeErr) {
+        logger.warn(`[BrowserManager] Chrome channel notice: ${chromeErr.message}. Falling back to default Chromium.`);
+        this.context = await chromium.launchPersistentContext(config.browser.storageDir, contextOptions);
+      }
 
       const pages = this.context.pages();
       this.page = pages.length > 0 ? pages[0] : await this.context.newPage();
     } else {
-      this.browser = await chromium.launch(launchOptions);
-      this.context = await this.browser.newContext({
-        viewport: null,
-        bypassCSP: true,
-        ignoreHTTPSErrors: true,
-        acceptDownloads: true,
-        downloadsPath: downloadDir,
-        permissions: ["microphone"],
-        userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-      });
+      try {
+        this.browser = await chromium.launch({ ...launchOptions, channel: "chrome" });
+      } catch {
+        this.browser = await chromium.launch(launchOptions);
+      }
+      this.context = await this.browser.newContext(contextOptions);
       this.page = await this.context.newPage();
     }
 

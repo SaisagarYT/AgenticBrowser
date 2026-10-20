@@ -413,7 +413,36 @@ export function getSidebarHtml(ICONS, VOXLE_CUBE_SVG) {
             <div class="as-section-sub">Configure Kira's offline Kokoro-82M neural voice, speech speed, and auto-read responses.</div>
           </div>
 
-          <div class="as-settings-card">
+            <!-- Speech Recognition Language & Accent -->
+            <div class="as-setting-row" style="flex-direction: column; align-items: stretch; gap: 8px;">
+              <div class="as-setting-info">
+                <div class="as-setting-label">Speech Recognition Language &amp; Accent</div>
+                <div class="as-setting-desc">Real-time streaming speech recognition engine tuned to your regional accent.</div>
+              </div>
+              <select class="as-settings-select" id="as-voice-lang-select" style="width: 100%; margin-top: 4px;">
+                <option value="en-IN">English (India) — en-IN (Recommended)</option>
+                <option value="en-US">English (United States) — en-US</option>
+                <option value="en-GB">English (United Kingdom) — en-GB</option>
+                <option value="en-AU">English (Australia) — en-AU</option>
+              </select>
+            </div>
+
+            <div class="as-setting-divider"></div>
+
+            <!-- Voice Synthesis Engine -->
+            <div class="as-setting-row" style="flex-direction: column; align-items: stretch; gap: 8px;">
+              <div class="as-setting-info">
+                <div class="as-setting-label">Voice Synthesis Mode</div>
+                <div class="as-setting-desc">Instant Natural Speech (0ms delay) or Local Kokoro-82M Neural Model.</div>
+              </div>
+              <select class="as-settings-select" id="as-voice-engine-select" style="width: 100%; margin-top: 4px;">
+                <option value="browser">Instant Natural Speech (Fastest, 0ms Delay)</option>
+                <option value="kokoro">Kokoro-82M Neural Voice (Offline ONNX)</option>
+              </select>
+            </div>
+
+            <div class="as-setting-divider"></div>
+
             <!-- Voice Persona Selector -->
             <div class="as-setting-row" style="flex-direction: column; align-items: stretch; gap: 8px;">
               <div class="as-setting-info">
