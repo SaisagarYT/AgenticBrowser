@@ -32,7 +32,6 @@ class BrowserManager {
         "--start-maximized",
         "--disable-web-security",
         "--disable-features=IsolateOrigins,site-per-process",
-        "--use-fake-ui-for-media-stream",
       ],
     };
 

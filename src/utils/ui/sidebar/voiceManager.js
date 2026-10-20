@@ -122,13 +122,16 @@ export function getVoiceManagerCode() {
             noiseSuppression: false,
             autoGainControl: true,
           },
-        }).catch((err) => {
-          console.warn("[Kira Voice] getUserMedia error:", err);
-          updateFloatStatus("Mic blocked");
-          if (statusLabel) {
-            statusLabel.textContent = "Kira Voice: Microphone access blocked or not available.";
-          }
-          return null;
+        }).catch(async (err) => {
+          console.warn("[Kira Voice] getUserMedia with constraints error, falling back to basic audio:", err);
+          return await navigator.mediaDevices.getUserMedia({ audio: true }).catch((err2) => {
+            console.error("[Kira Voice] getUserMedia fallback failed:", err2);
+            updateFloatStatus("Mic blocked");
+            if (statusLabel) {
+              statusLabel.textContent = "Kira Voice: Microphone access blocked or not available.";
+            }
+            return null;
+          });
         });
       }
 
