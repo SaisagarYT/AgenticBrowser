@@ -108,7 +108,11 @@ export function getVoiceManagerCode() {
       if (!audioContext || audioContext.state === "closed") {
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
         if (AudioCtx) {
-          audioContext = new AudioCtx();
+          try {
+            audioContext = new AudioCtx({ sampleRate: 16000 });
+          } catch {
+            audioContext = new AudioCtx();
+          }
         }
       }
       if (audioContext && audioContext.state === "suspended") {
@@ -118,8 +122,9 @@ export function getVoiceManagerCode() {
       if (!micMediaStream || !micMediaStream.active) {
         micMediaStream = await navigator.mediaDevices.getUserMedia({
           audio: {
+            channelCount: 1,
             echoCancellation: true,
-            noiseSuppression: false,
+            noiseSuppression: true,
             autoGainControl: true,
           },
         }).catch(async (err) => {
@@ -163,8 +168,6 @@ export function getVoiceManagerCode() {
         audioSourceNode.connect(analyserNode);
 
         // Connect speech audio recording processor (16kHz for local Whisper ASR)
-        const inputSampleRate = audioContext.sampleRate;
-        const ratio = inputSampleRate / 16000;
         audioCaptureNode = audioContext.createScriptProcessor(4096, 1, 1);
 
         // Connect to MediaStreamDestination (prevents Chromium power-saving zero-gain muting)
@@ -192,15 +195,21 @@ export function getVoiceManagerCode() {
           }
           const frameRms = Math.sqrt(sumSquares / channelData.length);
 
-          // Downsample frame to 16kHz Float32 PCM
-          const targetSamples = Math.round(channelData.length / ratio);
-          const downsampled = new Float32Array(targetSamples);
-          for (let k = 0; k < targetSamples; k++) {
-            const origIdx = k * ratio;
-            const lower = Math.floor(origIdx);
-            const upper = Math.min(lower + 1, channelData.length - 1);
-            const weight = origIdx - lower;
-            downsampled[k] = channelData[lower] * (1 - weight) + channelData[upper] * weight;
+          // Native 16kHz sample capture (or fallback linear resampling if device locked rate)
+          let downsampled;
+          if (audioContext.sampleRate === 16000) {
+            downsampled = new Float32Array(channelData);
+          } else {
+            const ratio = audioContext.sampleRate / 16000;
+            const targetSamples = Math.round(channelData.length / ratio);
+            downsampled = new Float32Array(targetSamples);
+            for (let k = 0; k < targetSamples; k++) {
+              const origIdx = k * ratio;
+              const lower = Math.floor(origIdx);
+              const upper = Math.min(lower + 1, channelData.length - 1);
+              const weight = origIdx - lower;
+              downsampled[k] = channelData[lower] * (1 - weight) + channelData[upper] * weight;
+            }
           }
 
           // Keep rolling pre-roll ring buffer (~350ms of audio)
@@ -236,7 +245,7 @@ export function getVoiceManagerCode() {
 
             // Commit when user pauses for 750ms after speaking OR max utterance reaches 15s
             const elapsedSinceSpeech = Date.now() - lastSpeechTime;
-            const totalEstimatedSamples = pcmChunks.length * targetSamples;
+            const totalEstimatedSamples = pcmChunks.length * downsampled.length;
             if ((elapsedSinceSpeech > 750 && totalEstimatedSamples >= 3200) || totalEstimatedSamples > 240000) {
               isRecordingSpeech = false;
               updateFloatStatus("Transcribing...");
