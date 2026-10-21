@@ -46,6 +46,7 @@ export class VoiceService {
       activeVoice: "af_heart",
       speed: 1.0,
       autoSpeak: true,
+      liveNarration: true,
       voiceInputEnabled: true,
       recognitionLang: "en-IN",
       ttsEngine: "edge",

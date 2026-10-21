@@ -113,14 +113,14 @@ class STTService {
       }
       const rms = Math.sqrt(sumSquares / float32Samples.length);
 
-      // Dead silence / mic floor gate: avoid wasting inference on background silence
-      if (maxAbs < 0.012 || rms < 0.003) {
+      // Dead silence / mic floor gate: only reject true dead silence (<0.003 peak AND <0.0006 RMS)
+      if (maxAbs < 0.003 && rms < 0.0006) {
         return { success: true, text: "" };
       }
 
       // Peak amplitude normalization to optimize signal-to-noise ratio for Whisper
-      if (maxAbs < 0.75) {
-        const scale = 0.88 / maxAbs;
+      if (maxAbs > 0.001 && maxAbs < 0.85) {
+        const scale = Math.min(100.0, 0.88 / maxAbs);
         for (let i = 0; i < float32Samples.length; i++) {
           float32Samples[i] *= scale;
         }

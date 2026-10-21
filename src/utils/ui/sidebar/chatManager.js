@@ -204,7 +204,7 @@ export function getChatManagerCode() {
     pillEl.innerHTML = '<span class="as-voice-spoken-pill-icon">' + ICONS.waveform + '</span><span class="as-voice-spoken-pill-text">"' + escapeHtml(spokenText) + '"</span>';
   }
 
-  function appendAiResponseCard(text, isInstant = false) {
+  function appendAiResponseCard(text, isInstant = false, isReplay = false) {
     if (heroView) heroView.style.display = "none";
     activeTimelineContainer = null;
     activeTimelineStream = null;
@@ -213,7 +213,7 @@ export function getChatManagerCode() {
 
     // 1. If an active streaming card is already in progress, finalize it instead of creating a second card!
     if (currentStreamingCard && currentStreamingCard.container && currentStreamingCard.container.parentNode) {
-      finalizeStreamingAiCard(text);
+      finalizeStreamingAiCard(text, isReplay);
       return;
     }
 
@@ -292,9 +292,9 @@ export function getChatManagerCode() {
         </div>
       </div>
 
-      <div class="as-ai-message-body">\${isInstant ? formattedBody : ""}</div>
+      <div class="as-ai-message-body">\${(isInstant || isReplay) ? formattedBody : ""}</div>
 
-      <div class="as-ai-toolbar" style="\${isInstant ? 'opacity: 1; pointer-events: auto;' : 'opacity: 0; pointer-events: none;'}">
+      <div class="as-ai-toolbar" style="\${(isInstant || isReplay) ? 'opacity: 1; pointer-events: auto;' : 'opacity: 0; pointer-events: none;'}">
         <button class="as-ai-tool-btn as-btn-speak" title="Listen to Kira" type="button">
           \${ICONS.volume2}
         </button>
@@ -326,14 +326,14 @@ export function getChatManagerCode() {
 
     attachToolbarListeners(container, text, renderVoicePill);
 
-    // Trigger voice output IMMEDIATELY upon message arrival (eliminates 6-8s typewriter delay)
-    if (window.kiraVoice && window.kiraVoice.isVoiceActive && window.kiraVoice.isVoiceActive()) {
+    // Trigger voice output IMMEDIATELY upon message arrival (suppressed on history replay)
+    if (!isReplay && window.kiraVoice && window.kiraVoice.isVoiceActive && window.kiraVoice.isVoiceActive()) {
       window.kiraVoice.speak(text, container.querySelector(".as-btn-speak"), (spokenText) => {
         renderVoicePill(container, spokenText);
       });
     }
 
-    if (!isInstant && bodyEl) {
+    if (!isInstant && !isReplay && bodyEl) {
       try {
         typewriteMarkdown(bodyEl, text, toolbarEl, () => {});
       } catch (err) {
@@ -560,7 +560,7 @@ export function getChatManagerCode() {
     }
   }
 
-  function finalizeStreamingAiCard(finalText) {
+  function finalizeStreamingAiCard(finalText, isReplay = false) {
     hideSkeleton();
     activeTimelineContainer = null;
     activeTimelineStream = null;
@@ -577,7 +577,7 @@ export function getChatManagerCode() {
       attachToolbarListeners(card.container, finalText, renderVoicePill);
       contentEl.scrollTop = contentEl.scrollHeight;
 
-      if (window.kiraVoice && window.kiraVoice.isVoiceActive && window.kiraVoice.isVoiceActive()) {
+      if (!isReplay && window.kiraVoice && window.kiraVoice.isVoiceActive && window.kiraVoice.isVoiceActive()) {
         const speakBtn = card.container.querySelector(".as-btn-speak");
         window.kiraVoice.speak(finalText, speakBtn, (spokenText) => {
           renderVoicePill(card.container, spokenText);
@@ -972,7 +972,7 @@ export function getChatManagerCode() {
   // --------------------------------------------------------------------------
   // Step & System Event Message Router
   // --------------------------------------------------------------------------
-  function appendStepCard(text, type = "step") {
+  function appendStepCard(text, type = "step", isReplay = false) {
     if (heroView) heroView.style.display = "none";
 
     // 0. Route scholarly / file artifact downloads directly to artifact card
@@ -983,6 +983,9 @@ export function getChatManagerCode() {
       }
       if (typeof aData === "object" && aData !== null) {
         appendArtifactCard(aData);
+        if (!isReplay && window.kiraVoice && window.kiraVoice.narrateProgress) {
+          window.kiraVoice.narrateProgress(aData.title || "Scholarly Article", "artifact");
+        }
         return;
       }
     }
@@ -992,6 +995,20 @@ export function getChatManagerCode() {
       hideSkeleton();
       updatePlan(text);
       currentTaskThoughts.push({ type: "plan", stage: "planner", text: typeof text === "string" ? text : JSON.stringify(text), time: Date.now() });
+
+      // Live co-pilot progress voice narration (suppressed on history replay)
+      if (!isReplay) {
+        try {
+          let pData = text;
+          if (typeof text === "string" && text.startsWith("{")) {
+            pData = JSON.parse(text);
+          }
+          const instruction = pData.currentInstruction || "";
+          if (instruction && window.kiraVoice && window.kiraVoice.narrateProgress) {
+            window.kiraVoice.narrateProgress(instruction, "plan");
+          }
+        } catch {}
+      }
       return; // NO extra card in chat!
     }
 
@@ -1005,7 +1022,7 @@ export function getChatManagerCode() {
       const stage = typeof tData === "object" ? (tData.stage || "planner") : "planner";
       const cleanThought = stripStartSymbols(tText);
 
-      if (cleanThought && statusLabel) {
+      if (!isReplay && cleanThought && statusLabel) {
         setStatus("processing", cleanThought.slice(0, 50) + "...");
       }
 
@@ -1027,7 +1044,7 @@ export function getChatManagerCode() {
 
     // 3. Screenshot capture event (triggers screen flash & shows preview)
     if (type === "screenshot") {
-      triggerScreenshotFlash();
+      if (!isReplay) triggerScreenshotFlash();
       let sData = text;
       if (typeof text === "string" && text.startsWith("{")) {
         try { sData = JSON.parse(text); } catch { }
@@ -1055,6 +1072,11 @@ export function getChatManagerCode() {
         appendActionTimelineItem(text);
       }
       currentTaskThoughts.push({ type: "action", stage: "browser", text: stripStartSymbols(text), time: Date.now() });
+
+      // Live co-pilot progress voice narration (suppressed on history replay)
+      if (!isReplay && window.kiraVoice && window.kiraVoice.narrateProgress) {
+        window.kiraVoice.narrateProgress(text, "browser");
+      }
       return; // Handled
     }
 
@@ -1075,8 +1097,8 @@ export function getChatManagerCode() {
     if (type === "done") {
       completeAllPlanSteps();
       hideSkeleton();
-      if (!finalizeStreamingAiCard(text)) {
-        appendAiResponseCard(text);
+      if (!finalizeStreamingAiCard(text, isReplay)) {
+        appendAiResponseCard(text, isReplay, isReplay);
       }
       return;
     }

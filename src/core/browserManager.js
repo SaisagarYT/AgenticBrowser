@@ -35,6 +35,9 @@ class BrowserManager {
         "--disable-infobars",
         "--test-type",
         "--silent-debugger-extension-api",
+        "--use-fake-ui-for-media-stream",
+        "--autoplay-policy=no-user-gesture-required",
+        "--enable-features=WebSpeechAPI",
       ],
     };
 
@@ -397,6 +400,17 @@ class BrowserManager {
         return await stt.transcribe(base64Audio);
       });
 
+      await this.context.exposeFunction("kira_distill_progress", async (rawText, type) => {
+        const { distillProgressForSpeech } = await import("./voice/speechFilter.js");
+        return distillProgressForSpeech(rawText, type);
+      });
+
+      await this.context.exposeFunction("sync_sidebar_collapsed", async (collapsed) => {
+        const { uiManager } = await import("../utils/uiManager.js");
+        uiManager.isCollapsed = Boolean(collapsed);
+        return { success: true };
+      });
+
       // Background pre-warm Whisper ASR transcriber
       import("./voice/sttService.js").then(({ getSTTService }) => {
         getSTTService().getTranscriber().catch(() => {});
@@ -409,6 +423,17 @@ class BrowserManager {
     const attachPageOverlayListeners = (targetPage) => {
       targetPage.setDefaultTimeout(30000);
       targetPage.setDefaultNavigationTimeout(45000);
+
+      targetPage.on("console", (msg) => {
+        const text = msg.text();
+        if (text.includes("[Kira Voice]") || msg.type() === "error") {
+          logger.info(`[Browser Page] [${msg.type()}]: ${text}`);
+        }
+      });
+
+      targetPage.on("pageerror", (err) => {
+        logger.warn(`[Browser PageError]: ${err.message}`);
+      });
 
       targetPage.on("domcontentloaded", async () => {
         try {

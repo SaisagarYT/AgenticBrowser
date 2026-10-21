@@ -20,6 +20,7 @@ export function getVoiceManagerCode() {
   let speechTimeoutTimer = null;
   let executionWatchdogTimer = null;
   let speechRecognizer = null;
+  let isSpeechRecognizerStarted = false;
   let activeAudioPlayer = null;
   let activeSpeakingBtn = null;
   let activeInterimText = "";
@@ -35,9 +36,11 @@ export function getVoiceManagerCode() {
     activeVoice: "af_heart",
     speed: 1.0,
     autoSpeak: false,
+    liveNarration: true,
     recognitionLang: "en-IN",
     ttsEngine: "edge",
   };
+  let lastNarrationTime = 0;
 
   // Voice Toggle Switch Elements (voiceToggleBtn and railVoiceToggleBtn are declared in controller scope)
 
@@ -57,7 +60,7 @@ export function getVoiceManagerCode() {
   let smoothedHeights = [4, 4, 4, 4, 4, 4, 4, 4, 4];
   let pcmChunks = [];
   let preRollBuffer = [];
-  let noiseFloor = 0.002;
+  let noiseFloor = 0.0006;
   let isRecordingSpeech = false;
   let lastSpeechTime = 0;
   let isTranscribing = false;
@@ -119,36 +122,65 @@ export function getVoiceManagerCode() {
       if (!audioContext || audioContext.state === "closed") {
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
         if (AudioCtx) {
-          try {
-            audioContext = new AudioCtx({ sampleRate: 16000 });
-          } catch {
-            audioContext = new AudioCtx();
-          }
+          audioContext = new AudioCtx();
         }
       }
       if (audioContext && audioContext.state === "suspended") {
-        await audioContext.resume();
+        audioContext.resume().catch(() => {});
+      }
+      if (audioContext) {
+        audioContext.onstatechange = () => {
+          if (audioContext && audioContext.state === "suspended" && isVoiceModeActive) {
+            audioContext.resume().catch(() => {});
+          }
+        };
       }
 
+      // Gesture listeners to guarantee AudioContext is never blocked by autoplay policy
+      const unlockAudioContext = () => {
+        if (audioContext && audioContext.state === "suspended") {
+          audioContext.resume().catch(() => {});
+        }
+      };
+      document.addEventListener("click", unlockAudioContext, { passive: true });
+      document.addEventListener("keydown", unlockAudioContext, { passive: true });
+
+      const getMedia = navigator.mediaDevices?.getUserMedia?.bind(navigator.mediaDevices)
+        || navigator.getUserMedia?.bind(navigator)
+        || navigator.webkitGetUserMedia?.bind(navigator);
+
       if (!micMediaStream || !micMediaStream.active) {
-        micMediaStream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            channelCount: 1,
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-          },
-        }).catch(async (err) => {
-          console.warn("[Kira Voice] getUserMedia with constraints error, falling back to basic audio:", err);
-          return await navigator.mediaDevices.getUserMedia({ audio: true }).catch((err2) => {
-            console.error("[Kira Voice] getUserMedia fallback failed:", err2);
+        if (!getMedia) {
+          console.error("[Kira Voice] MediaDevices getUserMedia not supported in this frame.");
+          updateFloatStatus("Mic not supported");
+          if (statusLabel) {
+            statusLabel.textContent = "Kira Voice: Microphone API not supported in this frame.";
+          }
+          return;
+        }
+
+        try {
+          micMediaStream = await getMedia({
+            audio: {
+              channelCount: 1,
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+            },
+          });
+        } catch (err) {
+          console.warn("[Kira Voice] getUserMedia with constraints failed, retrying simple {audio: true}:", err);
+          try {
+            micMediaStream = await getMedia({ audio: true });
+          } catch (err2) {
+            console.error("[Kira Voice] getUserMedia completely failed:", err2);
             updateFloatStatus("Mic blocked");
             if (statusLabel) {
-              statusLabel.textContent = "Kira Voice: Microphone access blocked or not available.";
+              statusLabel.textContent = "Kira Voice: Microphone access blocked or unavailable.";
             }
-            return null;
-          });
-        });
+            return;
+          }
+        }
       }
 
       if (micMediaStream && audioContext) {
@@ -175,23 +207,27 @@ export function getVoiceManagerCode() {
 
         analyserNode = audioContext.createAnalyser();
         analyserNode.fftSize = 256;
-        analyserNode.smoothingTimeConstant = 0.3; // Snappy live acoustic tracking
+        analyserNode.smoothingTimeConstant = 0.25; // Snappy live acoustic tracking
         audioSourceNode.connect(analyserNode);
 
-        // Connect speech audio recording processor (16kHz for local Whisper ASR)
+        // Connect speech audio recording processor (buffer size 4096 = ~85ms at 48kHz)
         audioCaptureNode = audioContext.createScriptProcessor(4096, 1, 1);
-
-        // Connect to MediaStreamDestination (prevents Chromium power-saving zero-gain muting)
-        audioDestinationNode = audioContext.createMediaStreamDestination();
         audioSourceNode.connect(audioCaptureNode);
-        audioCaptureNode.connect(audioDestinationNode);
+
+        // Connect through silent zero-gain node directly to audioContext.destination
+        // This is ESSENTIAL in Chromium to keep the audio graph actively pulling samples without speaker feedback
+        const zeroGain = audioContext.createGain();
+        zeroGain.gain.value = 0;
+        audioCaptureNode.connect(zeroGain);
+        analyserNode.connect(zeroGain);
+        zeroGain.connect(audioContext.destination);
 
         // Retain references on window to permanently prevent V8 garbage collection
         window._kiraAudioCtx = audioContext;
         window._kiraAudioSource = audioSourceNode;
         window._kiraCaptureNode = audioCaptureNode;
         window._kiraAnalyser = analyserNode;
-        window._kiraAudioDest = audioDestinationNode;
+        window._kiraZeroGain = zeroGain;
         window._kiraMediaStream = micMediaStream;
 
         audioCaptureNode.onaudioprocess = (e) => {
@@ -206,7 +242,7 @@ export function getVoiceManagerCode() {
           }
           const frameRms = Math.sqrt(sumSquares / channelData.length);
 
-          // Native 16kHz sample capture (or fallback linear resampling if device locked rate)
+          // Native 16kHz sample capture (or fallback linear resampling if device rate is 44.1/48kHz)
           let downsampled;
           if (audioContext.sampleRate === 16000) {
             downsampled = new Float32Array(channelData);
@@ -229,11 +265,17 @@ export function getVoiceManagerCode() {
             preRollBuffer.shift();
           }
 
-          // Dynamic Voice Activity Detection (VAD)
-          // Adapts to quiet microphones and room noise floor
-          const speechThreshold = Math.max(0.0035, noiseFloor * 1.8);
+          let framePeak = 0;
+          for (let k = 0; k < channelData.length; k++) {
+            const abs = Math.abs(channelData[k]);
+            if (abs > framePeak) framePeak = abs;
+          }
 
-          if (frameRms > speechThreshold) {
+          // Dynamic Voice Activity Detection (VAD)
+          // Sensitive to quiet microphones and conversational voices
+          const speechThreshold = Math.max(0.0008, noiseFloor * 1.25);
+
+          if (frameRms > speechThreshold || framePeak > 0.006) {
             if (!isRecordingSpeech) {
               isRecordingSpeech = true;
               updateFloatStatus("Hearing you...");
@@ -248,7 +290,7 @@ export function getVoiceManagerCode() {
             lastSpeechTime = Date.now();
           } else {
             // Adapt resting ambient noise floor during silence
-            noiseFloor = noiseFloor * 0.97 + frameRms * 0.03;
+            noiseFloor = noiseFloor * 0.96 + frameRms * 0.04;
           }
 
           if (isRecordingSpeech) {
@@ -364,8 +406,93 @@ export function getVoiceManagerCode() {
       return true;
     }
 
+    // 5. Live Co-Pilot Narration voice controls
+    if (/^(enable|turn\\s+on|start)\\s+(live\\s+narration|co\\s*pilot(\\s+voice)?|progress(\\s+voice)?)$/i.test(lower)) {
+      voiceSettings.liveNarration = true;
+      syncVoiceSettingsUI();
+      if (typeof window.kira_save_voice_settings === "function") window.kira_save_voice_settings(voiceSettings);
+      speakText("Live co-pilot narration is now enabled.");
+      return true;
+    }
+    if (/^(disable|turn\\s+off|stop|mute)\\s+(live\\s+narration|co\\s*pilot(\\s+voice)?|progress(\\s+voice)?)$/i.test(lower)) {
+      voiceSettings.liveNarration = false;
+      syncVoiceSettingsUI();
+      if (typeof window.kira_save_voice_settings === "function") window.kira_save_voice_settings(voiceSettings);
+      speakText("Live co-pilot narration is turned off.");
+      return true;
+    }
+
     return false;
   }
+
+  function distillClientProgress(rawText, type = "browser") {
+    if (!rawText || typeof rawText !== "string") return "";
+    const trimmed = rawText.trim();
+    if (/\\b(cookie|consent|scroll|screenshot|evaluat|wait|sleep|viewport|press\\s+key)\\b/i.test(trimmed)) {
+      return "";
+    }
+    if (type === "artifact" || type === "download" || /download/i.test(trimmed)) {
+      return "Downloading the file for you.";
+    }
+    const urlMatch = trimmed.match(/https?:\\/\\/(?:www\\.)?([a-zA-Z0-9.-]+)/i);
+    if (urlMatch && urlMatch[1]) {
+      const host = urlMatch[1].replace(/\\.(com|org|net|io|edu|gov|ai)$/i, "");
+      let site = host.charAt(0).toUpperCase() + host.slice(1);
+      if (/goldmansachs/i.test(host)) site = "Goldman Sachs";
+      if (/arxiv/i.test(host)) site = "arXiv";
+      if (/github/i.test(host)) site = "GitHub";
+      if (/google/i.test(host)) site = "Google";
+      if (/wikipedia/i.test(host)) site = "Wikipedia";
+      return "Opening " + site + " now.";
+    }
+    const searchMatch = trimmed.match(/(?:searched\\s+for|search\\s+for|search\\s+google\\s+for)\\s+['"]?([^'";\\n]+)['"]?/i);
+    if (searchMatch && searchMatch[1]) {
+      const q = searchMatch[1].trim().split(/\\s+/).slice(0, 5).join(" ");
+      return "Searching for " + q + ".";
+    }
+    if (type === "plan" && trimmed.length > 5 && trimmed.length < 80) {
+      let cln = trimmed.replace(/^(?:step\\s+\\d+:?|first,?|next,?|then,?)\\s*/i, "").trim();
+      const wrds = cln.split(/\\s+/);
+      if (wrds.length <= 6) {
+        return cln.endsWith(".") ? cln : cln + ".";
+      }
+    }
+    return "";
+  }
+
+  async function narrateProgress(rawText, type = "browser") {
+    if (!isVoiceModeActive || voiceSettings.liveNarration === false) return;
+    if (isSpeaking) return;
+
+    const now = Date.now();
+    if (type !== "artifact" && type !== "download" && (now - lastNarrationTime < 5500)) {
+      return;
+    }
+
+    let phrase = "";
+    try {
+      if (typeof window.kira_distill_progress === "function") {
+        phrase = await window.kira_distill_progress(rawText, type);
+      }
+    } catch {}
+
+    if (!phrase) {
+      phrase = distillClientProgress(rawText, type);
+    }
+
+    if (!phrase || phrase.trim().length < 3) return;
+
+    lastNarrationTime = now;
+    console.log("[Kira Voice] Co-pilot live progress update:", phrase);
+    const floatDisplay = phrase.length > 28 ? phrase.slice(0, 25) + "..." : phrase;
+    updateFloatStatus("Kira: " + floatDisplay);
+    if (statusLabel) {
+      statusLabel.textContent = "Kira: " + phrase;
+    }
+
+    speakText(phrase);
+  }
+
 
   function normalizeVoiceText(raw) {
     if (!raw) return "";
@@ -437,8 +564,9 @@ export function getVoiceManagerCode() {
     updateFloatStatus("Thinking...");
 
     // Pause live speech recognition during active task dispatch to eliminate acoustic self-echo
-    if (speechRecognizer) {
+    if (speechRecognizer && isSpeechRecognizerStarted) {
       try { speechRecognizer.stop(); } catch {}
+      isSpeechRecognizerStarted = false;
     }
 
     textareaEl.value = cleanText;
@@ -471,6 +599,7 @@ export function getVoiceManagerCode() {
       rec.lang = voiceSettings.recognitionLang || "en-IN";
 
       rec.onstart = () => {
+        isSpeechRecognizerStarted = true;
         isListening = true;
         updateFloatStatus("Listening...");
         if (statusLabel) {
@@ -557,19 +686,20 @@ export function getVoiceManagerCode() {
       };
 
       rec.onerror = (event) => {
+        isSpeechRecognizerStarted = false;
         if (event.error === "no-speech") {
           return;
         }
         console.warn("[Kira Voice] Speech recognition notice:", event.error);
-        if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-          updateFloatStatus("Mic blocked");
-          if (statusLabel) {
-            statusLabel.textContent = "Kira Voice: Microphone access blocked.";
-          }
+        if (event.error === "not-allowed" || event.error === "service-not-allowed" || event.error === "network") {
+          // Disable native speechRecognizer and fail over cleanly to local Whisper ASR
+          speechRecognizer = null;
+          console.log("[Kira Voice] Switched to local Whisper ASR engine (SpeechRecognition unavailable: " + event.error + ")");
         }
       };
 
       rec.onend = () => {
+        isSpeechRecognizerStarted = false;
         isListening = false;
         // If there is an accumulated completed utterance waiting when recognition pauses, finalize it cleanly
         if (accumulatedFinalTranscript && !isPausedForExecution && !isSpeaking) {
@@ -582,13 +712,16 @@ export function getVoiceManagerCode() {
         }
 
         // Keep continuously listening if voice mode is still active
-        if (isVoiceModeActive && !isSpeaking && !isPausedForExecution) {
+        if (isVoiceModeActive && !isSpeaking && !isPausedForExecution && speechRecognizer && !isSpeechRecognizerStarted) {
           if (recognitionRestartTimer) clearTimeout(recognitionRestartTimer);
           recognitionRestartTimer = setTimeout(() => {
-            if (isVoiceModeActive && !isSpeaking && !isPausedForExecution && speechRecognizer) {
+            if (isVoiceModeActive && !isSpeaking && !isPausedForExecution && speechRecognizer && !isSpeechRecognizerStarted) {
               try {
                 speechRecognizer.start();
-              } catch {}
+                isSpeechRecognizerStarted = true;
+              } catch (err) {
+                isSpeechRecognizerStarted = false;
+              }
             }
           }, 250);
         }
@@ -602,8 +735,10 @@ export function getVoiceManagerCode() {
   }
 
   async function commitVoiceRecording() {
-    // If native streaming speechRecognizer is active, let it handle transcription
-    if (speechRecognizer) {
+    if (pcmChunks.length === 0 || isTranscribing || isPausedForExecution || isSpeaking) return;
+
+    // If native streaming speechRecognizer already committed a command recently, don't double-transcribe
+    if (Date.now() - lastCommittedTime < 2500) {
       pcmChunks = [];
       return;
     }
@@ -703,8 +838,19 @@ export function getVoiceManagerCode() {
       const now = Date.now();
 
       // Dynamic sensitivity for visualizer waves:
-      // Sensitive down to 0.004 RMS so normal speech visibly moves the red waves!
-      const isUserSpeaking = isRecordingSpeech || (rms > Math.max(0.004, noiseFloor * 1.5));
+      // Combines low-threshold RMS with vocal formant spectrum (bins 1-12 = ~150Hz - 2200Hz)
+      let vocalEnergy = 0;
+      if (freqData) {
+        for (let b = 1; b <= 12; b++) {
+          if (freqData[b] > vocalEnergy) vocalEnergy = freqData[b];
+        }
+      }
+      const normVocal = vocalEnergy / 255;
+
+      // Keep AudioContext clock active
+      if (audioContext && audioContext.state === "suspended" && isVoiceModeActive) {
+        audioContext.resume().catch(() => {});
+      }
 
       for (let i = 0; i < numBars; i++) {
         let targetHeight = 3.5; // Calm baseline
@@ -715,15 +861,18 @@ export function getVoiceManagerCode() {
           const pulse = Math.abs(Math.sin(now * 0.008 + offset)) * Math.cos(now * 0.004 + offset * 0.5);
           const centerFactor = 1 - Math.abs(i - 4) / 5.5;
           targetHeight = 4 + Math.abs(pulse) * centerFactor * 16;
-        } else if (isUserSpeaking) {
-          // Real live microphone speech reaction (vocal formant spectrum 180Hz - 1700Hz)
+        } else {
+          // Real live microphone speech reaction (vocal formant spectrum + dynamic acoustic gain)
           const binVal = (freqData ? freqData[i + 1] : 0) / 255;
           const centerFactor = 1 - Math.abs(i - 4) / 5.5;
-          const energy = Math.min(1.0, Math.max(0, (rms - noiseFloor) * 8.0));
-          targetHeight = 3.5 + (energy * 0.7 + binVal * 0.3) * centerFactor * 20;
-        } else {
-          // Silent resting baseline: steady 3.5px with gentle organic micro-breathe
-          targetHeight = 3.5 + 0.35 * Math.sin(now * 0.0025 + i * 0.6);
+          const acousticEnergy = Math.max(binVal * 2.2, normVocal * 1.5, Math.max(0, rms - 0.0004) * 24.0);
+
+          if (acousticEnergy > 0.02 || isRecordingSpeech) {
+            targetHeight = 3.5 + Math.min(1.0, acousticEnergy) * centerFactor * 22;
+          } else {
+            // Calm resting baseline: steady 3.5px with gentle organic micro-breathe
+            targetHeight = 3.5 + 0.35 * Math.sin(now * 0.0025 + i * 0.6);
+          }
         }
 
         targetHeight = Math.max(3, Math.min(22, targetHeight));
@@ -905,6 +1054,12 @@ export function getVoiceManagerCode() {
     if (engineSelect && voiceSettings.ttsEngine) {
       engineSelect.value = voiceSettings.ttsEngine;
     }
+    const narrationToggle = sidebar.querySelector("#as-setting-toggle-narration");
+    if (narrationToggle) {
+      const isNarrationActive = voiceSettings.liveNarration !== false;
+      narrationToggle.classList.toggle("active", isNarrationActive);
+      narrationToggle.setAttribute("aria-checked", isNarrationActive ? "true" : "false");
+    }
   }
 
   loadVoiceSettings();
@@ -996,6 +1151,7 @@ export function getVoiceManagerCode() {
       try {
         speechRecognizer.abort();
       } catch {}
+      isSpeechRecognizerStarted = false;
       speechRecognizer = null;
     }
 
@@ -1257,11 +1413,13 @@ export function getVoiceManagerCode() {
     if (!speechRecognizer) {
       speechRecognizer = initSpeechRecognizer();
     }
-    if (speechRecognizer) {
+    if (speechRecognizer && !isSpeechRecognizerStarted) {
       try {
         speechRecognizer.lang = voiceSettings.recognitionLang || "en-IN";
         speechRecognizer.start();
+        isSpeechRecognizerStarted = true;
       } catch (err) {
+        isSpeechRecognizerStarted = false;
         console.debug("[Kira Voice] Recognizer start notice:", err);
       }
     }
@@ -1282,6 +1440,7 @@ export function getVoiceManagerCode() {
       try {
         speechRecognizer.stop();
       } catch {}
+      isSpeechRecognizerStarted = false;
       speechRecognizer = null;
     }
 
@@ -1331,6 +1490,19 @@ export function getVoiceManagerCode() {
     });
   }
 
+  const narrationToggle = sidebar.querySelector("#as-setting-toggle-narration");
+  if (narrationToggle) {
+    narrationToggle.addEventListener("click", () => {
+      const active = !narrationToggle.classList.contains("active");
+      voiceSettings.liveNarration = active;
+      narrationToggle.classList.toggle("active", active);
+      narrationToggle.setAttribute("aria-checked", active ? "true" : "false");
+      if (typeof window.kira_save_voice_settings === "function") {
+        window.kira_save_voice_settings(voiceSettings);
+      }
+    });
+  }
+
   const speedSlider = sidebar.querySelector("#as-voice-speed-slider");
   const speedVal = sidebar.querySelector("#as-voice-speed-val");
   if (speedSlider) {
@@ -1356,6 +1528,7 @@ export function getVoiceManagerCode() {
   // Expose Kira voice API globally inside sidebar
   window.kiraVoice = {
     speak: speakText,
+    narrateProgress: narrateProgress,
     stop: stopSpeaking,
     isSpeaking: () => isSpeaking || !!(activeAudioPlayer && !activeAudioPlayer.paused),
     isVoiceActive: () => isVoiceModeActive,

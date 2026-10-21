@@ -208,3 +208,64 @@ export function normalizeVoiceInput(rawSpeech) {
 
   return text;
 }
+
+/**
+ * Distills live intermediate browser actions and plan steps into brief, natural
+ * spoken co-pilot phrases (strictly under 8 words) for real-time progress narration.
+ *
+ * @param {string} rawText The action description or plan step instruction
+ * @param {string} [type] "plan" | "browser" | "artifact" | "download"
+ * @returns {string} Short co-pilot phrase to speak, or empty string if action should be silent
+ */
+export function distillProgressForSpeech(rawText, type = "browser") {
+  if (!rawText || typeof rawText !== "string") return "";
+  const trimmed = rawText.trim();
+
+  // 1. Skip noisy, micro, or internal actions that shouldn't interrupt speech
+  if (/(?:cookie|consent|scroll|screenshot|evaluat|wait|sleep|viewport|press\s+key)/i.test(trimmed)) {
+    return "";
+  }
+
+  // 2. Download / Artifact actions
+  if (type === "artifact" || type === "download" || /download/i.test(trimmed)) {
+    return "Downloading the file for you.";
+  }
+
+  // 3. Navigation to URLs
+  const urlMatch = trimmed.match(/https?:\/\/(?:www\.)?([a-zA-Z0-9.-]+)/i);
+  if (urlMatch && urlMatch[1]) {
+    const host = urlMatch[1].replace(/\.(com|org|net|io|edu|gov|ai)$/i, "");
+    let siteName = host.charAt(0).toUpperCase() + host.slice(1);
+    if (/goldmansachs/i.test(host)) siteName = "Goldman Sachs";
+    if (/arxiv/i.test(host)) siteName = "arXiv";
+    if (/github/i.test(host)) siteName = "GitHub";
+    if (/google/i.test(host)) siteName = "Google";
+    if (/wikipedia/i.test(host)) siteName = "Wikipedia";
+    return `Opening ${siteName} now.`;
+  }
+
+  // 4. Web searches
+  const searchMatch = trimmed.match(/(?:searched\s+for|search\s+for|search\s+google\s+for)\s+['"]?([^'";\n]+)['"]?/i);
+  if (searchMatch && searchMatch[1]) {
+    const query = searchMatch[1].trim().split(/\s+/).slice(0, 5).join(" ");
+    return `Searching for ${query}.`;
+  }
+
+  // 5. Clicks on meaningful links/buttons
+  const clickMatch = trimmed.match(/(?:clicked\s+on|click)\s+['"]?([^'";\n]{3,30})['"]?/i);
+  if (clickMatch && clickMatch[1] && !/(?:submit|button|div|span|input)/i.test(clickMatch[1])) {
+    return `Opening ${clickMatch[1].trim()}.`;
+  }
+
+  // 6. Plan step instructions
+  if (type === "plan" && trimmed.length > 5 && trimmed.length < 90) {
+    let clean = cleanTextForSpeech(trimmed);
+    clean = clean.replace(/^(?:step\s+\d+:?|first,?|next,?|then,?)\s*/i, "");
+    const words = clean.split(/\s+/);
+    if (words.length <= 7) {
+      return clean.endsWith(".") ? clean : clean + ".";
+    }
+  }
+
+  return "";
+}

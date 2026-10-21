@@ -509,6 +509,19 @@ export function getSidebarHtml(ICONS, VOXLE_CUBE_SVG) {
 
             <div class="as-setting-divider"></div>
 
+            <!-- Live Progress Narration Switch -->
+            <div class="as-setting-row">
+              <div class="as-setting-info">
+                <div class="as-setting-label">Live Co-Pilot Narration</div>
+                <div class="as-setting-desc">Kira speaks brief co-pilot updates as the agent navigates and downloads files.</div>
+              </div>
+              <button class="as-switch-btn active" id="as-setting-toggle-narration" type="button" role="switch" aria-checked="true">
+                <span class="as-switch-thumb"></span>
+              </button>
+            </div>
+
+            <div class="as-setting-divider"></div>
+
             <!-- Speech Speed Slider -->
             <div class="as-setting-row" style="flex-direction: column; align-items: stretch; gap: 8px;">
               <div class="as-setting-info" style="display: flex; justify-content: space-between; align-items: center;">

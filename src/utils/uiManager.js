@@ -51,6 +51,7 @@ export class UIManager {
         const activeSess = this.activeSessionId ? JSON.stringify(this.activeSessionId) : "null";
         const activeTitle = this.activeSessionTitle ? JSON.stringify(this.activeSessionTitle) : "null";
         const isTaskRunning = this.isExecuting ? "true" : "false";
+        const isCollapsedInit = this.isCollapsed ? "true" : "false";
         const initScript = `
 window.__INITIAL_MODELS__ = ${initialModels};
 window.__INITIAL_PROVIDERS__ = ${initialProviders};
@@ -58,6 +59,7 @@ window.__ANTIGRAVITY_AVAILABLE__ = true;
 window.__ACTIVE_SESSION_ID__ = window.__ACTIVE_SESSION_ID__ || ${activeSess};
 window.__ACTIVE_SESSION_TITLE__ = window.__ACTIVE_SESSION_TITLE__ || ${activeTitle};
 window.__IS_TASK_RUNNING__ = ${isTaskRunning};
+window.__INITIAL_COLLAPSED__ = ${isCollapsedInit};
 `;
         return initScript + "\n" + baseScript;
       } catch {
@@ -190,10 +192,10 @@ window.__IS_TASK_RUNNING__ = ${isTaskRunning};
     try {
       for (const item of this.conversationHistory) {
         if (item.from === "user") {
-          await page.evaluate((msg) => window.agenticSidebar?.addUserMessage(msg), item.message);
+          await page.evaluate((msg) => window.agenticSidebar?.addUserMessage(msg, true), item.message);
         } else {
           await page.evaluate(
-            ({ msg, type }) => window.agenticSidebar?.addSystemMessage(msg, type),
+            ({ msg, type }) => window.agenticSidebar?.addSystemMessage(msg, type, true),
             { msg: item.message, type: item.messageType || "step" }
           );
         }

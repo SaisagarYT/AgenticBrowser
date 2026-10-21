@@ -32,6 +32,13 @@ export function getClientManagerCode() {
       root.appendChild(container);
     }
 
+    if (isCurrentlyCollapsed) {
+      sidebar.classList.add("collapsed");
+      rail.style.display = "flex";
+    } else {
+      sidebar.classList.remove("collapsed");
+      rail.style.display = "none";
+    }
     adaptPageLayout(isCurrentlyCollapsed);
   }
 
@@ -399,6 +406,13 @@ export function getClientManagerCode() {
   // Collapse / Rail Toggle
   // --------------------------------------------------------------------------
   function setCollapsed(collapsed) {
+    isCurrentlyCollapsed = Boolean(collapsed);
+    try {
+      localStorage.setItem("__agentic_sidebar_collapsed__", collapsed ? "true" : "false");
+    } catch {}
+    if (typeof window.sync_sidebar_collapsed === "function") {
+      try { window.sync_sidebar_collapsed(Boolean(collapsed)); } catch {}
+    }
     if (collapsed) {
       sidebar.classList.add("collapsed");
       rail.style.display = "flex";
@@ -513,11 +527,14 @@ export function getClientManagerCode() {
   window.agenticSidebar = {
     setCollapsed,
     toggleCollapsed,
-    addUserMessage: (msg) => {
+    isCollapsed: () => isCurrentlyCollapsed,
+    addUserMessage: (msg, isReplay = false) => {
       appendUserBubble(msg);
-      showSkeleton();
+      if (!isReplay) {
+        showSkeleton();
+      }
     },
-    addSystemMessage: (msg, type = "step") => appendStepCard(msg, type),
+    addSystemMessage: (msg, type = "step", isReplay = false) => appendStepCard(msg, type, isReplay),
     streamToken: (text) => {
       if (typeof streamTokenToAiCard === "function") {
         streamTokenToAiCard(text);

@@ -28,7 +28,15 @@
 
   const EXPANDED_WIDTH = 420;
   const RAIL_WIDTH = 46;
-  let isCurrentlyCollapsed = false;
+  let isCurrentlyCollapsed = (typeof window.__INITIAL_COLLAPSED__ === "boolean")
+    ? window.__INITIAL_COLLAPSED__
+    : (function() {
+        try {
+          return localStorage.getItem("__agentic_sidebar_collapsed__") === "true";
+        } catch {
+          return false;
+        }
+      })();
 
   function getEffectiveExpandedWidth() {
     return Math.min(EXPANDED_WIDTH, Math.floor(window.innerWidth * 0.92));
@@ -67,13 +75,16 @@
   // 3. Render Thin Vertical Rail Dock (46px)
   const rail = document.createElement("div");
   rail.id = "agentic-rail-root";
-  rail.style.display = "none";
+  rail.style.display = isCurrentlyCollapsed ? "flex" : "none";
   rail.innerHTML = `/* __RAIL_HTML__ */`;
   container.appendChild(rail);
 
   // 4. Render Full Expanded Sidebar (shadcn + Voxle Modern Layout)
   const sidebar = document.createElement("div");
   sidebar.id = "agentic-sidebar-root";
+  if (isCurrentlyCollapsed) {
+    sidebar.classList.add("collapsed");
+  }
   sidebar.innerHTML = `/* __SIDEBAR_HTML__ */`;
   container.appendChild(sidebar);
 
