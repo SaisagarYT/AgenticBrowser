@@ -8,3 +8,4 @@ scratch/
 *.bundle.js
 downloads/
 papers/
+*.xlsx

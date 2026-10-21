@@ -28,6 +28,37 @@ Do NOT read technical markdown, bullet points, file paths, URLs, or code.
 </conversational_rules>
 `.trim();
 
+/**
+ * Sanitizes Kira's spoken utterance to ensure complete, natural sentences
+ * and eliminates trailing truncated prepositions or cut-offs.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+export function sanitizeSpokenUtterance(text) {
+  if (!text || typeof text !== "string") return "";
+  let clean = text.replace(/[*_#`"]/g, "").replace(/\s+/g, " ").trim();
+
+  // Strip trailing dangling prepositions/conjunctions caused by token limits
+  clean = clean.replace(/\b(to|and|with|for|the|that|of|in|on|at|by|from|about|into|through|during|before|after|a|an)\s*$/i, "").trim();
+
+  // If there are multiple sentences and the last one is truncated without punctuation, trim to last complete sentence
+  const lastPunct = Math.max(clean.lastIndexOf("."), clean.lastIndexOf("!"), clean.lastIndexOf("?"));
+  if (lastPunct > 20 && lastPunct < clean.length - 1) {
+    clean = clean.slice(0, lastPunct + 1).trim();
+  } else if (!clean.endsWith(".") && !clean.endsWith("!") && !clean.endsWith("?")) {
+    clean += ".";
+  }
+
+  // Ensure conversational brevity (under 30 words)
+  const words = clean.split(/\s+/);
+  if (words.length > 30) {
+    clean = words.slice(0, 26).join(" ") + "...";
+  }
+
+  return clean;
+}
+
 export class VoiceAgent {
   /**
    * Generates Kira's dedicated voice companion response.
@@ -42,10 +73,33 @@ export class VoiceAgent {
   static async generateVoiceResponse({ userCommand = "", agentOutcome = "", taskStatus = "COMPLETED", model = null }) {
     logger.info(`[VoiceAgent] Formulating Kira companion voice response for: "${(userCommand || "").slice(0, 50)}..."`);
 
-    // If query is an empty or trivial greeting, instant answer
+    // Fast-path 1: Instant responses for common conversational queries
     const trimmedQuery = (userCommand || "").trim();
     if (/^(hi|hello|hey|hiya|howdy)[.!?]*$/i.test(trimmedQuery)) {
       return "Hello! How can I help you today?";
+    }
+    if (/^(thank\s*you|thanks|thx)[.!?]*$/i.test(trimmedQuery)) {
+      return "You're very welcome!";
+    }
+    if (/^(who\s+are\s+you|what\s+is\s+your\s+name)[.!?]*$/i.test(trimmedQuery)) {
+      return "I'm Kira, your autonomous browser companion.";
+    }
+    if (/^(good\s+job|great\s+job|well\s+done|awesome)[.!?]*$/i.test(trimmedQuery)) {
+      return "Glad I could help!";
+    }
+
+    // Fast-path 2: If the agent outcome is already a concise, clean sentence under 18 words, return immediately
+    const cleanOutcome = (agentOutcome || "").trim();
+    if (
+      cleanOutcome.length > 5 &&
+      cleanOutcome.length < 110 &&
+      !cleanOutcome.includes("\n") &&
+      !cleanOutcome.includes("http") &&
+      !cleanOutcome.includes("```") &&
+      !cleanOutcome.includes("#") &&
+      !cleanOutcome.includes("[")
+    ) {
+      return sanitizeSpokenUtterance(cleanOutcome);
     }
 
     try {
@@ -56,7 +110,7 @@ export class VoiceAgent {
         systemPrompt: VOICE_COMPANION_SYSTEM_PROMPT,
         userPrompt: prompt,
         temperature: 0.6,
-        maxTokens: 60,
+        maxTokens: 120,
         model: model || undefined,
       });
 
@@ -65,17 +119,19 @@ export class VoiceAgent {
       );
 
       const response = await Promise.race([llmPromise, timeoutPromise]);
-      const cleaned = (response || "").replace(/[*_#`"]/g, "").trim();
+      const sanitized = sanitizeSpokenUtterance(response || "");
 
-      if (cleaned.length > 5 && cleaned.length < 200) {
-        logger.info(`[VoiceAgent] Generated voice companion response: "${cleaned}"`);
-        return cleaned;
+      if (sanitized.length > 5 && sanitized.length < 250) {
+        logger.info(`[VoiceAgent] Generated voice companion response: "${sanitized}"`);
+        return sanitized;
       }
     } catch (err) {
       logger.warn(`[VoiceAgent] LLM fallback notice (${err.message}). Using instant conversational distillation.`);
     }
 
     // Instant deterministic fallback via linguistic distiller
-    return generateSpokenSummary(agentOutcome, userCommand);
+    const distilled = generateSpokenSummary(agentOutcome, userCommand);
+    return sanitizeSpokenUtterance(distilled);
   }
 }
+

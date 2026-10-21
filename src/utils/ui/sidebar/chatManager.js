@@ -18,25 +18,13 @@ export function getChatManagerCode() {
     activeTimelineCountBadge = null;
     activeTimelineItemCount = 0;
 
-    // Robust duplicate prevention: check if this message was already added in the current turn
-    const currentText = (text || "").trim();
-    const allUserBubbles = contentEl.querySelectorAll(".as-bubble-user");
-    if (allUserBubbles.length > 0) {
-      const lastUserBubble = allUserBubbles[allUserBubbles.length - 1];
-      const lastText = lastUserBubble.textContent.trim();
+    // Immediate duplicate prevention (e.g. local echo + backend addUserMessage call)
+    const lastEl = contentEl.lastElementChild;
+    if (lastEl && lastEl.classList.contains("as-bubble-user")) {
+      const lastText = lastEl.textContent.trim();
+      const currentText = (text || "").trim();
       if (lastText === currentText || (currentText && lastText.includes(currentText))) {
-        let sibling = lastUserBubble.nextElementSibling;
-        let hasAiCardAfter = false;
-        while (sibling) {
-          if (sibling.classList.contains("as-ai-response-container")) {
-            hasAiCardAfter = true;
-            break;
-          }
-          sibling = sibling.nextElementSibling;
-        }
-        if (!hasAiCardAfter) {
-          return;
-        }
+        return;
       }
     }
 
@@ -229,32 +217,20 @@ export function getChatManagerCode() {
       return;
     }
 
-    // 2. Duplicate prevention: If an AI response card already exists for the active turn, update it in place!
-    const allAiCards = contentEl.querySelectorAll(".as-ai-response-container");
-    if (allAiCards.length > 0) {
-      const lastAiCard = allAiCards[allAiCards.length - 1];
-      const allUserBubbles = contentEl.querySelectorAll(".as-bubble-user");
-      const lastUserBubble = allUserBubbles.length > 0 ? allUserBubbles[allUserBubbles.length - 1] : null;
-      // If there's no user bubble after this AI card, it belongs to the current turn -> update in place
-      const isCardAfterUser = !lastUserBubble || Boolean(lastUserBubble.compareDocumentPosition(lastAiCard) & Node.DOCUMENT_POSITION_FOLLOWING);
-      if (isCardAfterUser) {
-        const bodyEl = lastAiCard.querySelector(".as-ai-message-body");
-        if (bodyEl) {
-          bodyEl.innerHTML = formatAiMarkdown(text);
-          const toolbarEl = lastAiCard.querySelector(".as-ai-toolbar");
-          if (toolbarEl) {
-            toolbarEl.style.opacity = "1";
-            toolbarEl.style.pointerEvents = "auto";
-          }
-          attachToolbarListeners(lastAiCard, text);
-          contentEl.scrollTop = contentEl.scrollHeight;
-          hideSkeleton();
-          if (typeof setStatus === "function") setStatus("idle", "Task completed. Ready for next prompt.");
-          if (typeof unlockInputs === "function") unlockInputs();
-          else if (typeof window.__agenticUnlockInputs === "function") window.__agenticUnlockInputs();
-          if (window.kiraVoice && !window.kiraVoice.isSpeaking()) window.kiraVoice.resumeListening?.();
-          return;
+    // 2. Duplicate prevention: If the last message is already an AI response card, update it rather than appending a duplicate!
+    const lastEl = contentEl.lastElementChild;
+    if (lastEl && lastEl.classList.contains("as-ai-response-container")) {
+      const bodyEl = lastEl.querySelector(".as-ai-message-body");
+      if (bodyEl) {
+        bodyEl.innerHTML = formatAiMarkdown(text);
+        const toolbarEl = lastEl.querySelector(".as-ai-toolbar");
+        if (toolbarEl) {
+          toolbarEl.style.opacity = "1";
+          toolbarEl.style.pointerEvents = "auto";
         }
+        attachToolbarListeners(lastEl, text);
+        contentEl.scrollTop = contentEl.scrollHeight;
+        return;
       }
     }
 
@@ -369,12 +345,6 @@ export function getChatManagerCode() {
         }
       }
     }
-
-    hideSkeleton();
-    if (typeof setStatus === "function") setStatus("idle", "Task completed. Ready for next prompt.");
-    if (typeof unlockInputs === "function") unlockInputs();
-    else if (typeof window.__agenticUnlockInputs === "function") window.__agenticUnlockInputs();
-    if (window.kiraVoice && !window.kiraVoice.isSpeaking()) window.kiraVoice.resumeListening?.();
   }
 
   function attachToolbarListeners(container, rawText, renderVoicePill = null) {
@@ -613,13 +583,6 @@ export function getChatManagerCode() {
           renderVoicePill(card.container, spokenText);
         });
       }
-
-      hideSkeleton();
-      if (typeof setStatus === "function") setStatus("idle", "Task completed. Ready for next prompt.");
-      if (typeof unlockInputs === "function") unlockInputs();
-      else if (typeof window.__agenticUnlockInputs === "function") window.__agenticUnlockInputs();
-      if (window.kiraVoice && !window.kiraVoice.isSpeaking()) window.kiraVoice.resumeListening?.();
-
       return true;
     }
     return false;

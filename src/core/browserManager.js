@@ -26,12 +26,15 @@ class BrowserManager {
       slowMo: config.browser.slowMo,
       args: [
         "--no-sandbox",
-        "--disable-setuid-sandbox",
         "--disable-blink-features=AutomationControlled",
         "--disable-dev-shm-usage",
         "--start-maximized",
         "--disable-web-security",
         "--disable-features=IsolateOrigins,site-per-process",
+        "--lang=en-US",
+        "--disable-infobars",
+        "--test-type",
+        "--silent-debugger-extension-api",
       ],
     };
 
@@ -40,6 +43,10 @@ class BrowserManager {
     const contextOptions = {
       ...launchOptions,
       viewport: null,
+      locale: "en-US",
+      extraHTTPHeaders: {
+        "Accept-Language": "en-US,en;q=0.9",
+      },
       bypassCSP: true,
       ignoreHTTPSErrors: true,
       acceptDownloads: true,
@@ -501,8 +508,8 @@ class BrowserManager {
     // Navigate to Google by default if fresh page
     if (this.page.url() === "about:blank") {
       try {
-        logger.info("Opening default homepage: https://www.google.com");
-        await this.page.goto("https://www.google.com", { waitUntil: "domcontentloaded" });
+        logger.info("Opening default homepage: https://www.google.com?hl=en");
+        await this.page.goto("https://www.google.com?hl=en", { waitUntil: "domcontentloaded" });
         await uiManager.injectOverlay(this.page);
       } catch (err) {
         logger.warn(`Default navigation warning: ${err.message}`);

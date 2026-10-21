@@ -30,7 +30,11 @@ export class Orchestrator extends EventEmitter {
   async runTask(command, existingTaskId = null, options = {}) {
     const cleanCmd = (command || "").trim();
     const now = Date.now();
-    if (cleanCmd && cleanCmd.toLowerCase() === this._recentTaskCommand.toLowerCase() && (now - this._recentTaskTime) < 4000) {
+    const cleanLower = cleanCmd.toLowerCase();
+    const recentLower = (this._recentTaskCommand || "").toLowerCase();
+
+    // Semantic deduplication: ignore identical or partial fragment commands within 4s window
+    if (cleanCmd && (cleanLower === recentLower || ((now - this._recentTaskTime < 4000) && (cleanLower.includes(recentLower) || recentLower.includes(cleanLower))))) {
       logger.warn(`[Orchestrator] Dropped duplicate concurrent task command within 4s window: "${cleanCmd}"`);
       return {
         status: "COMPLETED",
@@ -40,6 +44,7 @@ export class Orchestrator extends EventEmitter {
     }
     this._recentTaskCommand = cleanCmd;
     this._recentTaskTime = now;
+    uiManager.setExecuting(true);
 
     const taskId = existingTaskId || randomUUID();
     const taskModel = options.model || null;
@@ -378,8 +383,8 @@ export class Orchestrator extends EventEmitter {
         // Ignore UI update errors on failure
       }
 
-      throw err;
     } finally {
+      uiManager.setExecuting(false);
       // Keep browser alive for inspection in non-headless mode, or clean up if desired
       if (config.browser.headless) {
         await browserManager.close();

@@ -433,10 +433,11 @@ export function getSidebarHtml(ICONS, VOXLE_CUBE_SVG) {
             <div class="as-setting-row" style="flex-direction: column; align-items: stretch; gap: 8px;">
               <div class="as-setting-info">
                 <div class="as-setting-label">Voice Synthesis Mode</div>
-                <div class="as-setting-desc">Instant Natural Speech (0ms delay) or Local Kokoro-82M Neural Model.</div>
+                <div class="as-setting-desc">Choose between Instant Web Speech, Studio HD Edge Neural Voice, or 100% Offline Kokoro ONNX.</div>
               </div>
               <select class="as-settings-select" id="as-voice-engine-select" style="width: 100%; margin-top: 4px;">
                 <option value="browser">Instant Natural Speech (Fastest, 0ms Delay)</option>
+                <option value="edge">Microsoft Edge Neural Voice (Studio HD, Fast)</option>
                 <option value="kokoro">Kokoro-82M Neural Voice (Offline ONNX)</option>
               </select>
             </div>
@@ -447,10 +448,12 @@ export function getSidebarHtml(ICONS, VOXLE_CUBE_SVG) {
             <div class="as-setting-row" style="flex-direction: column; align-items: stretch; gap: 8px;">
               <div class="as-setting-info">
                 <div class="as-setting-label">Voice Persona</div>
-                <div class="as-setting-desc">Choose Kira's speech character and accent (powered by Kokoro-82M ONNX).</div>
+                <div class="as-setting-desc">Choose Kira's speech character and accent (powered by Microsoft Edge Neural & Kokoro).</div>
               </div>
               <select class="as-settings-select" id="as-voice-select" style="width: 100%; margin-top: 4px;">
                 <option value="af_heart">Kira — Warm &amp; Natural (Default)</option>
+                <option value="in_neerja">Kira — Indian Natural (Female)</option>
+                <option value="in_prabhat">Kira — Indian Natural (Male)</option>
                 <option value="af_sky">Kira — Gentle &amp; Friendly</option>
                 <option value="af_bella">Kira — Confident &amp; Energetic</option>
                 <option value="af_nicole">Kira — Professional &amp; Crisp</option>
@@ -458,6 +461,36 @@ export function getSidebarHtml(ICONS, VOXLE_CUBE_SVG) {
                 <option value="bf_isabella">Kira — British Soft</option>
                 <option value="bm_george">Kira — British Butler (Male)</option>
                 <option value="am_michael">Kira — American Natural (Male)</option>
+              </select>
+            </div>
+
+            <div class="as-setting-divider"></div>
+
+            <!-- Speech Recognition Accent Selector -->
+            <div class="as-setting-row" style="flex-direction: column; align-items: stretch; gap: 8px;">
+              <div class="as-setting-info">
+                <div class="as-setting-label">Microphone Recognition Accent</div>
+                <div class="as-setting-desc">Tuning for your natural spoken English pronunciation.</div>
+              </div>
+              <select class="as-settings-select" id="as-voice-lang-select" style="width: 100%; margin-top: 4px;">
+                <option value="en-IN">English (India) — en-IN</option>
+                <option value="en-US">English (United States) — en-US</option>
+                <option value="en-GB">English (United Kingdom) — en-GB</option>
+              </select>
+            </div>
+
+            <div class="as-setting-divider"></div>
+
+            <!-- Speech Synthesis Engine Selector -->
+            <div class="as-setting-row" style="flex-direction: column; align-items: stretch; gap: 8px;">
+              <div class="as-setting-info">
+                <div class="as-setting-label">Speech Synthesis Engine</div>
+                <div class="as-setting-desc">Microsoft Edge Neural (Studio Quality) or Browser Speech.</div>
+              </div>
+              <select class="as-settings-select" id="as-voice-engine-select" style="width: 100%; margin-top: 4px;">
+                <option value="edge">Microsoft Edge Neural (Studio Human Quality)</option>
+                <option value="browser">Instant Browser Speech (Low Latency)</option>
+                <option value="kokoro">Kokoro-82M (100% Offline Local Model)</option>
               </select>
             </div>
 

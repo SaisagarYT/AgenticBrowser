@@ -16,7 +16,11 @@ export class UIManager {
     this.isCollapsed = false;
     this.statusText = "Ready. Type a prompt below to automate.";
     this.activeSessionId = null;
-    this.activeSessionTitle = null;
+    this.isExecuting = false;
+  }
+
+  setExecuting(isExec) {
+    this.isExecuting = Boolean(isExec);
   }
 
   setActiveSession(sessionId, title = null) {
@@ -46,12 +50,14 @@ export class UIManager {
         const initialProviders = JSON.stringify(modelRegistry.getProviders());
         const activeSess = this.activeSessionId ? JSON.stringify(this.activeSessionId) : "null";
         const activeTitle = this.activeSessionTitle ? JSON.stringify(this.activeSessionTitle) : "null";
+        const isTaskRunning = this.isExecuting ? "true" : "false";
         const initScript = `
 window.__INITIAL_MODELS__ = ${initialModels};
 window.__INITIAL_PROVIDERS__ = ${initialProviders};
 window.__ANTIGRAVITY_AVAILABLE__ = true;
 window.__ACTIVE_SESSION_ID__ = window.__ACTIVE_SESSION_ID__ || ${activeSess};
 window.__ACTIVE_SESSION_TITLE__ = window.__ACTIVE_SESSION_TITLE__ || ${activeTitle};
+window.__IS_TASK_RUNNING__ = ${isTaskRunning};
 `;
         return initScript + "\n" + baseScript;
       } catch {

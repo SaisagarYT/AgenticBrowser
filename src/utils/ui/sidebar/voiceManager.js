@@ -15,7 +15,7 @@ export function getVoiceManagerCode() {
   let isVoiceModeActive = false; // Continuous Hands-Free Listening Mode
   let isListening = false;
   let isSpeaking = false;
-  let isPausedForExecution = false;
+  let isPausedForExecution = Boolean(window.__IS_TASK_RUNNING__);
   let restartTimeout = null;
   let speechTimeoutTimer = null;
   let executionWatchdogTimer = null;
@@ -23,9 +23,12 @@ export function getVoiceManagerCode() {
   let activeAudioPlayer = null;
   let activeSpeakingBtn = null;
   let activeInterimText = "";
+  let accumulatedFinalTranscript = "";
+  let lastCommittedText = "";
+  let lastCommittedTime = 0;
+  let silenceCommitTimer = null;
   let recognitionRestartTimer = null;
   let activeSpeechUtterance = null;
-  let activeSpeechUtteranceText = "";
   let speakingStartTime = 0;
   let speechKeepAliveInterval = null;
   let voiceSettings = {
@@ -33,7 +36,7 @@ export function getVoiceManagerCode() {
     speed: 1.0,
     autoSpeak: false,
     recognitionLang: "en-IN",
-    ttsEngine: "browser",
+    ttsEngine: "edge",
   };
 
   // Voice Toggle Switch Elements (voiceToggleBtn and railVoiceToggleBtn are declared in controller scope)
@@ -89,13 +92,6 @@ export function getVoiceManagerCode() {
       if (closeBtn) {
         closeBtn.addEventListener("click", () => setVoiceActive(false));
       }
-
-      floatWidgetEl.addEventListener("click", (e) => {
-        if (e.target.closest("#as-float-btn-close")) return;
-        if (isSpeaking) {
-          stopSpeaking();
-        }
-      });
 
       waveCanvas = floatWidgetEl.querySelector("#as-float-wave-canvas");
       if (waveCanvas) {
@@ -258,10 +254,10 @@ export function getVoiceManagerCode() {
           if (isRecordingSpeech) {
             pcmChunks.push(downsampled);
 
-            // Commit when user pauses for 750ms after speaking OR max utterance reaches 15s
+            // Commit when user pauses for 1400ms after speaking OR max utterance reaches 15s
             const elapsedSinceSpeech = Date.now() - lastSpeechTime;
             const totalEstimatedSamples = pcmChunks.length * downsampled.length;
-            if ((elapsedSinceSpeech > 750 && totalEstimatedSamples >= 3200) || totalEstimatedSamples > 240000) {
+            if ((elapsedSinceSpeech > 1400 && totalEstimatedSamples >= 3200) || totalEstimatedSamples > 240000) {
               isRecordingSpeech = false;
               updateFloatStatus("Transcribing...");
               commitVoiceRecording();
@@ -279,70 +275,172 @@ export function getVoiceManagerCode() {
   }
 
   let interimCommitTimer = null;
-  let lastStopInterruptTime = 0;
 
-  function normalizeVoiceTranscript(rawText) {
-    if (!rawText) return "";
-    let text = rawText.trim();
+  function handleFastVoiceAction(rawText) {
+    if (!rawText) return false;
+    const lower = rawText.toLowerCase().trim().replace(/[.,?!]/g, "");
 
-    // 1. Multi-word wake word phonetics (e.g. "Ek Hira", "Ek hero", "Ek Heera", "Hey Kheera")
-    text = text
-      .replace(/\b(ek|ake|ack|ec|ak|ae|ai|a)\s+(hira|heera|keera|kera|geera|veera|hero|khera|kheera)\b/gi, "hey kira")
-      .replace(/\b(hey|hay|hi|hello)\s+(hira|heera|keera|kera|geera|veera|hero|khera|kheera)\b/gi, "hey kira")
-      .replace(/\b(hira|heera|keera|kera|khera|kheera)\b/gi, "kira")
-      .replace(/\b(ek\s*hero)\b/gi, "hey kira")
-      .replace(/\b(ek\s*kira)\b/gi, "hey kira")
-      .replace(/\b(ekera|hekira)\b/gi, "hey kira");
+    // 1. Scroll actions
+    if (/^(scroll\\s+(down|a\\s+bit\\s+down)|page\\s+down)$/i.test(lower)) {
+      window.scrollBy({ top: window.innerHeight * 0.75, behavior: "smooth" });
+      updateFloatStatus("Scrolled down");
+      if (statusLabel) statusLabel.textContent = "Kira Voice: Scrolled down";
+      return true;
+    }
+    if (/^(scroll\\s+(up|a\\s+bit\\s+up)|page\\s+up)$/i.test(lower)) {
+      window.scrollBy({ top: -window.innerHeight * 0.75, behavior: "smooth" });
+      updateFloatStatus("Scrolled up");
+      if (statusLabel) statusLabel.textContent = "Kira Voice: Scrolled up";
+      return true;
+    }
+    if (/^(scroll\\s+to\\s+(the\\s+)?(top|start)|go\\s+to\\s+(the\\s+)?top)$/i.test(lower)) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      updateFloatStatus("Scrolled to top");
+      if (statusLabel) statusLabel.textContent = "Kira Voice: Scrolled to top";
+      return true;
+    }
+    if (/^(scroll\\s+to\\s+(the\\s+)?(bottom|end)|go\\s+to\\s+(the\\s+)?bottom)$/i.test(lower)) {
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+      updateFloatStatus("Scrolled to bottom");
+      if (statusLabel) statusLabel.textContent = "Kira Voice: Scrolled to bottom";
+      return true;
+    }
 
-    // 2. Audio check query normalizer ("can hear", "can u hear", etc.)
-    text = text
-      .replace(/\bcan\s+(you\s+|u\s+)?hear\b(?!\s*me)/gi, "can you hear me")
-      .replace(/\bcan\s+u\s+hear\s+me\b/gi, "can you hear me")
-      .replace(/\bcan\s+hear\s+me\b/gi, "can you hear me")
-      .replace(/\bcan\s+hear\b/gi, "can you hear me")
-      .replace(/\bare\s+you\s+(able\s+to\s+hear|hearing)\s*(me)?\b/gi, "can you hear me");
+    // 2. Navigation actions
+    if (/^(go\\s+back|history\\s+back|previous\\s+page)$/i.test(lower)) {
+      updateFloatStatus("Going back");
+      if (statusLabel) statusLabel.textContent = "Kira Voice: Going back";
+      window.history.back();
+      return true;
+    }
+    if (/^(go\\s+forward|history\\s+forward|next\\s+page)$/i.test(lower)) {
+      updateFloatStatus("Going forward");
+      if (statusLabel) statusLabel.textContent = "Kira Voice: Going forward";
+      window.history.forward();
+      return true;
+    }
+    if (/^(refresh(\\s+page)?|reload(\\s+page)?)$/i.test(lower)) {
+      updateFloatStatus("Reloading");
+      if (statusLabel) statusLabel.textContent = "Kira Voice: Reloading page";
+      window.location.reload();
+      return true;
+    }
 
-    return text;
+    // 3. Voice control
+    if (/^(turn\\s+off\\s+voice|stop\\s+listening|mute\\s+voice|close\\s+voice(\\s+mode)?)$/i.test(lower)) {
+      setVoiceActive(false);
+      return true;
+    }
+
+    // 4. Voice speed & accent voice controls
+    if (/^(speak\\s+faster|talk\\s+faster|increase\\s+voice\\s+speed)$/i.test(lower)) {
+      voiceSettings.speed = Math.min(1.5, Math.round(((voiceSettings.speed || 1.0) + 0.15) * 100) / 100);
+      syncVoiceSettingsUI();
+      if (typeof window.kira_save_voice_settings === "function") window.kira_save_voice_settings(voiceSettings);
+      speakText("I will speak a little faster now.");
+      return true;
+    }
+    if (/^(speak\\s+slower|talk\\s+slower|decrease\\s+voice\\s+speed)$/i.test(lower)) {
+      voiceSettings.speed = Math.max(0.7, Math.round(((voiceSettings.speed || 1.0) - 0.15) * 100) / 100);
+      syncVoiceSettingsUI();
+      if (typeof window.kira_save_voice_settings === "function") window.kira_save_voice_settings(voiceSettings);
+      speakText("I will speak a bit slower for you.");
+      return true;
+    }
+    if (/^(switch\\s+to\\s+indian(\\s+accent|\\s+voice|\\s+english)?|use\\s+indian(\\s+accent|\\s+voice))$/i.test(lower)) {
+      voiceSettings.activeVoice = "in_neerja";
+      voiceSettings.recognitionLang = "en-IN";
+      syncVoiceSettingsUI();
+      if (typeof window.kira_save_voice_settings === "function") window.kira_save_voice_settings(voiceSettings);
+      speakText("Namaste! I have switched to my Indian English voice.");
+      return true;
+    }
+    if (/^(switch\\s+to\\s+american(\\s+accent|\\s+voice|\\s+english)?|use\\s+american(\\s+accent|\\s+voice))$/i.test(lower)) {
+      voiceSettings.activeVoice = "af_heart";
+      voiceSettings.recognitionLang = "en-US";
+      syncVoiceSettingsUI();
+      if (typeof window.kira_save_voice_settings === "function") window.kira_save_voice_settings(voiceSettings);
+      speakText("Hello! I have switched to my American English voice.");
+      return true;
+    }
+
+    return false;
+  }
+
+  function normalizeVoiceText(raw) {
+    if (!raw) return "";
+    let t = raw.trim().replace(/\\s+/g, " ");
+    t = t.replace(/^(?:hey\\s+kira|kira|hey\\s+browser|can\\s+you\\s+please|please|could\\s+you)\\s+/i, "").trim();
+    const replacements = [
+      [/\\b(?:a\\s+i|eye(?=\\s+(?:in\\s+a|in|model|agent|bubble|tech|trend|research)))\\b/gi, "AI"],
+      [/\\b(?:a\\s+i)\\b/gi, "AI"],
+      [/\\b(?:l\\s+l\\s+m|l\\s+lm|llm)\\b/gi, "LLM"],
+      [/\\b(?:g\\s+p\\s+t|gpt)\\b/gi, "GPT"],
+      [/\\b(?:chat\\s*gpt)\\b/gi, "ChatGPT"],
+      [/\\b(?:p\\s+d\\s+f|pdf)\\b/gi, "PDF"],
+      [/\\b(?:u\\s+r\\s+l|url)\\b/gi, "URL"],
+      [/\\b(?:a\\s+p\\s+i|api)\\b/gi, "API"],
+      [/\\b(?:you\\s*tube)\\b/gi, "YouTube"],
+      [/\\b(?:git\\s*hub)\\b/gi, "GitHub"],
+      [/\\b(?:ar\\s*k?ive?|r\\s*kive?|arxiv)\\b/gi, "arXiv"],
+      [/\\b(?:wiki\\s*pedia)\\b/gi, "Wikipedia"],
+      [/\\b(?:hugging\\s*face)\\b/gi, "Hugging Face"],
+      [/\\b(?:u\\s*i)\\b/gi, "UI"],
+      [/\\b(?:u\\s*x)\\b/gi, "UX"],
+    ];
+    for (let r = 0; r < replacements.length; r++) {
+      t = t.replace(replacements[r][0], replacements[r][1]);
+    }
+    t = t.replace(/^(?:open\\s+up|go\\s+to|navigate\\s+to)\\s+([a-zA-Z0-9-]+)(?:\\s+dot\\s+com|\\.com)\\b/i, (m, domain) => "Open " + domain.toLowerCase() + ".com");
+    if (t.length > 0) {
+      t = t.charAt(0).toUpperCase() + t.slice(1);
+    }
+    return t;
   }
 
   function commitVoiceText(resultText) {
-    if (!resultText) return;
-    const cleanText = normalizeVoiceTranscript(resultText).trim();
+    if (!resultText || isPausedForExecution || isSpeaking) return;
+    const cleanText = normalizeVoiceText(resultText);
     if (!cleanText || cleanText.length < 2) return;
 
-    // Check if this is an explicit interrupt command ("stop", "wait", "kira stop", etc.)
-    const isPureInterrupt = /^(hey\s+kira\s+|kira\s+)?(wait|stop|hold\s*(on|up)|pause|quiet|cancel|shut\s*up|silence|halt)(\s+(please|now|kira|wait|stop))?[.!]?$/i.test(cleanText);
-    if (isPureInterrupt) {
-      console.log("[Kira Voice] Recognized pure voice interrupt command:", cleanText);
-      stopSpeaking();
-      isPausedForExecution = false;
-      if (typeof unlockInputs === "function") unlockInputs();
-      else if (typeof window.__agenticUnlockInputs === "function") window.__agenticUnlockInputs();
-      updateFloatStatus("Stopped");
-      if (statusLabel) {
-        statusLabel.textContent = "Kira Voice: Stopped.";
-      }
-      activeInterimText = "";
-      lastStopInterruptTime = Date.now();
-      return;
+    if (silenceCommitTimer) {
+      clearTimeout(silenceCommitTimer);
+      silenceCommitTimer = null;
     }
-
-    // Suppress submission if user recently issued a stop/wait interrupt within 1.2 seconds
-    if (Date.now() - lastStopInterruptTime < 1200) {
-      return;
-    }
-
-    if (isPausedForExecution || isSpeaking) return;
-
-    if (interimCommitTimer) {
-      clearTimeout(interimCommitTimer);
-      interimCommitTimer = null;
-    }
+    accumulatedFinalTranscript = "";
     activeInterimText = "";
 
+    const now = Date.now();
+    const cleanLower = cleanText.toLowerCase();
+    const lastLower = (lastCommittedText || "").toLowerCase();
+
+    // 1. Semantic deduplication: ignore identical or partial fragment commands within 3.5s window
+    if (now - lastCommittedTime < 3500) {
+      if (cleanLower === lastLower || cleanLower.includes(lastLower) || lastLower.includes(cleanLower)) {
+        console.log("[Kira Voice] Dropped rapid duplicate/fragment voice command within 3.5s:", cleanText);
+        return;
+      }
+    }
+
+    // Fast local browser voice action dispatcher
+    if (handleFastVoiceAction(cleanText)) {
+      lastCommittedText = cleanText;
+      lastCommittedTime = now;
+      console.log("[Kira Voice] Executed instant local voice action:", cleanText);
+      return;
+    }
+
+    lastCommittedText = cleanText;
+    lastCommittedTime = now;
     console.log("[Kira Voice] Realtime voice command committed:", cleanText);
     isPausedForExecution = true;
     updateFloatStatus("Thinking...");
+
+    // Pause live speech recognition during active task dispatch to eliminate acoustic self-echo
+    if (speechRecognizer) {
+      try { speechRecognizer.stop(); } catch {}
+    }
+
     textareaEl.value = cleanText;
     autoResizeTextarea();
     if (statusLabel) {
@@ -355,7 +453,7 @@ export function getVoiceManagerCode() {
       if (isVoiceModeActive && isPausedForExecution && !isSpeaking) {
         resumeListening();
       }
-    }, 12000);
+    }, 20000);
   }
 
   function initSpeechRecognizer() {
@@ -383,95 +481,79 @@ export function getVoiceManagerCode() {
       rec.onresult = (event) => {
         if (!isVoiceModeActive) return;
 
+        // Barge-in 1: Interrupt active task execution if user commands stop/cancel
+        if (isPausedForExecution) {
+          const heard = (event.results[event.results.length - 1]?.[0]?.transcript || "").trim().toLowerCase();
+          if (/\\b(stop|cancel|abort|halt|pause|wait|hold on)\\b/i.test(heard)) {
+            console.log("[Kira Voice] Voice abort detected during active execution:", heard);
+            isPausedForExecution = false;
+            if (executionWatchdogTimer) clearTimeout(executionWatchdogTimer);
+            executionWatchdogTimer = null;
+            updateFloatStatus("Cancelled");
+            if (typeof hideSkeleton === "function") hideSkeleton();
+            if (statusLabel) {
+              statusLabel.textContent = "Kira Voice: Task cancelled by voice command.";
+            }
+            speakText("I've stopped that task for you.");
+            return;
+          }
+          return;
+        }
+
+        // Barge-in 2: If Kira is speaking, ignore speaker acoustic echo (first 1.5s)
+        // and only stop if user speaks a clear, distinct multi-word command
+        if (isSpeaking) {
+          if (Date.now() - speakingStartTime < 1500) {
+            return;
+          }
+          const heardWords = (event.results[event.results.length - 1]?.[0]?.transcript || "").trim().split(/\\s+/).filter(Boolean);
+          if (heardWords.length >= 2) {
+            stopSpeaking();
+          } else {
+            return;
+          }
+        }
+
         let interim = "";
-        let final = "";
+        let finalPhrase = "";
 
         for (let i = event.resultIndex; i < event.results.length; ++i) {
           const item = event.results[i];
           const transcript = item[0]?.transcript || "";
           if (item.isFinal) {
-            final += transcript;
+            finalPhrase += (finalPhrase ? " " : "") + transcript.trim();
           } else {
-            interim += transcript;
+            interim += (interim ? " " : "") + transcript.trim();
           }
         }
 
-        interim = normalizeVoiceTranscript(interim);
-        final = normalizeVoiceTranscript(final);
-
-        const heardPhrase = (final || interim).trim();
-        if (!heardPhrase) return;
-
-        const isExplicitStop = /\b(wait|stop|hold\s*(on|up)|pause|quiet|cancel|shut\s*up|silence|halt)\b/i.test(heardPhrase);
-
-        // Case 1: Kira is speaking - immediate barge-in interruption!
-        if (isSpeaking) {
-          if (isExplicitStop) {
-            console.log("[Kira Voice] User voice explicitly stopped Kira speech:", heardPhrase);
-            stopSpeaking();
-            updateFloatStatus("Stopped");
-            if (statusLabel) {
-              statusLabel.textContent = "Kira Voice: Stopped.";
-            }
-            activeInterimText = "";
-            lastStopInterruptTime = Date.now();
-            return;
-          }
-          // Do not interrupt on other words while speaking to avoid speaker acoustic feedback
-          return;
+        if (finalPhrase) {
+          accumulatedFinalTranscript += (accumulatedFinalTranscript ? " " : "") + finalPhrase;
         }
+        activeInterimText = interim;
 
-        // Case 2: Task is executing or thinking (isPausedForExecution is true, but not speaking)
-        if (isPausedForExecution) {
-          if (isExplicitStop) {
-            console.log("[Kira Voice] User said stop/wait during execution:", heardPhrase);
-            isPausedForExecution = false;
-            stopSpeaking();
-            hideSkeleton();
-            if (typeof finishActiveTypewriter === "function") finishActiveTypewriter();
-            if (typeof unlockInputs === "function") unlockInputs();
-            else if (typeof window.__agenticUnlockInputs === "function") window.__agenticUnlockInputs();
-            updateFloatStatus("Stopped");
-            if (statusLabel) {
-              statusLabel.textContent = "Kira Voice: Execution paused/stopped.";
-            }
-            activeInterimText = "";
-            lastStopInterruptTime = Date.now();
-            return;
-          }
-          // Ignore other non-stop background speech while task is executing
-          return;
-        }
-
-        if (interim) {
-          activeInterimText = interim.trim();
-          const displayTxt = activeInterimText.length > 25 ? activeInterimText.slice(0, 22) + "..." : activeInterimText;
+        const liveDisplay = (accumulatedFinalTranscript + " " + activeInterimText).trim();
+        if (liveDisplay) {
+          const displayTxt = liveDisplay.length > 25 ? liveDisplay.slice(0, 22) + "..." : liveDisplay;
           updateFloatStatus("Hearing: " + displayTxt);
           if (statusLabel) {
-            statusLabel.textContent = "Hearing: " + activeInterimText;
+            statusLabel.textContent = "Hearing: " + liveDisplay;
           }
+        }
 
-          // Debounce / silence commit: if user stops speaking for 750ms, auto-commit the spoken phrase!
-          if (interimCommitTimer) clearTimeout(interimCommitTimer);
-          interimCommitTimer = setTimeout(() => {
-            if (activeInterimText && !isPausedForExecution && !isSpeaking) {
-              const textToCommit = activeInterimText;
-              activeInterimText = "";
-              commitVoiceText(textToCommit);
+        // Natural conversational pause commit (1400ms)
+        // Prevents premature cutting-off of sentences while the user pauses or thinks
+        if (silenceCommitTimer) clearTimeout(silenceCommitTimer);
+        silenceCommitTimer = setTimeout(() => {
+          if (!isPausedForExecution && !isSpeaking) {
+            const candidate = (accumulatedFinalTranscript || activeInterimText).trim();
+            accumulatedFinalTranscript = "";
+            activeInterimText = "";
+            if (candidate && candidate.length >= 2) {
+              commitVoiceText(candidate);
             }
-          }, 750);
-        }
-
-        if (final) {
-          if (interimCommitTimer) {
-            clearTimeout(interimCommitTimer);
-            interimCommitTimer = null;
           }
-          const finalText = final.trim();
-          console.log("[Kira Voice] Streaming speech final phrase:", finalText);
-          activeInterimText = "";
-          commitVoiceText(finalText);
-        }
+        }, 1400);
       };
 
       rec.onerror = (event) => {
@@ -489,26 +571,24 @@ export function getVoiceManagerCode() {
 
       rec.onend = () => {
         isListening = false;
-        if (speechRecognizer === rec) {
-          speechRecognizer = null;
-        }
-        if (interimCommitTimer) {
-          clearTimeout(interimCommitTimer);
-          interimCommitTimer = null;
-        }
-        // If there was uncommitted interim speech when recognition stopped, commit it now!
-        if (activeInterimText && !isPausedForExecution && !isSpeaking) {
-          const textToCommit = activeInterimText;
+        // If there is an accumulated completed utterance waiting when recognition pauses, finalize it cleanly
+        if (accumulatedFinalTranscript && !isPausedForExecution && !isSpeaking) {
+          if (silenceCommitTimer) clearTimeout(silenceCommitTimer);
+          silenceCommitTimer = null;
+          const candidate = accumulatedFinalTranscript.trim();
+          accumulatedFinalTranscript = "";
           activeInterimText = "";
-          commitVoiceText(textToCommit);
+          commitVoiceText(candidate);
         }
 
         // Keep continuously listening if voice mode is still active
-        if (isVoiceModeActive && !isSpeaking) {
+        if (isVoiceModeActive && !isSpeaking && !isPausedForExecution) {
           if (recognitionRestartTimer) clearTimeout(recognitionRestartTimer);
           recognitionRestartTimer = setTimeout(() => {
-            if (isVoiceModeActive && !isSpeaking) {
-              startContinuousListening();
+            if (isVoiceModeActive && !isSpeaking && !isPausedForExecution && speechRecognizer) {
+              try {
+                speechRecognizer.start();
+              } catch {}
             }
           }, 250);
         }
@@ -853,6 +933,52 @@ export function getVoiceManagerCode() {
   // --------------------------------------------------------------------------
   // 1. Text-to-Speech (Kira Speaking Short, Precise Human Response)
   // --------------------------------------------------------------------------
+  async function formulateSpokenText(rawText, userCommand = "") {
+    if (!rawText) return "";
+    const trimmed = rawText.trim();
+
+    // If text is already very short, natural and plain (no markdown, headers, code, urls)
+    if (trimmed.length < 80 && !trimmed.includes("#") && !trimmed.includes(String.fromCharCode(96, 96, 96)) && !trimmed.includes("http") && !trimmed.includes("[")) {
+      return trimmed.replace(new RegExp("[*_#" + String.fromCharCode(96) + "\\\"]", "g"), "").trim();
+    }
+
+    // Attempt Kira Companion Voice formulation via backend exposed function
+    try {
+      if (typeof window.kira_generate_voice_response === "function") {
+        const companionSpeech = await window.kira_generate_voice_response({
+          userCommand: userCommand || lastSubmittedCommand || "",
+          agentOutcome: trimmed,
+          taskStatus: "COMPLETED",
+        });
+        if (companionSpeech && companionSpeech.trim().length > 3) {
+          return companionSpeech.trim();
+        }
+      }
+    } catch (e) {
+      console.debug("[Kira Voice] Companion formulation notice:", e);
+    }
+
+    // Fast client-side linguistic distillation fallback
+    let cleanText = trimmed
+      .split(String.fromCharCode(96, 96, 96)).filter((_, idx) => idx % 2 === 0).join(" ")
+      .replace(/\\[([^\\]]+)\\]\\([^)]+\\)/g, "$1")
+      .replace(/[*_#~]/g, "")
+      .replace(new RegExp(String.fromCharCode(96), "g"), "")
+      .replace(/https?:\\/\\/\\S+/g, "")
+      .replace(/^[\\s•\\-\\*\\d\\.\\)\\:]+/gm, "")
+      .replace(/\\n+/g, " ")
+      .trim();
+
+    const sentences = cleanText.split(/(?<=[.?!])\s+/);
+    if (sentences.length > 2) {
+      cleanText = sentences.slice(0, 2).join(" ");
+    }
+    if (cleanText.length > 180) {
+      cleanText = cleanText.slice(0, 175).trim() + "...";
+    }
+    return cleanText || "I've completed your task. Check the chat for details.";
+  }
+
   async function speakText(text, triggerBtn = null, onSpokenCallback = null) {
     if (!text || typeof text !== "string") return;
 
@@ -865,17 +991,12 @@ export function getVoiceManagerCode() {
     stopSpeaking();
     isSpeaking = true;
 
-    // Ensure microphone remains active during speech output for user barge-in / interrupt ("wait", "stop")
-    if (isVoiceModeActive) {
-      if (!speechRecognizer) {
-        speechRecognizer = initSpeechRecognizer();
-      }
-      if (speechRecognizer) {
-        try {
-          speechRecognizer.lang = voiceSettings.recognitionLang || "en-IN";
-          speechRecognizer.start();
-        } catch {}
-      }
+    // Completely abort and silence microphone during speech output to prevent acoustic feedback
+    if (speechRecognizer) {
+      try {
+        speechRecognizer.abort();
+      } catch {}
+      speechRecognizer = null;
     }
 
     if (triggerBtn) {
@@ -890,27 +1011,7 @@ export function getVoiceManagerCode() {
     // FAST MODE: Instant Natural Speech via Browser Web Speech API (<50ms turnaround)
     if (voiceSettings.ttsEngine === "browser" && "speechSynthesis" in window) {
       try {
-        // Strip markdown formatting, URLs, code blocks, bullet points, numbers, and symbols
-        let cleanText = text
-          .split(String.fromCharCode(96, 96, 96)).filter((_, idx) => idx % 2 === 0).join(" ")
-          .replace(/\\[([^\\]]+)\\]\\([^)]+\\)/g, "$1")
-          .replace(/[*_#~]/g, "")
-          .replace(new RegExp(String.fromCharCode(96), "g"), "")
-          .replace(/https?:\\/\\/\\S+/g, "")
-          .replace(/^[\\s•\\-\\*\\d\\.\\)\\:]+/gm, "")
-          .replace(/\\n+/g, " ")
-          .trim();
-
-        // Conversational length: keep up to 3 natural sentences or ~280 characters
-        const sentences = cleanText.split(/(?<=[.?!])\\s+/);
-        if (sentences.length > 3) {
-          cleanText = sentences.slice(0, 3).join(" ");
-        }
-        if (cleanText.length > 300) {
-          cleanText = cleanText.slice(0, 290).trim() + "...";
-        }
-        if (!cleanText) cleanText = "All set. Task complete.";
-        activeSpeechUtteranceText = cleanText;
+        const cleanText = await formulateSpokenText(text, lastSubmittedCommand);
 
         if (statusLabel && !activeSpeakingBtn) {
           statusLabel.textContent = "Kira is speaking...";
@@ -994,7 +1095,7 @@ export function getVoiceManagerCode() {
     speechTimeoutTimer = setTimeout(() => {
       console.warn("[Kira Voice] Speech synthesis or playback timeout fallback.");
       stopSpeaking();
-    }, 12000);
+    }, 15000);
 
     try {
       if (typeof window.kira_synthesize_speech !== "function") {
@@ -1010,6 +1111,7 @@ export function getVoiceManagerCode() {
       // Synthesize short, human-like voice response via dedicated companion VoiceAgent
       const res = await window.kira_synthesize_speech(text, {
         userCommand: lastSubmittedCommand || "",
+        engine: voiceSettings.ttsEngine || "browser",
         voice: voiceSettings.activeVoice || "af_heart",
         speed: voiceSettings.speed || 1.0,
         distill: true,
@@ -1030,7 +1132,6 @@ export function getVoiceManagerCode() {
       if (typeof onSpokenCallback === "function" && res.spokenText) {
         onSpokenCallback(res.spokenText);
       }
-      activeSpeechUtteranceText = res.spokenText || text;
 
       const audio = new Audio(res.audioUrl);
       activeAudioPlayer = audio;
@@ -1053,7 +1154,6 @@ export function getVoiceManagerCode() {
 
   function stopSpeaking() {
     isSpeaking = false;
-    activeSpeechUtteranceText = "";
     if (speechKeepAliveInterval) {
       clearInterval(speechKeepAliveInterval);
       speechKeepAliveInterval = null;
@@ -1154,11 +1254,9 @@ export function getVoiceManagerCode() {
     startWaveVisualizer();
 
     // 2. Start native streaming speech recognition
-    if (speechRecognizer) {
-      try { speechRecognizer.stop(); } catch {}
-      speechRecognizer = null;
+    if (!speechRecognizer) {
+      speechRecognizer = initSpeechRecognizer();
     }
-    speechRecognizer = initSpeechRecognizer();
     if (speechRecognizer) {
       try {
         speechRecognizer.lang = voiceSettings.recognitionLang || "en-IN";

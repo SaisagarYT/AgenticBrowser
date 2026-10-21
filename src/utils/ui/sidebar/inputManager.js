@@ -29,18 +29,6 @@ export function getInputManagerCode() {
     attachmentListEl.style.display = "none";
     currentTaskThoughts = [];
     resetPlan();
-    isTaskSubmitting = false;
-    lastSubmittedCommandText = "";
-    lastSubmittedCommandTime = 0;
-    if (submissionWatchdogTimer) {
-      clearTimeout(submissionWatchdogTimer);
-      submissionWatchdogTimer = null;
-    }
-    if (sendBtn) {
-      sendBtn.disabled = false;
-      sendBtn.style.opacity = "";
-      sendBtn.style.pointerEvents = "";
-    }
   }
 
   clearBtn.addEventListener("click", clearChat);
@@ -146,45 +134,9 @@ export function getInputManagerCode() {
   // --------------------------------------------------------------------------
   // Submit & Textarea Management
   // --------------------------------------------------------------------------
-  let isTaskSubmitting = false;
-  let lastSubmittedCommandText = "";
-  let lastSubmittedCommandTime = 0;
-  let submissionWatchdogTimer = null;
-
-  function unlockInputs() {
-    isTaskSubmitting = false;
-    if (submissionWatchdogTimer) {
-      clearTimeout(submissionWatchdogTimer);
-      submissionWatchdogTimer = null;
-    }
-    if (sendBtn) {
-      sendBtn.disabled = false;
-      sendBtn.style.opacity = "";
-      sendBtn.style.pointerEvents = "";
-    }
-    if (statusSpinner) {
-      statusSpinner.style.display = "none";
-    }
-  }
-
   function triggerSubmit() {
     const text = textareaEl.value.trim();
     if (!text && attachedFiles.length === 0) return;
-
-    const now = Date.now();
-    const cleanCmd = text.trim();
-
-    // Prevent concurrent duplicate submissions while a task is in flight
-    if (isTaskSubmitting) {
-      console.warn("[InputManager] Blocked concurrent submission while task is in flight:", cleanCmd);
-      return;
-    }
-
-    // Deduplication cooldown: prevent accidental rapid double-clicks within 1200ms
-    if (cleanCmd && cleanCmd.toLowerCase() === lastSubmittedCommandText.toLowerCase() && (now - lastSubmittedCommandTime) < 1200) {
-      console.warn("[InputManager] Blocked rapid double-click within 1.2s window:", cleanCmd);
-      return;
-    }
 
     const activeModel = window.agenticSelectedModel || (registeredModels[0]?.id || null);
     if (!activeModel) {
@@ -192,25 +144,6 @@ export function getInputManagerCode() {
       setView("settings");
       return;
     }
-
-    isTaskSubmitting = true;
-    lastSubmittedCommandText = cleanCmd;
-    lastSubmittedCommandTime = now;
-    if (sendBtn) {
-      sendBtn.disabled = true;
-      sendBtn.style.opacity = "0.5";
-      sendBtn.style.pointerEvents = "none";
-    }
-
-    if (submissionWatchdogTimer) clearTimeout(submissionWatchdogTimer);
-    submissionWatchdogTimer = setTimeout(() => {
-      isTaskSubmitting = false;
-      if (sendBtn) {
-        sendBtn.disabled = false;
-        sendBtn.style.opacity = "";
-        sendBtn.style.pointerEvents = "";
-      }
-    }, 45000);
 
     resetPlan();
     currentTaskStartTime = Date.now();
@@ -343,18 +276,13 @@ export function getInputManagerCode() {
         statusSpinner.style.display = "none";
       }
     }
-    if (state === "idle") {
-      unlockInputs();
-    }
     if (state === "idle" && window.kiraVoice && window.kiraVoice.isVoiceActive && window.kiraVoice.isVoiceActive()) {
       setTimeout(() => {
         if (window.kiraVoice && window.kiraVoice.isVoiceActive() && !window.kiraVoice.isSpeaking()) {
           window.kiraVoice.resumeListening?.();
         }
-      }, 500);
+      }, 1000);
     }
   }
-
-  window.__agenticUnlockInputs = unlockInputs;
   `;
 }

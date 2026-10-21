@@ -129,7 +129,8 @@ export function generateSpokenSummary(rawText, userPrompt = "") {
     let candidate = sentences[0];
 
     // If candidate contains path or technical artifacts, generalize it
-    candidate = candidate.replace(/[A-Z]:\\[^\s]+/g, "your local folder");
+    candidate = candidate.replace(/[A-Za-z]:\\[^\s]+/g, "your local folder");
+    candidate = candidate.replace(/(?:\/[a-zA-Z0-9._-]+){2,}\.[a-zA-Z0-9]+/g, "your local file");
     candidate = candidate.replace(/https?:\/\/[^\s]+/g, "the webpage");
 
     // Keep under ~150 chars or ~25 words
@@ -142,8 +143,9 @@ export function generateSpokenSummary(rawText, userPrompt = "") {
       candidate += ".";
     }
 
-    // Add conversational touch if candidate is very short
-    if (words.length <= 12 && !candidate.toLowerCase().includes("chat")) {
+    // Add conversational touch only if action was performed and not a casual conversational sentence
+    const isConversational = /^(hi|hello|hey|good\s+|i am|i'm|sure|yes|no|certainly|glad|how)\b/i.test(candidate);
+    if (words.length <= 12 && !isConversational && !candidate.toLowerCase().includes("chat") && !candidate.toLowerCase().includes("detail")) {
       return candidate + " Details are in your chat.";
     }
 
@@ -151,4 +153,58 @@ export function generateSpokenSummary(rawText, userPrompt = "") {
   }
 
   return "I've completed your task. Check the chat for details.";
+}
+
+/**
+ * Speech Input Normalizer: Cleans, refines, and corrects phonetic slips and technical
+ * terminology in spoken user queries before sending them to the agent planner.
+ *
+ * @param {string} rawSpeech
+ * @returns {string}
+ */
+export function normalizeVoiceInput(rawSpeech) {
+  if (!rawSpeech || typeof rawSpeech !== "string") return "";
+
+  let text = rawSpeech.trim().replace(/\s+/g, " ");
+
+  // 1. Common conversational web command prefixes
+  text = text
+    .replace(/^(?:hey\s+kira|kira|hey\s+browser|can\s+you\s+please|please|could\s+you)\s+/i, "")
+    .trim();
+
+  // 2. Technical acronyms and brand names (case & phonetic fixes)
+  const technicalReplacements = [
+    [/\b(?:a\s+i|eye(?=\s+(?:in\s+a|in|model|agent|bubble|tech|trend|research)))\b/gi, "AI"],
+    [/\b(?:a\s+i)\b/gi, "AI"],
+    [/\b(?:l\s+l\s+m|l\s+lm|llm)\b/gi, "LLM"],
+    [/\b(?:g\s+p\s+t|gpt)\b/gi, "GPT"],
+    [/\b(?:chat\s*gpt)\b/gi, "ChatGPT"],
+    [/\b(?:p\s+d\s+f|pdf)\b/gi, "PDF"],
+    [/\b(?:u\s+r\s+l|url)\b/gi, "URL"],
+    [/\b(?:a\s+p\s+i|api)\b/gi, "API"],
+    [/\b(?:you\s*tube)\b/gi, "YouTube"],
+    [/\b(?:git\s*hub)\b/gi, "GitHub"],
+    [/\b(?:ar\s*k?ive?|r\s*kive?|arxiv)\b/gi, "arXiv"],
+    [/\b(?:wiki\s*pedia)\b/gi, "Wikipedia"],
+    [/\b(?:hugging\s*face)\b/gi, "Hugging Face"],
+    [/\b(?:u\s*i)\b/gi, "UI"],
+    [/\b(?:u\s*x)\b/gi, "UX"],
+    [/\b(?:html|h\s+t\s+m\s+l)\b/gi, "HTML"],
+    [/\b(?:css|c\s+s\s+s)\b/gi, "CSS"],
+    [/\b(?:js|javascript|java\s+script)\b/gi, "JavaScript"],
+  ];
+
+  for (const [pattern, replacement] of technicalReplacements) {
+    text = text.replace(pattern, replacement);
+  }
+
+  // 3. Domain navigation expansions (e.g. "go to youtube.com" or "go to youtube dot com" -> "Open youtube.com")
+  text = text.replace(/^(?:open\s+up|go\s+to|navigate\s+to)\s+([a-zA-Z0-9-]+)(?:\s+dot\s+com|\.com)\b/i, (m, domain) => `Open ${domain.toLowerCase()}.com`);
+
+  // 4. Ensure first character is capitalized
+  if (text.length > 0) {
+    text = text.charAt(0).toUpperCase() + text.slice(1);
+  }
+
+  return text;
 }

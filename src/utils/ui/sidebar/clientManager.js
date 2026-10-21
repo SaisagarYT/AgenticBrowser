@@ -530,10 +530,6 @@ export function getClientManagerCode() {
     },
     setStatus: (status) => setStatus("idle", status),
     setProcessing: (status) => setStatus("processing", status),
-    unlockInputs: () => {
-      if (typeof unlockInputs === "function") unlockInputs();
-      else if (typeof window.__agenticUnlockInputs === "function") window.__agenticUnlockInputs();
-    },
     showSkeleton: (status) => showSkeleton(status),
     hideSkeleton: () => hideSkeleton(),
     clearMessages: clearChat,
