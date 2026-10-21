@@ -390,3 +390,27 @@ The Voice Agent ("Kira") is a multi-tier conversational and hands-free voice con
    - Rebuilt `src/utils/ui/sidebar/build.js` (`sidebar.bundle.js` bytes: 390899).
    - Added automated assertion in `scratch/test_voice_agent_suite.mjs` verifying that `loadSessionDetails` passes `true` as `isReplay` for both AI responses and step cards.
    - Ran test suite: **20/20 PASSED** (100%).
+
+---
+
+### User Feedback (Session 12):
+> *"now there is no chat displaying"* (with screenshot of Google page without sidebar overlay)
+
+### Deep Root Cause Analysis (Session 12):
+- **Where**: `src/utils/ui/sidebar/clientManager.js:368, 392`
+- **Root Cause**:
+  In `clientManager.js`, `: turn.plan.plan_text.split("\n")` had an unescaped newline `\n` inside the template string of `getClientManagerCode()`. When `build.js` concatenated the bundle, `\n` expanded to a literal line break inside a string literal (`split("`), causing `SyntaxError: Invalid or unexpected token` when evaluated in the browser page.
+  This prevented `sidebar.bundle.js` from executing, so `#agentic-sidebar-wrapper` was never mounted.
+
+### Fixes Implemented (Session 12):
+1. **`src/utils/ui/sidebar/clientManager.js`**:
+   - Properly escaped `\n` to `\\n` in `split("\\n")`.
+   - Replaced nested template literals in `setStatus` with string concatenation.
+2. **`src/utils/ui/sidebar/build.js`**:
+   - Added strict JavaScript syntax compilation check via `new vm.Script(template)` in `buildSidebarScript()` so any syntax error in any template module will immediately fail the build before writing the bundle.
+3. **Rebuilt & Tested**:
+   - Rebuilt `sidebar.bundle.js` (390,901 bytes).
+   - Validated syntax with `node -c src/utils/ui/sidebar.bundle.js` (passed with code 0).
+   - Validated live DOM injection in Playwright: `Sidebar mounted successfully: true`.
+   - Ran full test suite: **20/20 PASSED**.
+

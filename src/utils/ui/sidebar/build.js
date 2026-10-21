@@ -21,6 +21,8 @@ const __dirname = path.dirname(__filename);
 const TEMPLATE_PATH = path.resolve(__dirname, "controller.template.js");
 const BUNDLE_PATH = path.resolve(__dirname, "..", "sidebar.bundle.js");
 
+import vm from "node:vm";
+
 export function buildSidebarScript() {
   const stylesText = getSidebarStyles();
   const railHtml = getRailHtml(ICONS);
@@ -42,6 +44,9 @@ export function buildSidebarScript() {
   template = template.replace("/* __INPUT_MODULE__ */", () => getInputManagerCode());
   template = template.replace("/* __VOICE_MODULE__ */", () => getVoiceManagerCode());
   template = template.replace("/* __CLIENT_MODULE__ */", () => getClientManagerCode());
+
+  // Strict JS syntax validation before returning
+  new vm.Script(template);
 
   return template;
 }

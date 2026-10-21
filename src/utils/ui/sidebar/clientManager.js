@@ -365,7 +365,7 @@ export function getClientManagerCode() {
               if (turn.plan && turn.plan.plan_text) {
                 const stepLines = Array.isArray(turn.steps) && turn.steps.length > 0
                   ? turn.steps.map((st) => st.instruction)
-                  : turn.plan.plan_text.split("\n").filter(Boolean);
+                  : turn.plan.plan_text.split("\\n").filter(Boolean);
                 appendStepCard(JSON.stringify({ plan: stepLines, stepIndex: stepLines.length, currentInstruction: "Completed workflow" }), "plan", true);
               }
               if (Array.isArray(turn.actions) && turn.actions.length > 0) {
@@ -389,7 +389,7 @@ export function getClientManagerCode() {
             if (details.plan && details.plan.plan_text) {
               const stepLines = Array.isArray(details.steps) && details.steps.length > 0
                 ? details.steps.map((st) => st.instruction)
-                : details.plan.plan_text.split("\n").filter(Boolean);
+                : details.plan.plan_text.split("\\n").filter(Boolean);
               appendStepCard(JSON.stringify({ plan: stepLines, stepIndex: stepLines.length, currentInstruction: "Completed workflow" }), "plan", true);
             }
             if (Array.isArray(details.actions)) {
