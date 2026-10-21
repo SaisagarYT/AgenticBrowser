@@ -360,6 +360,7 @@ The Voice Agent ("Kira") is a multi-tier conversational and hands-free voice con
   3. Binary threshold gate in `renderWaveLoop` causing the red bars to remain flat at 3.5px.
   4. AudioContext clock suspension on initial page loads.
 - Confirmed all 4 fixes applied, tested (20/20 tests passing), and verified live on hardware.
+- Committed and pushed to GitHub main (`c6239d1`): "fix(voice): fix microphone reactivity, speech recognition state guard, and silence gate".
 
 
 
