@@ -362,5 +362,31 @@ The Voice Agent ("Kira") is a multi-tier conversational and hands-free voice con
 - Confirmed all 4 fixes applied, tested (20/20 tests passing), and verified live on hardware.
 - Committed and pushed to GitHub main (`c6239d1`): "fix(voice): fix microphone reactivity, speech recognition state guard, and silence gate".
 
+---
 
+### User Feedback (Session 11):
+> *"hey currently there is a problem - If i open a previous chat then all the voices of previous chat will speak at a time and creates noice why ?"*
 
+### Deep Root Cause Analysis (Session 11):
+- **Where**: `src/utils/ui/sidebar/clientManager.js:352-396` (`loadSessionDetails`)
+- **Root Cause**:
+  When clicking a historical chat session from the drawer:
+  1. `appendAiResponseCard(turn.task.final_response, true)` was invoked with `isInstant = true`, but omitted the third parameter `isReplay` (which defaulted to `false`).
+  2. Because `isReplay` was `false`, `appendAiResponseCard` executed line 330:
+     `if (!isReplay && window.kiraVoice && window.kiraVoice.isVoiceActive()) { window.kiraVoice.speak(text, ...); }`
+  3. Similarly, `appendStepCard` calls for `"plan"`, `"browser"`, and `"done"` omitted `isReplay = true`, which caused lines 986, 1000, and 1077 in `chatManager.js` to trigger `window.kiraVoice.narrateProgress(...)`.
+  4. In a session with multiple turns, every historical turn and action triggered voice synthesis and progress narration concurrently at the exact same millisecond, creating an overlapping cacophony of voices speaking at once.
+
+### Fixes Implemented (Session 11):
+1. **`src/utils/ui/sidebar/clientManager.js` (`loadSessionDetails`)**:
+   - Added immediate speech cancellation at the top of `loadSessionDetails`:
+     `window.kiraVoice?.stop();` and `window.speechSynthesis?.cancel();` to silence any ongoing speech immediately upon selecting a session.
+   - Updated all card rendering calls to explicitly pass `isReplay = true`:
+     * `appendStepCard(..., "plan", true)`
+     * `appendStepCard(desc, "browser", true)`
+     * `appendAiResponseCard(turn.task.final_response, true, true)`
+     * `appendStepCard("Error: " + turn.task.error, "done", true)`
+2. **Rebuilt & Tested**:
+   - Rebuilt `src/utils/ui/sidebar/build.js` (`sidebar.bundle.js` bytes: 390899).
+   - Added automated assertion in `scratch/test_voice_agent_suite.mjs` verifying that `loadSessionDetails` passes `true` as `isReplay` for both AI responses and step cards.
+   - Ran test suite: **20/20 PASSED** (100%).

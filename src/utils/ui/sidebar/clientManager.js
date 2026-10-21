@@ -332,6 +332,14 @@ export function getClientManagerCode() {
     clearChat();
     if (heroView) heroView.style.display = "none";
 
+    // Silence any currently active Kira voice playback or speech synthesis before restoring chat
+    if (window.kiraVoice && typeof window.kiraVoice.stop === "function") {
+      try { window.kiraVoice.stop(); } catch {}
+    }
+    if ("speechSynthesis" in window) {
+      try { window.speechSynthesis.cancel(); } catch {}
+    }
+
     window.__ACTIVE_SESSION_ID__ = sessionSummary.id;
 
     const displayTitle = sessionSummary.title || sessionSummary.latest_command || sessionSummary.command || "AI Chat";
@@ -342,7 +350,7 @@ export function getClientManagerCode() {
         : displayTitle;
     }
 
-    setStatus("idle", \`Loading session: \${displayTitle.slice(0, 26)}...\`);
+    setStatus("idle", "Loading session: " + displayTitle.slice(0, 26) + "...");
 
     try {
       if (typeof window.get_chat_session === "function") {
@@ -357,8 +365,8 @@ export function getClientManagerCode() {
               if (turn.plan && turn.plan.plan_text) {
                 const stepLines = Array.isArray(turn.steps) && turn.steps.length > 0
                   ? turn.steps.map((st) => st.instruction)
-                  : turn.plan.plan_text.split("\\n").filter(Boolean);
-                appendStepCard(JSON.stringify({ plan: stepLines, stepIndex: stepLines.length, currentInstruction: "Completed workflow" }), "plan");
+                  : turn.plan.plan_text.split("\n").filter(Boolean);
+                appendStepCard(JSON.stringify({ plan: stepLines, stepIndex: stepLines.length, currentInstruction: "Completed workflow" }), "plan", true);
               }
               if (Array.isArray(turn.actions) && turn.actions.length > 0) {
                 turn.actions.forEach((act) => {
@@ -366,13 +374,13 @@ export function getClientManagerCode() {
                   if (act.parameters) {
                     desc += ": " + (typeof act.parameters === "object" ? JSON.stringify(act.parameters) : act.parameters);
                   }
-                  appendStepCard(desc, "browser");
+                  appendStepCard(desc, "browser", true);
                 });
               }
               if (turn.task && turn.task.final_response) {
-                appendAiResponseCard(turn.task.final_response, true);
+                appendAiResponseCard(turn.task.final_response, true, true);
               } else if (turn.task && turn.task.error) {
-                appendStepCard("Error: " + turn.task.error, "done");
+                appendStepCard("Error: " + turn.task.error, "done", true);
               }
             });
           } else if (details.task) {
@@ -381,16 +389,16 @@ export function getClientManagerCode() {
             if (details.plan && details.plan.plan_text) {
               const stepLines = Array.isArray(details.steps) && details.steps.length > 0
                 ? details.steps.map((st) => st.instruction)
-                : details.plan.plan_text.split("\\n").filter(Boolean);
-              appendStepCard(JSON.stringify({ plan: stepLines, stepIndex: stepLines.length, currentInstruction: "Completed workflow" }), "plan");
+                : details.plan.plan_text.split("\n").filter(Boolean);
+              appendStepCard(JSON.stringify({ plan: stepLines, stepIndex: stepLines.length, currentInstruction: "Completed workflow" }), "plan", true);
             }
             if (Array.isArray(details.actions)) {
               details.actions.forEach((act) => {
-                appendStepCard(act.tool_name ? "Executed " + act.tool_name : "Action executed", "browser");
+                appendStepCard(act.tool_name ? "Executed " + act.tool_name : "Action executed", "browser", true);
               });
             }
             if (details.task.final_response) {
-              appendAiResponseCard(details.task.final_response, true);
+              appendAiResponseCard(details.task.final_response, true, true);
             }
           }
         }
