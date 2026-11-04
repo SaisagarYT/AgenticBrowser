@@ -70,21 +70,36 @@
     antigravity: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" x2="12" y1="22" y2="15.5"/><polyline points="22 8.5 12 15.5 2 8.5"/></svg>`,
   };
 
-  // 3D Isometric Cube SVG Logo (Exact Voxle Aesthetic)
+  // 3D Isometric Cube SVG Logo (Modern Tech Palette)
   const VOXLE_CUBE_SVG = `
     <svg class="as-hero-cube" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M32 4L58 19V45L32 60L6 45V19L32 4Z" fill="#FACC15" fill-opacity="0.2"/>
+      <path d="M32 4L58 19V45L32 60L6 45V19L32 4Z" fill="#3B82F6" fill-opacity="0.15"/>
       <!-- Top Face -->
-      <polygon points="32,4 58,19 32,34 6,19" fill="#FACC15" stroke="#CA8A04" stroke-width="1.5" stroke-linejoin="round"/>
+      <polygon points="32,4 58,19 32,34 6,19" fill="#60A5FA" stroke="#2563EB" stroke-width="1.5" stroke-linejoin="round"/>
       <!-- Left Face -->
-      <polygon points="6,19 32,34 32,60 6,45" fill="#EAB308" stroke="#CA8A04" stroke-width="1.5" stroke-linejoin="round"/>
+      <polygon points="6,19 32,34 32,60 6,45" fill="#2563EB" stroke="#0F172A" stroke-width="1.5" stroke-linejoin="round"/>
       <!-- Right Face -->
-      <polygon points="58,19 32,34 32,60 58,45" fill="#CA8A04" stroke="#A16207" stroke-width="1.5" stroke-linejoin="round"/>
+      <polygon points="58,19 32,34 32,60 58,45" fill="#0F172A" stroke="#0F172A" stroke-width="1.5" stroke-linejoin="round"/>
       <!-- Letter Inscriptions -->
-      <text x="32" y="22" font-size="10" font-weight="800" font-family="sans-serif" fill="#713F12" text-anchor="middle">VOX</text>
-      <text x="19" y="44" font-size="9" font-weight="800" font-family="sans-serif" fill="#854D0E" text-anchor="middle">AI</text>
-      <text x="45" y="44" font-size="9" font-weight="800" font-family="sans-serif" fill="#FEF08A" text-anchor="middle">4.0</text>
+      <text x="32" y="22" font-size="10" font-weight="800" font-family="sans-serif" fill="#0F172A" text-anchor="middle">VOX</text>
+      <text x="19" y="44" font-size="9" font-weight="800" font-family="sans-serif" fill="#FFFFFF" text-anchor="middle">AI</text>
+      <text x="45" y="44" font-size="9" font-weight="800" font-family="sans-serif" fill="#FFFFFF" text-anchor="middle">4.0</text>
     </svg>
   `;
 
-export { ICONS, VOXLE_CUBE_SVG };
+  // Iconic Multi-tone Radiant AI Star (Gemini Gradient: Electric Blue -> Violet -> Coral -> Amber)
+  const GEMINI_STAR_SVG = `
+    <svg class="as-hero-star" width="44" height="44" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="as-gemini-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#4285F4"/>
+          <stop offset="38%" stop-color="#9B72CB"/>
+          <stop offset="72%" stop-color="#D96570"/>
+          <stop offset="100%" stop-color="#FF9E43"/>
+        </linearGradient>
+      </defs>
+      <path d="M24 0C24 13.2548 13.2548 24 0 24C13.2548 24 24 34.7452 24 48C24 34.7452 34.7452 24 48 24C34.7452 24 24 13.2548 24 0Z" fill="url(#as-gemini-gradient)"/>
+    </svg>
+  `;
+
+export { ICONS, VOXLE_CUBE_SVG, GEMINI_STAR_SVG };

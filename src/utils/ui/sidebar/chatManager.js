@@ -30,24 +30,23 @@ export function getChatManagerCode() {
 
     const bubble = document.createElement("div");
     bubble.className = "as-bubble-user";
-    bubble.setAttribute("style", "color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; background-color: #18181b !important;");
 
     let attachHtml = "";
     if (attachments.length > 0) {
       attachHtml =
-        \`<div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px;">\` +
+        '<div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px;">' +
         attachments
           .map((att) => {
             if (att.isImage) {
-              return \`<img src="\${att.dataUrl}" style="width: 48px; height: 48px; border-radius: 6px; object-fit: cover; border: 1px solid rgba(255, 255, 255, 0.2);" />\`;
+              return '<img src="' + att.dataUrl + '" style="width: 48px; height: 48px; border-radius: 6px; object-fit: cover; border: 1px solid rgba(201, 193, 177, 0.3);" />';
             }
-            return \`<span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 4px; background: rgba(255, 255, 255, 0.15); font-size: 10px; color: #ffffff !important; -webkit-text-fill-color: #ffffff !important;">\${ICONS.fileText} \${escapeHtml(att.name)}</span>\`;
+            return '<span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 4px; background: rgba(201, 193, 177, 0.2); font-size: 10px; color: inherit;">' + (ICONS.fileText || "") + ' ' + escapeHtml(att.name) + '</span>';
           })
           .join("") +
-        \`</div>\`;
+        '</div>';
     }
 
-    bubble.innerHTML = \`\${attachHtml}<div style="color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; word-break: break-word !important; font-size: 12.5px !important; line-height: 1.45 !important;">\${escapeHtml(text || "Uploaded attachment(s)")}</div>\`;
+    bubble.innerHTML = attachHtml + '<div class="as-bubble-user-text">' + escapeHtml(text || "Uploaded attachment(s)") + '</div>';
     contentEl.appendChild(bubble);
     contentEl.scrollTop = contentEl.scrollHeight;
   }

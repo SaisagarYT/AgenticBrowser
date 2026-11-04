@@ -2,7 +2,6 @@
 
 import express from "express";
 import cors from "cors";
-import path from "node:path";
 import { config } from "./config.js";
 import { apiRouter } from "./routes/apiRoutes.js";
 import { sseRouter } from "./routes/sseRoutes.js";
@@ -24,10 +23,6 @@ export function createServer() {
     logger.debug(`${req.method} ${req.url}`);
     next();
   });
-
-  // Static web dashboard
-  const publicDir = path.resolve(config.paths.root, "public");
-  app.use(express.static(publicDir));
 
   // Serve captured screenshots
   app.use("/screenshots", express.static(config.paths.screenshots));

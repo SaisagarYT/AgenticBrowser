@@ -65,7 +65,7 @@ export function getRailHtml(ICONS) {
   `;
 }
 
-export function getSidebarHtml(ICONS, VOXLE_CUBE_SVG) {
+export function getSidebarHtml(ICONS, VOXLE_CUBE_SVG, GEMINI_STAR_SVG) {
   return `
     <!-- shadcn Sheet Overlay (Drawer for Sessions / History) -->
     <div class="as-sheet-overlay" id="as-sheet-overlay"></div>
@@ -127,8 +127,30 @@ export function getSidebarHtml(ICONS, VOXLE_CUBE_SVG) {
       <!-- Plan Wrapper (Hidden - Plan rendered inline in feed) -->
       <div class="as-plan-wrapper" id="as-plan-wrapper" style="display: none !important;"></div>
 
-      <!-- Feed / Content Area (Clean Canvas matching Reference) -->
-      <div class="as-content-area" id="as-content-area"></div>
+      <!-- Feed / Content Area (Clean Canvas with Gemini-Style Empty State) -->
+      <div class="as-content-area" id="as-content-area">
+        <div class="as-hero-container" id="as-hero-view">
+          <div class="as-hero-star-wrapper">
+            ${GEMINI_STAR_SVG || VOXLE_CUBE_SVG}
+          </div>
+          <h2 class="as-hero-title">Where should we start?</h2>
+
+          <div class="as-suggestion-chips-container" id="as-suggestion-chips">
+            <button class="as-suggestion-pill" type="button" data-prompt="What can you do?">
+              <span class="as-pill-icon">${ICONS.sparkles}</span>
+              <span class="as-pill-text">What can you do?</span>
+            </button>
+            <button class="as-suggestion-pill" type="button" data-prompt="What kinds of questions can I ask?">
+              <span class="as-pill-icon">${ICONS.messageSquare}</span>
+              <span class="as-pill-text">What kinds of questions can I ask?</span>
+            </button>
+            <button class="as-suggestion-pill" type="button" data-prompt="Search Google for top news about artificial intelligence today">
+              <span class="as-pill-icon">${ICONS.search}</span>
+              <span class="as-pill-text">Search top AI news today</span>
+            </button>
+          </div>
+        </div>
+      </div>
 
       <!-- Floating Responsive Input Card -->
       <div class="as-input-footer">

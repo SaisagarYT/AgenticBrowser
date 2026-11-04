@@ -427,6 +427,9 @@ export function getClientManagerCode() {
       adaptPageLayout(true);
     } else {
       sidebar.classList.remove("collapsed");
+      const targetWidth = getEffectiveExpandedWidth();
+      sidebar.style.setProperty("--as-sidebar-width", targetWidth + "px");
+      sidebar.style.setProperty("width", targetWidth + "px", "important");
       rail.style.display = "none";
       adaptPageLayout(false);
       setTimeout(() => textareaEl.focus(), 250);
@@ -452,6 +455,66 @@ export function getClientManagerCode() {
       toggleCollapsed();
     }
   });
+
+  // --------------------------------------------------------------------------
+  // Interactive Viewport Resizing (col-resize handle)
+  // --------------------------------------------------------------------------
+  const resizeHandleEl = sidebar.querySelector("#as-resize-handle");
+  if (resizeHandleEl) {
+    let isResizing = false;
+    let startX = 0;
+    let startWidth = 0;
+
+    resizeHandleEl.addEventListener("mousedown", (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      e.stopPropagation();
+      isResizing = true;
+      startX = e.clientX;
+      startWidth = getEffectiveExpandedWidth();
+
+      document.body.classList.add("as-resizing-active");
+      resizeHandleEl.classList.add("active");
+      sidebar.style.transition = "none";
+
+      let dragShield = document.getElementById("as-drag-shield");
+      if (!dragShield) {
+        dragShield = document.createElement("div");
+        dragShield.id = "as-drag-shield";
+        dragShield.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;z-index:2147483647;cursor:col-resize;user-select:none;pointer-events:auto;";
+        document.documentElement.appendChild(dragShield);
+      }
+
+      const onMouseMove = (moveEvt) => {
+        if (!isResizing) return;
+        const deltaX = startX - moveEvt.clientX;
+        const maxAllowed = Math.floor(window.innerWidth * MAX_SIDEBAR_WIDTH_RATIO);
+        const newWidth = Math.max(MIN_SIDEBAR_WIDTH, Math.min(maxAllowed, startWidth + deltaX));
+        userSavedWidth = newWidth;
+        sidebar.style.setProperty("--as-sidebar-width", newWidth + "px");
+        sidebar.style.setProperty("width", newWidth + "px", "important");
+        adaptPageLayout(false, false);
+      };
+
+      const onMouseUp = () => {
+        if (!isResizing) return;
+        isResizing = false;
+        document.body.classList.remove("as-resizing-active");
+        resizeHandleEl.classList.remove("active");
+        sidebar.style.transition = "";
+        try {
+          localStorage.setItem("__agentic_sidebar_width__", String(userSavedWidth));
+        } catch {}
+        const shield = document.getElementById("as-drag-shield");
+        if (shield) shield.remove();
+        window.removeEventListener("mousemove", onMouseMove);
+        window.removeEventListener("mouseup", onMouseUp);
+      };
+
+      window.addEventListener("mousemove", onMouseMove, { passive: true });
+      window.addEventListener("mouseup", onMouseUp, { once: true });
+    });
+  }
 
   // --------------------------------------------------------------------------
   // Theme Toggle (Light / Dark)
@@ -487,13 +550,13 @@ export function getClientManagerCode() {
         iconEl.innerHTML = icon;
       } else {
         somToggleBtn.innerHTML = icon;
-        somToggleBtn.style.color = isVisualMarksActive ? "#facc15" : "";
+        somToggleBtn.style.color = isVisualMarksActive ? "#2563EB" : "";
       }
     }
     if (railSomToggleBtn) {
       railSomToggleBtn.innerHTML = icon;
       railSomToggleBtn.title = isVisualMarksActive ? "Hide Visual Marks (Alt+M)" : "Show Visual Marks (Alt+M)";
-      railSomToggleBtn.style.color = isVisualMarksActive ? "#facc15" : "";
+      railSomToggleBtn.style.color = isVisualMarksActive ? "#2563EB" : "";
     }
   }
 

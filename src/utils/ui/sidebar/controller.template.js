@@ -26,8 +26,21 @@
   const prevStyles = document.getElementById("agentic-sidebar-styles");
   if (prevStyles) prevStyles.remove();
 
-  const EXPANDED_WIDTH = 420;
+  const DEFAULT_EXPANDED_WIDTH = 420;
+  const MIN_SIDEBAR_WIDTH = 320;
+  const MAX_SIDEBAR_WIDTH_RATIO = 0.65;
   const RAIL_WIDTH = 46;
+
+  let userSavedWidth = (function() {
+    try {
+      const saved = parseInt(localStorage.getItem("__agentic_sidebar_width__"), 10);
+      if (!isNaN(saved) && saved >= MIN_SIDEBAR_WIDTH && saved <= 1400) {
+        return saved;
+      }
+    } catch {}
+    return DEFAULT_EXPANDED_WIDTH;
+  })();
+
   let isCurrentlyCollapsed = (typeof window.__INITIAL_COLLAPSED__ === "boolean")
     ? window.__INITIAL_COLLAPSED__
     : (function() {
@@ -39,17 +52,29 @@
       })();
 
   function getEffectiveExpandedWidth() {
-    return Math.min(EXPANDED_WIDTH, Math.floor(window.innerWidth * 0.92));
+    const maxAllowed = Math.floor(window.innerWidth * MAX_SIDEBAR_WIDTH_RATIO);
+    return Math.max(MIN_SIDEBAR_WIDTH, Math.min(userSavedWidth, maxAllowed));
   }
 
-  // Manage body reflow so web page content adapts cleanly beside the sidebar
-  function adaptPageLayout(isCollapsed) {
-    isCurrentlyCollapsed = isCollapsed;
+  // Manage true split-viewport body reflow so web page content adapts cleanly beside the sidebar
+  function adaptPageLayout(isCollapsed, smooth = true) {
+    isCurrentlyCollapsed = Boolean(isCollapsed);
     try {
+      const effectiveOffset = isCollapsed ? RAIL_WIDTH : getEffectiveExpandedWidth();
+      if (document.documentElement) {
+        document.documentElement.style.setProperty("--as-sidebar-width", `${effectiveOffset}px`);
+        document.documentElement.style.overflowX = "hidden";
+      }
       if (document.body) {
         document.body.style.boxSizing = "border-box";
-        document.body.style.transition = "margin-right 0.28s cubic-bezier(0.16, 1, 0.3, 1)";
-        document.body.style.marginRight = isCollapsed ? `${RAIL_WIDTH}px` : `${getEffectiveExpandedWidth()}px`;
+        if (smooth) {
+          document.body.style.transition = "margin-right 0.28s cubic-bezier(0.16, 1, 0.3, 1), width 0.28s cubic-bezier(0.16, 1, 0.3, 1), max-width 0.28s cubic-bezier(0.16, 1, 0.3, 1)";
+        } else {
+          document.body.style.transition = "none";
+        }
+        document.body.style.marginRight = `${effectiveOffset}px`;
+        document.body.style.width = `calc(100vw - ${effectiveOffset}px)`;
+        document.body.style.maxWidth = `calc(100vw - ${effectiveOffset}px)`;
       }
     } catch {
       // Ignore
@@ -57,7 +82,12 @@
   }
 
   window.addEventListener("resize", () => {
-    adaptPageLayout(isCurrentlyCollapsed);
+    adaptPageLayout(isCurrentlyCollapsed, false);
+    if (!isCurrentlyCollapsed && typeof sidebar !== "undefined" && sidebar) {
+      const currentWidth = getEffectiveExpandedWidth();
+      sidebar.style.setProperty("--as-sidebar-width", `${currentWidth}px`);
+      sidebar.style.setProperty("width", `${currentWidth}px`, "important");
+    }
   });
 
   // Create container for true viewport anchoring
@@ -82,10 +112,21 @@
   // 4. Render Full Expanded Sidebar (shadcn + Voxle Modern Layout)
   const sidebar = document.createElement("div");
   sidebar.id = "agentic-sidebar-root";
+  const initialExpandedWidth = getEffectiveExpandedWidth();
+  sidebar.style.setProperty("--as-sidebar-width", `${initialExpandedWidth}px`);
+  sidebar.style.setProperty("width", `${initialExpandedWidth}px`, "important");
   if (isCurrentlyCollapsed) {
     sidebar.classList.add("collapsed");
   }
   sidebar.innerHTML = `/* __SIDEBAR_HTML__ */`;
+
+  // Resizable boundary handle for native side-panel resizing
+  const resizeHandle = document.createElement("div");
+  resizeHandle.className = "as-resize-handle";
+  resizeHandle.id = "as-resize-handle";
+  resizeHandle.title = "Drag to resize sidebar";
+  sidebar.appendChild(resizeHandle);
+
   container.appendChild(sidebar);
 
   // 5. Modular Controller Elements & Shared State

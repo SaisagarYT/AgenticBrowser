@@ -777,7 +777,7 @@ export function getSettingsManagerCode() {
         floatingSomToggle.setAttribute("aria-checked", String(isActive));
       }
       if (railSomToggle) {
-        railSomToggle.style.color = isActive ? "#facc15" : "#71717a";
+        railSomToggle.style.color = isActive ? "#2563EB" : "#71717a";
       }
       window.__SOM_ACTIVE__ = isActive;
       setStatus("idle", \`Visual marks \${isActive ? "enabled" : "disabled"}\`);

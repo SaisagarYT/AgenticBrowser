@@ -42,10 +42,6 @@ User Prompt
 AgenticBrowser/
 ├── bin/
 │   └── cli.js                     # Interactive CLI runner
-├── public/                        # Built-in Web Dashboard
-│   ├── index.html                 # Dark-mode live execution UI
-│   ├── css/style.css              # Styling and animations
-│   └── js/app.js                  # Frontend SSE stream & API client
 ├── src/
 │   ├── index.js                   # Server entrypoint
 │   ├── server.js                  # Express setup (CORS, static, routes)
@@ -119,12 +115,12 @@ AGENTIC_BROWSER_SS_BASE_URL=https://api.openai.com/v1
 
 ## Running the Application
 
-### Option A: Web Server & Live Dashboard (Recommended)
+### Option A: API Server (Headless / REST / SSE)
 
 ```bash
 npm start
 ```
-Open **`http://localhost:8000`** in your browser. You can type tasks, watch the 3 agents work in real-time, view screenshots, and inspect past tasks stored in SQLite!
+Starts the API server at **`http://localhost:8000`** exposing the `/execute_task`, `/tasks`, and `/api` REST/SSE endpoints.
 
 ### Option B: Interactive CLI
 

@@ -38,7 +38,7 @@ export function formatAiMarkdown(raw) {
     // Inline code: `code`
     s = s.replace(/`([^`]+)`/g, '<span class="as-inline-code">$1</span>');
     // Links: [text](url)
-    s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color:#facc15;text-decoration:underline;">$1</a>');
+    s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color:var(--as-accent,#2563EB);text-decoration:underline;">$1</a>');
     return s;
   }
 
@@ -105,7 +105,7 @@ export function formatAiMarkdown(raw) {
       } else {
         output.push(`
           <div class="as-ai-bullet">
-            <span style="font-weight: 600; color: #facc15; font-size: 11.5px; min-width: 16px;">${num}</span>
+            <span class="as-ai-bullet-num" style="font-weight: 600; color: var(--as-accent,#2563EB); font-size: 11.5px; min-width: 16px;">${num}</span>
             <div>${formatInline(rest)}</div>
           </div>
         `);
@@ -156,7 +156,7 @@ export function getMarkdownCode() {
       s = s.replace(/\\*\\*(.*?)\\*\\*/g, "<strong>$1</strong>");
       s = s.replace(/__(.*?)__/g, "<strong>$1</strong>");
       s = s.replace(/\`([^\`]+)\`/g, '<span class="as-inline-code">$1</span>');
-      s = s.replace(/\\[([^\\]]+)\\]\\(([^)]+)\\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color:#facc15;text-decoration:underline;">$1</a>');
+      s = s.replace(/\\[([^\\]]+)\\]\\(([^)]+)\\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color:var(--as-accent,#2563EB);text-decoration:underline;">$1</a>');
       return s;
     }
 
@@ -218,7 +218,7 @@ export function getMarkdownCode() {
         } else {
           output.push(\`
             <div class="as-ai-bullet">
-              <span style="font-weight: 600; color: #facc15; font-size: 11.5px; min-width: 16px;">\${num}</span>
+              <span class="as-ai-bullet-num" style="font-weight: 600; color: var(--as-accent,#2563EB); font-size: 11.5px; min-width: 16px;">\${num}</span>
               <div>\${formatInline(rest)}</div>
             </div>
           \`);

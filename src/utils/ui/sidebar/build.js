@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { getSidebarStyles } from "./styles.js";
-import { ICONS, VOXLE_CUBE_SVG } from "./icons.js";
+import { ICONS, VOXLE_CUBE_SVG, GEMINI_STAR_SVG } from "./icons.js";
 import { getRailHtml, getSidebarHtml } from "./templates.js";
 import { getMarkdownCode } from "./markdown.js";
 import { getVisionManagerCode } from "./visionManager.js";
@@ -26,11 +26,11 @@ import vm from "node:vm";
 export function buildSidebarScript() {
   const stylesText = getSidebarStyles();
   const railHtml = getRailHtml(ICONS);
-  const sidebarHtml = getSidebarHtml(ICONS, VOXLE_CUBE_SVG);
+  const sidebarHtml = getSidebarHtml(ICONS, VOXLE_CUBE_SVG, GEMINI_STAR_SVG);
 
   let template = fs.readFileSync(TEMPLATE_PATH, "utf8");
 
-  const iconsBlock = "const ICONS = " + JSON.stringify(ICONS, null, 2) + ";\n  const VOXLE_CUBE_SVG = " + JSON.stringify(VOXLE_CUBE_SVG) + ";";
+  const iconsBlock = "const ICONS = " + JSON.stringify(ICONS, null, 2) + ";\n  const VOXLE_CUBE_SVG = " + JSON.stringify(VOXLE_CUBE_SVG) + ";\n  const GEMINI_STAR_SVG = " + JSON.stringify(GEMINI_STAR_SVG) + ";";
 
   template = template.replace("/* __SIDEBAR_STYLES__ */", () => stylesText);
   template = template.replace("/* __ICONS_AND_ASSETS__ */", () => iconsBlock);

@@ -267,6 +267,23 @@ export function getInputManagerCode() {
 
   textareaEl.addEventListener("input", autoResizeTextarea);
 
+  // --------------------------------------------------------------------------
+  // Suggestion Pills & Context Awareness Badge
+  // --------------------------------------------------------------------------
+  const suggestionContainer = sidebar.querySelector("#as-suggestion-chips");
+  if (suggestionContainer) {
+    suggestionContainer.addEventListener("click", (e) => {
+      const pill = e.target.closest(".as-suggestion-pill");
+      if (!pill) return;
+      const prompt = pill.getAttribute("data-prompt") || pill.textContent.trim();
+      if (prompt && textareaEl) {
+        textareaEl.value = prompt;
+        autoResizeTextarea();
+        textareaEl.focus();
+      }
+    });
+  }
+
   function setStatus(state, message) {
     if (statusLabel) statusLabel.textContent = message;
     if (statusSpinner) {
